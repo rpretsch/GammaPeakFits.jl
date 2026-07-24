@@ -3,7 +3,7 @@
 [![Build Status](https://github.com/rpretsch/GammaPeakFits.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/rpretsch/GammaPeakFits.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Julia Version](https://img.shields.io/badge/julia-%3E%3D1.10-blue)](https://julialang.org)
 
-Bayesian gamma-ray peak fitting on a binned energy spectrum with a composable shape model and Poisson likelihood using BAT.jl.
+Bayesian gamma-ray peak fitting on a binned energy spectrum with a composable shape model and Poisson likelihood using [BAT.jl](https://github.com/bat/BAT.jl).
 
 ## File Structure
 
@@ -29,7 +29,7 @@ f(x) = \frac{A}{\sigma\sqrt{2\pi}} \,
 
 ```math
 f(x) = \frac{h}{2} \,
-       \operatorname{erfc}\!\left(\frac{x-\mu}{\sigma\sqrt{2}}\right)
+       \text{erfc}\!\left(\frac{x-\mu}{\sigma\sqrt{2}}\right)
 ```
 
 ### Ex-Gaussian Tail
@@ -38,7 +38,7 @@ f(x) = \frac{h}{2} \,
 f(x) = \frac{A\lambda}{2} \,
        \exp\!\left(\frac{\lambda}{2}
        (2\mu + \lambda\sigma^2 - 2x)\right) \,
-       \operatorname{erfc}\!\left(
+       \text{erfc}\!\left(
        \frac{\mu + \lambda\sigma^2 - x}{\sigma\sqrt{2}}\right)
 ```
 

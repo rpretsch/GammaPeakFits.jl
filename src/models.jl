@@ -54,8 +54,7 @@ end
 
 Evaluate an exponentially modified Gaussian (ex-Gaussian) tail component at `x`.
 
-Used to model asymmetric peak tailing. The sign of `lambda` determines the tail direction:
-`lambda > 0` produces a high-energy tail, `lambda < 0` produces a low-energy tail.
+Used to model asymmetric peak tailing.
 Uses the complementary error function (`erfc`) from `SpecialFunctions.jl`.
 
 # Arguments

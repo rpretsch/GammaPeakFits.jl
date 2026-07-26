@@ -42,8 +42,6 @@ f(x) = \frac{A\lambda}{2} \,
        \frac{\mu + \lambda\sigma^2 - x}{\sigma\sqrt{2}}\right)
 ```
 
-Sign of `lambda` determines the tail direction: `lambda > 0` produces a high-energy tail, `lambda < 0` produces a low-energy tail.
-
 ### Background
 
 ```math

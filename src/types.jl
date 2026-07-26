@@ -65,8 +65,7 @@ model low- or high-energy tailing in gamma peaks.
 
 # Fields
 - `A::T`: total integrated tail area in counts
-- `lambda::T`: rate parameter of the exponential tail (`lambda > 0` for high-energy tail,
-  `lambda < 0` for low-energy tail) in 1/keV
+- `lambda::T`: rate parameter of the exponential tail in 1/keV
 - `mu::T`: centroid position of the peak on the x-axis in keV
 - `sigma::T`: standard deviation of the Gaussian core (`sigma > 0`) in keV
 
@@ -96,14 +95,13 @@ end
 Parameters for a quadratic polynomial background model, centered at `mu` to improve
 numerical stability during fitting.
 
+Each term is optional — unset fields are `nothing` and are skipped during evaluation.
 `mu` is usually the centroid of the gamma-peak and the same between all model components.
 
 # Fields
-- `b2::Union{T,Nothing}`: quadratic coefficient (``(x - \\mu)^2`` term) in counts/keV³.
-  `nothing` excludes the term
-- `b1::Union{T,Nothing}`: linear coefficient (``(x - \\mu)`` term) in counts/keV².
-  `nothing` excludes the term
-- `b0::Union{T,Nothing}`: constant offset in counts/keV. `nothing` excludes the term
+- `b2::Union{T,Nothing}`: quadratic coefficient (``(x - \\mu)^2`` term) in counts/keV³
+- `b1::Union{T,Nothing}`: linear coefficient (``(x - \\mu)`` term) in counts/keV²
+- `b0::Union{T,Nothing}`: constant offset in counts/keV
 - `mu::T`: centering value for the polynomial expansion in keV. Usually the centroid of the 
   gamma-peak
 

@@ -39,3 +39,44 @@ function poisson_ll(
     result_vector = poisson_ll.(bin_center, weight, Ref(params), bin_size)
     return sum(result_vector)
 end
+
+function build_prior(
+    params::ModelParams,
+    mu::Real,
+    sigma::Real,
+    peak_height::Real,
+    peak_area::Real,
+)
+    if (isnothing(params.peak) && isnothing(params.background))
+        throw(ArgumentError("No model specified"))
+    end
+
+    priors = Dict()
+    priors[:mu] = Normal(mu, 0.6)
+    if !isnothing(params.peak) && (
+        params.peak.gaussian !== false ||
+        params.peak.lowEnergyTail !== false ||
+        params.peak.highEnergyTail !== false
+    )
+        priors[:sigma] = truncated(Normal(sigma, 0.6), 0, Inf)
+    end
+
+    if !isnothing(params.peak)
+        params.peak.gaussian !== false && (priors[:gaussian_A] = Uniform(0, peak_area))
+        params.peak.compton !== false && (priors[:compton_h] = Uniform(0, peak_height))
+        if params.peak.lowEnergyTail !== false
+            # TODO
+        end
+        if params.peak.highEnergyTail !== false
+            # TODO
+        end
+    end
+
+    if !isnothing(params.background)
+        params.background.b2 !== false && (priors[:background_b2] = Uniform(-1, 1))
+        params.background.b1 !== false && (priors[:background_b1] = Uniform(-10, 10))
+        params.background.b0 !== false && (priors[:background_b0] = Uniform(0, peak_height))
+    end
+
+    return distprod(; priors...)
+end

@@ -95,15 +95,20 @@ end
 Parameters for a quadratic polynomial background model, centered at `mu` to improve
 numerical stability during fitting.
 
-Each term is optional — unset fields are `nothing` and are skipped during evaluation.
+Each term is optional — set the corresponding field to `false` to exclude it. Setting it to 
+`true` instead of specifiying a value allows for controlling which term is used in the 
+fitting process (See [build_prior](@ref)).
 `mu` is usually the centroid of the gamma-peak and the same between all model components.
+When `b1` or `b2` are numeric values, `mu` must also be provided — this is enforced at 
+construction. `mu` may be `nothing` when only `b0` is numeric (the constant term bypasses
+the centering).
 
 # Fields
-- `b2::Union{T,Nothing}`: quadratic coefficient (``(x - \\mu)^2`` term) in counts/keV³
-- `b1::Union{T,Nothing}`: linear coefficient (``(x - \\mu)`` term) in counts/keV²
-- `b0::Union{T,Nothing}`: constant offset in counts/keV
-- `mu::T`: centering value for the polynomial expansion in keV. Usually the centroid of the 
-  gamma-peak
+- `b2::Union{T,Bool}`: quadratic coefficient (``(x - \\mu)^2`` term) in counts/keV³
+- `b1::Union{T,Bool}`: linear coefficient (``(x - \\mu)`` term) in counts/keV²
+- `b0::Union{T,Bool}`: constant offset in counts/keV
+- `mu::Union{T,Nothing}`: centering value for the polynomial expansion in keV. Usually the 
+  centroid of the gamma-peak
 
 # Mathematical definition
 
@@ -111,14 +116,37 @@ Each term is optional — unset fields are `nothing` and are skipped during eval
 f(x) = b_2 (x - \\mu)^2 + b_1 (x - \\mu) + b_0
 ```
 
+# Examples
+
+```julia
+# Enable only (mu not needed)
+BackgroundParams{Float64}(b2 = true)
+
+# Specify values (mu required)
+BackgroundParams{Float64}(b1 = 5.0, mu = 2048.0)
+```
+
 # See also
 [background_model](@ref) for evaluating the background model.
 """
-Base.@kwdef struct BackgroundParams{T<:Real}
-    b2::Union{T,Nothing} = nothing
-    b1::Union{T,Nothing} = nothing
-    b0::Union{T,Nothing} = nothing
-    mu::T
+struct BackgroundParams{T<:Real}
+    b2::Union{T,Bool}
+    b1::Union{T,Bool}
+    b0::Union{T,Bool}
+    mu::Union{T,Nothing}
+
+    function BackgroundParams(;
+        b2::Union{T,Bool} = false,
+        b1::Union{T,Bool} = false,
+        b0::Union{T,Bool} = false,
+        mu::Union{T,Nothing} = nothing,
+    ) where {T<:Real}
+        if (isa(b2, T) || isa(b1, T)) && isnothing(mu)
+            throw(ArgumentError("`mu` needs to be specifed if `b1` or `b2` are set."))
+        end
+
+        new{T}(b2, b1, b0, mu)
+    end
 end
 
 """
@@ -126,14 +154,27 @@ end
 
 Aggregate container for all components that form a gamma-ray peak.
 
-Each component is optional — unset fields are `nothing` and are skipped during evaluation.
+Each component is optional — set the corresponding field to `false` to exclude it. Setting
+it to `true` instead of specifiying a `Params` object allows for controlling which 
+component is used in the fitting process (See [build_prior](@ref)).
 `mu` and `sigma` are usually the same between all model components.
 
 # Fields
-- `gaussian::Union{GaussianParams{T},Nothing}`: main Gaussian peak shape
-- `compton::Union{ComptonParams{T},Nothing}`: Compton-edge step function
-- `lowEnergyTail::Union{ExGaussianParams{T},Nothing}`: ex-Gaussian low-energy tail
-- `highEnergyTail::Union{ExGaussianParams{T},Nothing}`: ex-Gaussian high-energy tail
+- `gaussian::Union{GaussianParams{T},Bool}`: main Gaussian peak shape
+- `compton::Union{ComptonParams{T},Bool}`: Compton-edge step function
+- `lowEnergyTail::Union{ExGaussianParams{T},Bool}`: ex-Gaussian low-energy tail
+- `highEnergyTail::Union{ExGaussianParams{T},Bool}`: ex-Gaussian high-energy tail
+
+# Examples
+
+```julia
+# Enable only
+p = PeakParams{Float64}(gaussian = true)
+
+# Specify values 
+g = GaussianParams(A = 1000.0, mu = 2048.0, sigma = 10.0)
+p = PeakParams(gaussian = g)
+```
 
 # See also
 - [`peak_model`](@ref) for evaluating the combined peak shape
@@ -141,10 +182,10 @@ Each component is optional — unset fields are `nothing` and are skipped during
   component parameters.
 """
 Base.@kwdef struct PeakParams{T<:Real}
-    gaussian::Union{GaussianParams{T},Nothing} = nothing
-    compton::Union{ComptonParams{T},Nothing} = nothing
-    lowEnergyTail::Union{ExGaussianParams{T},Nothing} = nothing
-    highEnergyTail::Union{ExGaussianParams{T},Nothing} = nothing
+    gaussian::Union{GaussianParams{T},Bool} = false
+    compton::Union{ComptonParams{T},Bool} = false
+    lowEnergyTail::Union{ExGaussianParams{T},Bool} = false
+    highEnergyTail::Union{ExGaussianParams{T},Bool} = false
 end
 
 """
@@ -160,11 +201,19 @@ Each component is optional — unset fields are `nothing` and are skipped during
   tails)
 - `background::Union{BackgroundParams{T},Nothing}`: quadratic background parameters
 
+# Examples
+
 ```julia
+# Specify a model with values
 mu = 2048.0
 sigma = 10.0
 p = PeakParams(gaussian = GaussianParams(A = 100.0, mu = mu, sigma = sigma))
 b = BackgroundParams(b0 = 100.0, mu = mu)
+m = ModelParams(peak = p, background = b)
+
+# Only enable components for later fitting
+p = PeakParams{Float64}(gaussian = true)
+b = BackgroundParams{Float64}(b0 = true)
 m = ModelParams(peak = p, background = b)
 ```
 

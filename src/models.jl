@@ -83,7 +83,7 @@ end
 Evaluate a quadratic polynomial background at `x`.
 
 The polynomial is centred at `params.mu` to improve the numerical stability during fitting.
-Each term is optional — set the corresponding field to `nothing` in 
+Each term is optional — set the corresponding field to `false` in 
 [`BackgroundParams`](@ref) to exclude it.
 
 # Arguments
@@ -99,16 +99,16 @@ Each term is optional — set the corresponding field to `nothing` in
 """
 function background_model(x::Real, params::BackgroundParams)
     result = zero(float(x))
-    isnothing(params.b2) || (result += params.b2 * (x - params.mu)^2)
-    isnothing(params.b1) || (result += params.b1 * (x - params.mu))
-    isnothing(params.b0) || (result += params.b0)
+    !isa(params.b2, Bool) && (result += params.b2 * (x - params.mu)^2)
+    !isa(params.b1, Bool) && (result += params.b1 * (x - params.mu))
+    !isa(params.b0, Bool) && (result += params.b0)
     return result
 end
 function background_model(x::AbstractVector{<:Real}, params::BackgroundParams)
     result = zeros(float(eltype(x)), length(x))
-    isnothing(params.b2) || (result .+= params.b2 * (x - params.mu)^2)
-    isnothing(params.b1) || (result .+= params.b1 * (x - params.mu))
-    isnothing(params.b0) || (result .+= params.b0)
+    !isa(params.b2, Bool) && (result .+= params.b2 * (x - params.mu)^2)
+    !isa(params.b1, Bool) && (result .+= params.b1 * (x - params.mu))
+    !isa(params.b0, Bool) && (result .+= params.b0)
     return result
 end
 
@@ -117,8 +117,8 @@ end
 
 Evaluate the combined peak shape (Gaussian + Compton edge + ex-Gaussian tails) at `x`.
 
-Each term is optional — set the corresponding field to `nothing` in 
-[`PeakParams`](@ref) to exclude it.
+Each term is optional — set the corresponding field to `false` in [`PeakParams`](@ref) to 
+exclude it.
 
 # Arguments
 - `x::Union{Real, AbstractVector{<:Real}}`: position(s) at which to evaluate in keV
@@ -134,18 +134,18 @@ Each term is optional — set the corresponding field to `nothing` in
 """
 function peak_model(x::Real, params::PeakParams)
     result = zero(float(x))
-    isnothing(params.gaussian) || (result += gaussian(x, params.gaussian))
-    isnothing(params.compton) || (result += compton(x, params.compton))
-    isnothing(params.highEnergyTail) || (result += exGaussian(x, params.highEnergyTail))
-    isnothing(params.lowEnergyTail) || (result += exGaussian(x, params.lowEnergyTail))
+    isa(params.gaussian, GaussianParams) && (result += gaussian(x, params.gaussian))
+    isa(params.compton, ComptonParams) && (result += compton(x, params.compton))
+    isa(params.highEnergyTail, ExGaussianParams) && (result += exGaussian(x, params.highEnergyTail))
+    isa(params.lowEnergyTail, ExGaussianParams) && (result += exGaussian(x, params.lowEnergyTail))
     return result
 end
 function peak_model(x::AbstractVector{<:Real}, params::PeakParams)
     result = zeros(float(eltype(x)), length(x))
-    isnothing(params.gaussian) || (result .+= gaussian(x, params.gaussian))
-    isnothing(params.compton) || (result .+= compton(x, params.compton))
-    isnothing(params.highEnergyTail) || (result .+= exGaussian(x, params.highEnergyTail))
-    isnothing(params.lowEnergyTail) || (result .+= exGaussian(x, params.lowEnergyTail))
+    isa(params.gaussian, GaussianParams) && (result .+= gaussian(x, params.gaussian))
+    isa(params.compton, ComptonParams) && (result .+= compton(x, params.compton))
+    isa(params.highEnergyTail, ExGaussianParams) && (result .+= exGaussian(x, params.highEnergyTail))
+    isa(params.lowEnergyTail, ExGaussianParams) && (result .+= exGaussian(x, params.lowEnergyTail))
     return result
 end
 
@@ -155,7 +155,8 @@ end
 Evaluate the complete gamma-peak model (peak shape + background) at `x`.
 
 Combines [`peak_model`](@ref) and [`background_model`](@ref). Each term is optional — set
-the corresponding field to `nothing` in [`ModelParams`](@ref) to exclude it.
+the corresponding field to `false` in [`ModelParams`](@ref) to exclude it, or `true` to
+enable it.
 
 # Arguments
 - `x::Union{Real, AbstractVector{<:Real}}`: position(s) at which to evaluate in keV
@@ -182,13 +183,13 @@ full_model(1:4096, m)
 """
 function full_model(x::Real, params::ModelParams)
     result = zero(float(x))
-    isnothing(params.peak) || (result += peak_model(x, params.peak))
-    isnothing(params.background) || (result += background_model(x, params.background))
+    isa(params.peak, PeakParams) && (result += peak_model(x, params.peak))
+    isa(params.background, BackgroundParams) && (result += background_model(x, params.background))
     return result
 end
 function full_model(x::AbstractVector{<:Real}, params::ModelParams)
     result = zeros(float(eltype(x)), length(x))
-    isnothing(params.peak) || (result .+= peak_model(x, params.peak))
-    isnothing(params.background) || (result .+= background_model(x, params.background))
+    isa(params.peak, PeakParams) && (result .+= peak_model(x, params.peak))
+    isa(params.background, BackgroundParams) && (result .+= background_model(x, params.background))
     return result
 end

@@ -13,7 +13,7 @@ Bayesian gamma-ray peak fitting on a binned energy spectrum with a composable sh
 | `src/GammaPeakFits.jl` | Main module: imports and includes |
 | `src/types.jl` | Parameter structs for all model components |
 | `src/models.jl` | Model evaluation: Gaussian, Compton, tails, background, peak shape |
-| `src/likelihoods.jl` | Poisson log-likelihood with bin-integrated expected counts |
+| `src/fitting.jl` | Fitting logic |
 | `test/runtests.jl` | Test runner entry point |
 
 ## Model Components

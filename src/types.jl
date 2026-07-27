@@ -1,5 +1,5 @@
 """
-    GaussianParams{T::AbstractFloat}
+    GaussianParams{T<:AbstractFloat}
 
 Additional parameters for a scaled Gaussian (normal) peak component.
 
@@ -20,14 +20,14 @@ f(x) = \\frac{A}{\\sigma\\sqrt{2\\pi}} \\,
 # See also
 [`gaussian`](@ref) for evaluating the gaussian.
 """
-Base.@kwdef struct GaussianParams{T::AbstractFloat}
+Base.@kwdef struct GaussianParams{T<:AbstractFloat}
     A::T
     mu::T
     sigma::T
 end
 
 """
-    ComptonParams{T::AbstractFloat}
+    ComptonParams{T<:AbstractFloat}
 
 Parameters for a Compton-edge step function component, modelled as a scaled complementary 
 error function.
@@ -49,14 +49,14 @@ f(x) = \\frac{h}{2} \\,
 # See also
 [`compton`](@ref) for evaluating the Compton-edge.
 """
-Base.@kwdef struct ComptonParams{T::AbstractFloat}
+Base.@kwdef struct ComptonParams{T<:AbstractFloat}
     h::T
     mu::T
     sigma::T
 end
 
 """
-    ExGaussianParams{T::AbstractFloat}
+    ExGaussianParams{T<:AbstractFloat}
 
 Parameters for an exponentially modified Gaussian (ex-Gaussian) tail component, used to 
 model low- or high-energy tailing in gamma peaks.
@@ -82,7 +82,7 @@ f(x) = \\frac{A\\lambda}{2} \\,
 # See also
 [`exGaussian`](@ref) for evaluating the tail component.
 """
-Base.@kwdef struct ExGaussianParams{T::AbstractFloat}
+Base.@kwdef struct ExGaussianParams{T<:AbstractFloat}
     A::T
     lambda::T
     mu::T
@@ -193,7 +193,7 @@ Base.@kwdef struct ConstPolyParams{T<:AbstractFloat}
 end
 
 """
-    BackgroundParams{T::AbstractFloat}
+    BackgroundParams
 
 Aggregate container for all components that form the background model.
 

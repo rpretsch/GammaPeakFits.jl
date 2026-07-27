@@ -187,7 +187,7 @@ Evaluate a constant polynomial term.
 - `params::ConstPolyParams`: polynomial parameters
 
 # Returns
-- the constant coefficient in counts/keV
+the constant coefficient in counts/keV
 
 # See also
 [`ConstPolyParams`](@ref) for the parameter structure.

@@ -264,3 +264,25 @@ Base.@kwdef struct ModelParams
     peak::Union{PeakParams,Nothing} = nothing
     background::Union{BackgroundParams,Nothing} = nothing
 end
+
+"""
+    SpectrumData{T<:AbstractFloat}
+
+Container for binned energy spectrum data.
+
+# Fields
+- `bin_centers::Union{T,AbstractVector{T}}`: bin center(s) in keV
+- `weights::Union{Integer,AbstractVector{Integer}}`: observed count(s) per bin
+- `bin_size::T`: width of each bin in keV
+
+# Examples
+
+```julia
+data = SpectrumData(bin_centers = 1:4096, weights = zeros(Int, 4096), bin_size = 1.0)
+```
+"""
+Base.@kwdef struct SpectrumData{T<:AbstractFloat}
+    bin_centers::AbstractVector{T}
+    weights::AbstractVector{Integer}
+    bin_size::T
+end

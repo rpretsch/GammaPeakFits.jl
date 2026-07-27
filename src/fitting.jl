@@ -139,9 +139,10 @@ function build_prior(
     end
 
     if !isnothing(params.background)
-        params.background.b2 !== false && (priors[:background_b2] = Uniform(-1, 1))
-        params.background.b1 !== false && (priors[:background_b1] = Uniform(-10, 10))
-        params.background.b0 !== false && (priors[:background_b0] = Uniform(0, peak_height))
+        params.background.quadPoly !== false && (priors[:quadPoly_C] = Uniform(-1, 1))
+        params.background.linPoly !== false && (priors[:linPoly_C] = Uniform(-10, 10))
+        params.background.constPoly !== false &&
+            (priors[:constPoly_C] = Uniform(0, peak_height))
     end
 
     return distprod(; priors...)

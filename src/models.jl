@@ -1,12 +1,13 @@
 """
-    gaussian(x::Union{Real, AbstractVector{<:Real}}, params::GaussianParams)
+    gaussian(x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}, params::GaussianParams)
 
 Evaluate a scaled Gaussian (normal) distribution at `x`.
 
 Uses `Distributions.jl` for the normal distribution implementation.
 
 # Arguments
-- `x::Union{Real, AbstractVector{<:Real}}`: position(s) at which to evaluate in keV
+- `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to 
+  evaluate in keV
 - `params::GaussianParams`: component parameters
 
 # Returns
@@ -16,15 +17,15 @@ Uses `Distributions.jl` for the normal distribution implementation.
 # See also
 [`GaussianParams`](@ref) for the parameters.
 """
-function gaussian(x::Real, params::GaussianParams)
+function gaussian(x::AbstractFloat, params::GaussianParams)
     return params.A * pdf(Normal(params.mu, params.sigma), x)
 end
-function gaussian(x::AbstractVector{<:Real}, params::GaussianParams)
+function gaussian(x::AbstractVector{<:AbstractFloat}, params::GaussianParams)
     return gaussian.(x, Ref(params))
 end
 
 """
-    compton(x::Union{Real, AbstractVector{<:Real}}, params::ComptonParams)
+    compton(x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}, params::ComptonParams)
 
 Evaluate a Compton-edge step function component at `x`.
 
@@ -32,7 +33,8 @@ Uses the complementary error function (`erfc`) from `SpecialFunctions.jl` to mod
 smooth step from Compton scattering.
 
 # Arguments
-- `x::Union{Real, AbstractVector{<:Real}}`: position(s) at which to evaluate in keV
+- `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to 
+  evaluate in keV
 - `params::ComptonParams`: component parameters
 
 # Returns
@@ -42,15 +44,19 @@ smooth step from Compton scattering.
 # See also
 [`ComptonParams`](@ref) for the parameters.
 """
-function compton(x::Real, params::ComptonParams)
+function compton(x::AbstractFloat, params::ComptonParams)
     return params.h/2 * erfc((x - params.mu)/(sqrt(2) * params.sigma))
 end
-function compton(x::AbstractVector{<:Real}, params::ComptonParams)
+function compton(x::AbstractVector{<:AbstractFloat}, params::ComptonParams)
     return compton.(x, Ref(params))
 end
 
 """
-    exGaussian(x::Union{Real, AbstractVector{<:Real}}, params::ExGaussianParams)
+    exGaussian(
+        x::Union{AbstractFloat, 
+        AbstractVector{<:AbstractFloat}}, 
+        params::ExGaussianParams,
+    )
 
 Evaluate an exponentially modified Gaussian (ex-Gaussian) tail component at `x`.
 
@@ -58,7 +64,8 @@ Used to model asymmetric peak tailing.
 Uses the complementary error function (`erfc`) from `SpecialFunctions.jl`.
 
 # Arguments
-- `x::Union{Real, AbstractVector{<:Real}}`: position(s) at which to evaluate in keV
+- `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to 
+  evaluate in keV
 - `params::ExGaussianParams`: component parameters
 
 # Returns
@@ -68,52 +75,17 @@ Uses the complementary error function (`erfc`) from `SpecialFunctions.jl`.
 # See also
 [`ExGaussianParams`](@ref) for the parameters.
 """
-function exGaussian(x::Real, params::ExGaussianParams)
+function exGaussian(x::AbstractFloat, params::ExGaussianParams)
     return params.A * params.lambda/2 *
            exp(params.lambda/2 * (2 * params.mu + params.lambda * params.sigma^2 - 2 * x)) *
            erfc((params.mu + params.lambda * params.sigma^2 - x)/(sqrt(2) * params.sigma))
 end
-function exGaussian(x::AbstractVector{<:Real}, params::ExGaussianParams)
+function exGaussian(x::AbstractVector{<:AbstractFloat}, params::ExGaussianParams)
     return exGaussian.(x, Ref(params))
 end
 
 """
-    background_model(x::Union{Real, AbstractVector{<:Real}}, params::BackgroundParams)
-
-Evaluate a quadratic polynomial background at `x`.
-
-The polynomial is centred at `params.mu` to improve the numerical stability during fitting.
-Each term is optional — set the corresponding field to `false` in 
-[`BackgroundParams`](@ref) to exclude it.
-
-# Arguments
-- `x::Union{Real, AbstractVector{<:Real}}`: position(s) at which to evaluate in keV
-- `params::BackgroundParams`: background parameters
-
-# Returns
-- Scalar: the evaluated quadratic background value at `x` in counts/keV
-- Vector: an array of evaluated background values at each element of `x` in counts/keV
-
-# See also
-[`BackgroundParams`](@ref) for the parameters.
-"""
-function background_model(x::Real, params::BackgroundParams)
-    result = zero(float(x))
-    !isa(params.b2, Bool) && (result += params.b2 * (x - params.mu)^2)
-    !isa(params.b1, Bool) && (result += params.b1 * (x - params.mu))
-    !isa(params.b0, Bool) && (result += params.b0)
-    return result
-end
-function background_model(x::AbstractVector{<:Real}, params::BackgroundParams)
-    result = zeros(float(eltype(x)), length(x))
-    !isa(params.b2, Bool) && (result .+= params.b2 * (x - params.mu)^2)
-    !isa(params.b1, Bool) && (result .+= params.b1 * (x - params.mu))
-    !isa(params.b0, Bool) && (result .+= params.b0)
-    return result
-end
-
-"""
-    peak_model(x::Union{Real, AbstractVector{<:Real}}, params::PeakParams)
+    peak_model(x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}, params::PeakParams)
 
 Evaluate the combined peak shape (Gaussian + Compton edge + ex-Gaussian tails) at `x`.
 
@@ -121,7 +93,8 @@ Each term is optional — set the corresponding field to `false` in [`PeakParams
 exclude it.
 
 # Arguments
-- `x::Union{Real, AbstractVector{<:Real}}`: position(s) at which to evaluate in keV
+- `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to 
+  evaluate in keV
 - `params::PeakParams`: peak component parameters
 
 # Returns
@@ -132,7 +105,7 @@ exclude it.
 - [`PeakParams`](@ref) for the parameters
 - [`gaussian`](@ref), [`compton`](@ref), and [`exGaussian`](@ref) for the components
 """
-function peak_model(x::Real, params::PeakParams)
+function peak_model(x::AbstractFloat, params::PeakParams)
     result = zero(float(x))
     isa(params.gaussian, GaussianParams) && (result += gaussian(x, params.gaussian))
     isa(params.compton, ComptonParams) && (result += compton(x, params.compton))
@@ -140,7 +113,7 @@ function peak_model(x::Real, params::PeakParams)
     isa(params.lowEnergyTail, ExGaussianParams) && (result += exGaussian(x, params.lowEnergyTail))
     return result
 end
-function peak_model(x::AbstractVector{<:Real}, params::PeakParams)
+function peak_model(x::AbstractVector{<:AbstractFloat}, params::PeakParams)
     result = zeros(float(eltype(x)), length(x))
     isa(params.gaussian, GaussianParams) && (result .+= gaussian(x, params.gaussian))
     isa(params.compton, ComptonParams) && (result .+= compton(x, params.compton))
@@ -150,7 +123,119 @@ function peak_model(x::AbstractVector{<:Real}, params::PeakParams)
 end
 
 """
-    full_model(x::Union{Real, AbstractVector{<:Real}}, params::ModelParams)
+    quad_polynomial(
+        x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}},
+        params::QuadPolyParams,
+    )
+
+Evaluate a scaled quadratic polynomial term at `x`.
+
+# Arguments
+- `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to
+  evaluate in keV
+- `params::QuadPolyParams`: component parameters
+
+# Returns
+- Scalar: the evaluated quadratic polynomial amplitude at `x` in counts/keV
+- Vector: an array of evaluated quadratic polynomial amplitudes at each element of `x` in 
+  counts/keV
+
+# See also
+[`QuadPolyParams`](@ref) for the parameter structure.
+"""
+function quad_polynomial(x::AbstractFloat, params::QuadPolyParams)
+    return params.C * (x - params.mu)^2
+end
+function quad_polynomial(x::AbstractVector{<:AbstractFloat}, params::QuadPolyParams)
+    return quad_polynomial.(x, Ref(params))
+end
+
+"""
+    lin_polynomial(
+        x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}},
+        params::LinPolyParams,
+    )
+
+Evaluate a scaled linear polynomial term at `x`.
+
+# Arguments
+- `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to
+  evaluate in keV
+- `params::LinPolyParams`: component parameters
+
+# Returns
+- Scalar: the evaluated linear polynomial amplitude at `x` in counts/keV
+- Vector: an array of evaluated linear polynomial amplitudes at each element of `x` in 
+  counts/keV
+
+# See also
+[`LinPolyParams`](@ref) for the parameter structure.
+"""
+function lin_polynomial(x::AbstractFloat, params::LinPolyParams)
+    return params.C * (x - params.mu)
+end
+function lin_polynomial(x::AbstractVector{<:AbstractFloat}, params::LinPolyParams)
+    return lin_polynomial.(x, Ref(params))
+end
+
+"""
+    const_polynomial(params::ConstPolyParams)
+
+Evaluate a constant polynomial term.
+
+# Arguments
+- `params::ConstPolyParams`: polynomial parameters
+
+# Returns
+- the constant coefficient in counts/keV
+
+# See also
+[`ConstPolyParams`](@ref) for the parameter structure.
+"""
+function const_polynomial(params::ConstPolyParams)
+    return params.C
+end
+
+"""
+    background_model(
+        x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}, 
+        params::BackgroundParams,
+    )
+
+Evaluate the combined background (polynomial of 2nd order) at `x`.
+
+Each term is optional — set the corresponding field to `false` in 
+[`BackgroundParams`](@ref) to exclude it.
+
+# Arguments
+- `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to
+  evaluate in keV
+- `params::BackgroundParams`: background parameters
+
+# Returns
+- Scalar: the evaluated quadratic background value at `x` in counts/keV
+- Vector: an array of evaluated background values at each element of `x` in counts/keV
+
+# See also
+[`BackgroundParams`](@ref) for the parameters.
+"""
+function background_model(x::AbstractFloat, params::BackgroundParams)
+    result = zero(float(x))
+    !isa(params.quadPoly, Bool) && (result += quad_polynomial(x, params.quadPoly))
+    !isa(params.linPoly, Bool) && (result += lin_polynomial(x, params.linPoly))
+    !isa(params.constPoly, Bool) && (result += const_polynomial(params.constPoly))
+    return result
+end
+function background_model(x::AbstractVector{<:AbstractFloat}, params::BackgroundParams)
+    result = zeros(float(eltype(x)), length(x))
+    !isa(params.quadPoly, Bool) && (result .+= quad_polynomial(x, params.quadPoly))
+    !isa(params.linPoly, Bool) && (result .+= lin_polynomial(x, params.linPoly))
+    !isa(params.constPoly, Bool) && (result .+= const_polynomial(params.constPoly))
+    return result
+end
+
+"""
+    full_model(x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}, params::ModelParams)
 
 Evaluate the complete gamma-peak model (peak shape + background) at `x`.
 
@@ -159,7 +244,8 @@ the corresponding field to `false` in [`ModelParams`](@ref) to exclude it, or `t
 enable it.
 
 # Arguments
-- `x::Union{Real, AbstractVector{<:Real}}`: position(s) at which to evaluate in keV
+- `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to 
+  evaluate in keV
 - `params::ModelParams`: full model parameters
 
 # Returns
@@ -181,13 +267,13 @@ full_model(1:4096, m)
 - [`ModelParams`](@ref) for the parameters
 - [`peak_model`](@ref), and [`background_model`](@ref) for the components
 """
-function full_model(x::Real, params::ModelParams)
+function full_model(x::AbstractFloat, params::ModelParams)
     result = zero(float(x))
     isa(params.peak, PeakParams) && (result += peak_model(x, params.peak))
     isa(params.background, BackgroundParams) && (result += background_model(x, params.background))
     return result
 end
-function full_model(x::AbstractVector{<:Real}, params::ModelParams)
+function full_model(x::AbstractVector{<:AbstractFloat}, params::ModelParams)
     result = zeros(float(eltype(x)), length(x))
     isa(params.peak, PeakParams) && (result .+= peak_model(x, params.peak))
     isa(params.background, BackgroundParams) && (result .+= background_model(x, params.background))

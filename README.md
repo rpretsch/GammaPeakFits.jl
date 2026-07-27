@@ -3,19 +3,26 @@
 [![Build Status](https://github.com/rpretsch/GammaPeakFits.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/rpretsch/GammaPeakFits.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Julia Version](https://img.shields.io/badge/julia-%3E%3D1.10-blue)](https://julialang.org)
 
-Bayesian gamma-ray peak fitting on a binned energy spectrum with a composable shape model and Poisson likelihood, built on 
+Bayesian gamma-ray peak fitting on a binned energy spectrum with a composable shape model and Poisson likelihood, built on
 [BAT.jl](https://github.com/bat/BAT.jl).
 
 ## File Structure
 
-| File | Description |
-| --- | --- |
-| `Project.toml` | Package metadata and dependencies |
-| `src/GammaPeakFits.jl` | Main module: imports, exports, and includes |
-| `src/types.jl` | Parameter structs for all model components and containers |
-| `src/models.jl` | Model evaluation: component and combined model functions |
-| `src/fitting.jl` | Poisson likelihood, prior and posterior construction |
-| `test/runtests.jl` | Test runner entry point |
+```text
+GammaPeakFits/
+├── Project.toml            Package metadata and dependencies
+├── src/
+│   ├── GammaPeakFits.jl    Main module: imports, exports, and includes
+│   ├── types.jl            Parameter structs for model components and containers
+│   ├── models.jl           Model evaluation functions
+│   └── fitting.jl          Poisson likelihood, prior and posterior construction
+├── test/
+│   ├── runtests.jl         Top-level test runner
+│   ├── test_types.jl       Struct construction and field default tests
+│   ├── test_models.jl      Model evaluation and Bool sentinel guard tests
+│   └── test_fitting.jl     Prior, posterior, and likelihood tests
+└── README.md
+```
 
 ## Model Components
 

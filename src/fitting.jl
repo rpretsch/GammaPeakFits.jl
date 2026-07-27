@@ -1,5 +1,10 @@
 """
-    poisson_ll(bin_center::Union{Real, AbstractVector{<:Real}}, weight::Union{Int, AbstractVector{<:Int}}, params::ModelParams, bin_size::Real)
+    poisson_ll(
+        bin_center::Union{Real, AbstractVector{<:Real}}, 
+        weight::Union{Int, AbstractVector{<:Int}}, 
+        params::ModelParams, 
+        bin_size::Real,
+    )
 
 Compute the Poisson log-likelihood for the model given observed counts.
 
@@ -40,6 +45,67 @@ function poisson_ll(
     return sum(result_vector)
 end
 
+"""
+    build_prior(
+        params::ModelParams,
+        mu::Real,
+        sigma::Real,
+        peak_height::Real,
+        peak_area::Real,
+    )
+
+Construct a prior distribution over the model parameters for Bayesian fitting.
+
+Components that are `false` (or `nothing` for container fields) are skipped. Components set 
+to `true` or to a concrete parameter struct receive a weakly informative prior.
+
+# Arguments
+- `params::ModelParams`: model specification indicating which components are enabled
+- `mu::Real`: expected centroid position of the peak in keV
+- `sigma::Real`: expected standard deviation of the Gaussian core in keV
+- `peak_height::Real`: approximate peak height in counts/keV
+- `peak_area::Real`: approximate integrated peak area in counts
+
+# Returns
+- A `ProductDistribution` (via `distprod`) over the enabled component parameters
+
+# Throws
+- `ArgumentError` if both `params.peak` and `params.background` are `nothing`
+
+# Details
+
+The following priors are defined per enabled component:
+
+| Symbol | Prior | Component |
+| --- | --- | --- |
+| `:mu` | `Normal(mu, 0.6)` | all |
+| `:sigma` | `truncated(Normal(sigma, 0.6), 0, Inf)` | `peak.gaussian`, `peak.lowEnergyTail`, `peak.highEnergyTail` |
+| `:gaussian_A` | `Uniform(0, peak_area)` | `peak.gaussian` |
+| `:compton_h` | `Uniform(0, peak_height)` | `peak.compton` |
+| `:lowEnergyTail_A` | TODO | `peak.lowEnergyTail` |
+| `:lowEnergyTail_lambda` | TODO | `peak.lowEnergyTail` |
+| `:highEnergyTail_A` | TODO | `peak.highEnergyTail` |
+| `:highEnergyTail_lambda` | TODO | `peak.highEnergyTail` |
+| `:quadPoly_C` | `Uniform(-1, 1)` | `background.quadPoly` |
+| `:linPoly_C` | `Uniform(-10, 10)` | `background.linPoly` |
+| `:constPoly_C` | `Uniform(0, peak_height)` | `background.constPoly` |
+
+# Examples
+
+```julia
+mu = 2048.0
+sigma = 10.0
+p = PeakParams{Float64}(gaussian = true, compton = true)
+b = BackgroundParams{Float64}(b0 = true)
+m = ModelParams(peak = p, background = b)
+prior = build_prior(m, mu, sigma, 100.0, 1000.0)
+```
+
+# See also
+- [`ModelParams`](@ref), [`PeakParams`](@ref), [`BackgroundParams`](@ref) for the model
+  specification
+- [`poisson_ll`](@ref) for the likelihood that uses these priors
+"""
 function build_prior(
     params::ModelParams,
     mu::Real,

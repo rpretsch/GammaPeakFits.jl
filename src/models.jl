@@ -118,16 +118,20 @@ function peak_model(x::AbstractFloat, params::PeakParams)
     result = zero(float(x))
     isa(params.gaussian, GaussianParams) && (result += gaussian(x, params.gaussian))
     isa(params.compton, ComptonParams) && (result += compton(x, params.compton))
-    isa(params.highEnergyTail, ExGaussianParams) && (result += exGaussian(x, params.highEnergyTail))
-    isa(params.lowEnergyTail, ExGaussianParams) && (result += exGaussian(x, params.lowEnergyTail))
+    isa(params.highEnergyTail, ExGaussianParams) &&
+        (result += exGaussian(x, params.highEnergyTail))
+    isa(params.lowEnergyTail, ExGaussianParams) &&
+        (result += exGaussian(x, params.lowEnergyTail))
     return result
 end
 function peak_model(x::AbstractVector{<:AbstractFloat}, params::PeakParams)
     result = zeros(float(eltype(x)), length(x))
     isa(params.gaussian, GaussianParams) && (result .+= gaussian(x, params.gaussian))
     isa(params.compton, ComptonParams) && (result .+= compton(x, params.compton))
-    isa(params.highEnergyTail, ExGaussianParams) && (result .+= exGaussian(x, params.highEnergyTail))
-    isa(params.lowEnergyTail, ExGaussianParams) && (result .+= exGaussian(x, params.lowEnergyTail))
+    isa(params.highEnergyTail, ExGaussianParams) &&
+        (result .+= exGaussian(x, params.highEnergyTail))
+    isa(params.lowEnergyTail, ExGaussianParams) &&
+        (result .+= exGaussian(x, params.lowEnergyTail))
     return result
 end
 
@@ -188,21 +192,31 @@ function lin_polynomial(x::AbstractVector{<:AbstractFloat}, params::LinPolyParam
 end
 
 """
-    const_polynomial(params::ConstPolyParams)
+    const_polynomial(
+        x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}},
+        params::ConstPolyParams
+    )
 
 Evaluate a constant polynomial term.
 
+Uses `x` to set wether to return as a scalar or vector.
+
 # Arguments
+- `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: sets the return type
 - `params::ConstPolyParams`: polynomial parameters
 
 # Returns
-the constant coefficient in counts/keV
+- Scalar: the constant coefficient in counts/keV
+- Vector: an array of constant coefficient in counts/keV
 
 # See also
 [`ConstPolyParams`](@ref) for the parameter structure.
 """
-function const_polynomial(params::ConstPolyParams)
+function const_polynomial(x::AbstractFloat, params::ConstPolyParams)
     return params.C
+end
+function const_polynomial(x::AbstractVector{<:AbstractFloat}, params::ConstPolyParams)
+    return const_polynomial.(x, Ref(params))
 end
 
 """
@@ -240,14 +254,14 @@ function background_model(x::AbstractFloat, params::BackgroundParams)
     result = zero(float(x))
     !isa(params.quadPoly, Bool) && (result += quad_polynomial(x, params.quadPoly))
     !isa(params.linPoly, Bool) && (result += lin_polynomial(x, params.linPoly))
-    !isa(params.constPoly, Bool) && (result += const_polynomial(params.constPoly))
+    !isa(params.constPoly, Bool) && (result += const_polynomial(x, params.constPoly))
     return result
 end
 function background_model(x::AbstractVector{<:AbstractFloat}, params::BackgroundParams)
     result = zeros(float(eltype(x)), length(x))
     !isa(params.quadPoly, Bool) && (result .+= quad_polynomial(x, params.quadPoly))
     !isa(params.linPoly, Bool) && (result .+= lin_polynomial(x, params.linPoly))
-    !isa(params.constPoly, Bool) && (result .+= const_polynomial(params.constPoly))
+    !isa(params.constPoly, Bool) && (result .+= const_polynomial(x, params.constPoly))
     return result
 end
 
@@ -287,12 +301,14 @@ full_model(1.0:4096.0, m)
 function full_model(x::AbstractFloat, params::ModelParams)
     result = zero(float(x))
     isa(params.peak, PeakParams) && (result += peak_model(x, params.peak))
-    isa(params.background, BackgroundParams) && (result += background_model(x, params.background))
+    isa(params.background, BackgroundParams) &&
+        (result += background_model(x, params.background))
     return result
 end
 function full_model(x::AbstractVector{<:AbstractFloat}, params::ModelParams)
     result = zeros(float(eltype(x)), length(x))
     isa(params.peak, PeakParams) && (result .+= peak_model(x, params.peak))
-    isa(params.background, BackgroundParams) && (result .+= background_model(x, params.background))
+    isa(params.background, BackgroundParams) &&
+        (result .+= background_model(x, params.background))
     return result
 end

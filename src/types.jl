@@ -266,17 +266,17 @@ Base.@kwdef struct ModelParams
 end
 
 """
-    SpectrumData{T<:AbstractFloat}
+    SpectrumData{T<:AbstractFloat, U<:Integer}
 
 Container for binned energy spectrum data.
 
 # Fields
-- `bin_centers::Union{T,AbstractVector{T}}`: bin center(s) in keV
-- `weights::Union{Integer,AbstractVector{Integer}}`: observed count(s) per bin
+- `bin_centers::AbstractVector{T}`: bin center(s) in keV
+- `weights::AbstractVector{U}`: observed count(s) per bin
 - `bin_size::T`: width of each bin in keV
 """
-Base.@kwdef struct SpectrumData{T<:AbstractFloat}
+Base.@kwdef struct SpectrumData{T<:AbstractFloat, U<:Integer}
     bin_centers::AbstractVector{T}
-    weights::AbstractVector{Integer}
+    weights::AbstractVector{U}
     bin_size::T
 end

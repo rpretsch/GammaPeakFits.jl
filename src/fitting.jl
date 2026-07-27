@@ -20,12 +20,12 @@ sum of log-likelihoods across bins (total log-likelihood)
 - [`ModelParams`](@ref) for the parameter structure
 """
 function poisson_ll(data::SpectrumData, params::ModelParams)
-    expected_counts = quadgk.(
-        x -> full_model(x, Ref(params)),
-        data.bin_centers - data.bin_size/2,
-        data.bin_centers + data.bin_size/2,
-    )[1]
-    result_vector = logpdf.(Poisson(expected_counts), data.weights)
+    expected_counts = first.(quadgk.(
+        x -> full_model(x, params),
+        data.bin_centers .- data.bin_size/2,
+        data.bin_centers .+ data.bin_size/2,
+    ))
+    result_vector = logpdf.(Poisson.(expected_counts), data.weights)
     return sum(result_vector)
 end
 

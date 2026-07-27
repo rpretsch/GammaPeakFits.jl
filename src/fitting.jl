@@ -153,7 +153,7 @@ only checks pre-computed `Bool` flags on each sample.
 ```julia
 mu = 2048.0
 sigma = 10.0
-data = SpectrumData(bin_centers = 1.0:4096.0, weights = zeros(Int, 4096), bin_size = 1.0)
+data = SpectrumData(bin_centers = 1.0:4096.0, weights = counts, bin_size = 1.0)
 
 p = PeakParams(gaussian = true, compton = true)
 b = BackgroundParams(constPoly = true)

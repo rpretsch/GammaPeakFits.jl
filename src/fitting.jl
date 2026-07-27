@@ -51,10 +51,10 @@ to `true` or to a concrete parameter struct receive a weakly informative prior.
 - `peak_area::Real`: approximate integrated peak area in counts
 
 # Returns
-- A `ProductDistribution` (via `distprod`) over the enabled component parameters
+A `NamedTupleDist` (via `distprod`) over the enabled component parameters.
 
 # Throws
-- `ArgumentError` if both `params.peak` and `params.background` are `nothing`
+`ArgumentError` if both `params.peak` and `params.background` are `nothing`.
 
 # Details
 
@@ -79,8 +79,8 @@ The following priors are defined per enabled component:
 ```julia
 mu = 2048.0
 sigma = 10.0
-p = PeakParams{Float64}(gaussian = true, compton = true)
-b = BackgroundParams{Float64}(b0 = true)
+p = PeakParams(gaussian = true, compton = true)
+b = BackgroundParams(constPoly = true)
 m = ModelParams(peak = p, background = b)
 prior = build_prior(m, mu, sigma, 100.0, 1000.0)
 ```

@@ -131,3 +131,106 @@ function build_prior(
 
     return distprod(; priors...)
 end
+
+"""
+    build_posterior(data::SpectrumData, priors::NamedTupleDist)
+
+Construct a posterior measure from observed data and a prior distribution.
+
+`hasproperty` checks are evaluated once at construction time; the log-likelihood closure
+only checks pre-computed `Bool` flags on each sample.
+
+# Arguments
+- `data::SpectrumData`: the observed spectrum data
+- `priors`: the prior distribution (result of [`build_prior`](@ref))
+
+# Returns
+- A `PosteriorMeasure` wrapping the log-likelihood and prior, ready for
+  [`bat_sample`](@ref).
+
+# Examples
+
+```julia
+mu = 2048.0
+sigma = 10.0
+data = SpectrumData(bin_centers = 1.0:4096.0, weights = zeros(Int, 4096), bin_size = 1.0)
+
+p = PeakParams(gaussian = true, compton = true)
+b = BackgroundParams(constPoly = true)
+m = ModelParams(peak = p, background = b)
+prior = build_prior(m, mu, sigma, 100.0, 1000.0)
+posterior = build_posterior(data, prior)
+```
+
+# See also
+- [`build_prior`](@ref) for constructing the prior
+- [`poisson_ll`](@ref) for the likelihood function
+- [`ModelParams`](@ref) for the model parameter structure
+"""
+function build_posterior(data::SpectrumData, priors::NamedTupleDist)
+    has_gaussian = hasproperty(priors, :gaussian_A)
+    has_compton = hasproperty(priors, :compton_h)
+    has_lowEnergyTail = hasproperty(priors, :lowEnergyTail_TODO) # TODO
+    has_highEnergyTail = hasproperty(priors, :highEnergyTail_TODO) # TODO
+    has_quadPoly = hasproperty(priors, :quadPoly_C)
+    has_linPoly = hasproperty(priors, :linPoly_C)
+    has_constPoly = hasproperty(priors, :constPoly_C)
+
+    has_peak = has_gaussian || has_compton || has_lowEnergyTail || has_highEnergyTail
+    has_background = has_quadPoly || has_linPoly || has_constPoly
+
+    # Log-likelihood closure called by the BAT sampler with a NamedTuple of parameter
+    # values. Uses pre-computed Bool flags to determine which components to assemble.
+    function _log_likelihood(params::NamedTuple)
+        if has_peak
+            gaussian_params =
+                has_gaussian ?
+                GaussianParams(
+                    A = params.gaussian_A,
+                    mu = params.mu,
+                    sigma = params.sigma,
+                ) : false
+
+            compton_params =
+                has_compton ?
+                ComptonParams(h = params.compton_h, mu = params.mu, sigma = params.sigma) :
+                false
+
+            lowEnergyTail_params = has_lowEnergyTail ? false : false  # TODO
+            highEnergyTail_params = has_highEnergyTail ? false : false  # TODO
+
+            peak = PeakParams(
+                gaussian = gaussian_params,
+                compton = compton_params,
+                lowEnergyTail = lowEnergyTail_params,
+                highEnergyTail = highEnergyTail_params,
+            )
+        else
+            peak = nothing
+        end
+
+        if has_background
+            quadPoly_params =
+                has_quadPoly ? QuadPolyParams(C = params.quadPoly_C, mu = params.mu) : false
+
+            linPoly_params =
+                has_linPoly ? LinPolyParams(C = params.linPoly_C, mu = params.mu) : false
+                
+            constPoly_params =
+                has_constPoly ? ConstPolyParams(C = params.constPoly_C) : false
+
+            background = BackgroundParams(
+                quadPoly = quadPoly_params,
+                linPoly = linPoly_params,
+                constPoly = constPoly_params,
+            )
+        else
+            background = nothing
+        end
+
+        model_params = ModelParams(peak = peak, background = background)
+        return logfuncdensity(poisson_ll(data, model_params))
+    end
+
+    return PosteriorMeasure(_log_likelihood, priors)
+end

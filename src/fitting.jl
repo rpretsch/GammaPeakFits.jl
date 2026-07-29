@@ -13,18 +13,24 @@ Poisson distribution with that expected rate.
 - `params::ModelParams`: model parameters
 
 # Returns
-sum of log-likelihoods across bins (total log-likelihood)
+- `-Inf` if any expected counts are negative (unphysical model configuration)
+- sum of log-likelihoods across bins (total log-likelihood) otherwise
 
 # See also
 - [`full_model`](@ref) for the underlying model
 - [`ModelParams`](@ref) for the parameter structure
 """
 function poisson_ll(data::SpectrumData, params::ModelParams)
-    expected_counts = first.(quadgk.(
-        x -> full_model(x, params),
-        data.bin_centers .- data.bin_size/2,
-        data.bin_centers .+ data.bin_size/2,
-    ))
+    expected_counts = first.(
+        quadgk.(
+            x -> full_model(x, params),
+            data.bin_centers .- data.bin_size/2,
+            data.bin_centers .+ data.bin_size/2,
+        ),
+    )
+    if any(expected_counts .< 0)
+        return -Inf
+    end
     result_vector = logpdf.(Poisson.(expected_counts), data.weights)
     return sum(result_vector)
 end
@@ -215,7 +221,7 @@ function build_posterior(data::SpectrumData, priors::NamedTupleDist)
 
             linPoly_params =
                 has_linPoly ? LinPolyParams(C = params.linPoly_C, mu = params.mu) : false
-                
+
             constPoly_params =
                 has_constPoly ? ConstPolyParams(C = params.constPoly_C) : false
 
@@ -229,7 +235,7 @@ function build_posterior(data::SpectrumData, priors::NamedTupleDist)
         end
 
         model_params = ModelParams(peak = peak, background = background)
-        return logfuncdensity(poisson_ll(data, model_params))
+        return LogDVal(poisson_ll(data, model_params))
     end
 
     return PosteriorMeasure(_log_likelihood, priors)

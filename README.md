@@ -142,7 +142,7 @@ data = SpectrumData(bin_centers = 1.0:4096.0, weights = counts, bin_size = 1.0)
 posterior = build_posterior(data, prior)
 
 # Sample with BAT.jl
-# result = bat_sample(post, MCMCSerial(64, nsteps = 100_000))
+# result = bat_sample(posterior, TransformedMCMC(proposal=RandomWalk(), nsteps=10^5, nchains=4))
 ```
 
 ## License

@@ -47,7 +47,6 @@ posterior = build_posterior(data, prior)
 module GammaPeakFits
 
 using BAT
-using DensityInterface: logfuncdensity
 using Distributions
 using QuadGK: quadgk
 using SpecialFunctions: erfc

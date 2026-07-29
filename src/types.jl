@@ -18,7 +18,7 @@ f(x) = \\frac{A}{\\sigma\\sqrt{2\\pi}} \\,
 ```
 
 # See also
-[`gaussian`](@ref) for evaluating the gaussian.
+- [`gaussian`](@ref) for evaluating the gaussian
 """
 Base.@kwdef struct GaussianParams{T<:AbstractFloat}
     A::T
@@ -47,7 +47,7 @@ f(x) = \\frac{h}{2} \\,
 ```
 
 # See also
-[`compton`](@ref) for evaluating the Compton-edge.
+- [`compton`](@ref) for evaluating the Compton-edge
 """
 Base.@kwdef struct ComptonParams{T<:AbstractFloat}
     h::T
@@ -80,7 +80,7 @@ f(x) = \\frac{A\\lambda}{2} \\,
 ```
 
 # See also
-[`exGaussian`](@ref) for evaluating the tail component.
+- [`exGaussian`](@ref) for evaluating the tail component
 """
 Base.@kwdef struct ExGaussianParams{T<:AbstractFloat}
     A::T
@@ -146,7 +146,7 @@ f(x) = C \\cdot (x - \\mu)^2
 ```
 
 # See also
-[`quad_polynomial`](@ref) for evaluating the term.
+- [`quad_polynomial`](@ref) for evaluating the term
 """
 Base.@kwdef struct QuadPolyParams{T<:AbstractFloat}
     C::T
@@ -170,7 +170,7 @@ f(x) = C \\cdot (x - \\mu)
 ```
 
 # See also
-[`lin_polynomial`](@ref) for evaluating the term.
+- [`lin_polynomial`](@ref) for evaluating the term
 """
 Base.@kwdef struct LinPolyParams{T<:AbstractFloat}
     C::T
@@ -186,7 +186,7 @@ Parameters for the constant polynomial term in the background model.
 - `C::T`: constant offset in counts/keV
 
 # See also
-[`const_polynomial`](@ref) for evaluating the term.
+- [`const_polynomial`](@ref) for evaluating the term
 """
 Base.@kwdef struct ConstPolyParams{T<:AbstractFloat}
     C::T
@@ -219,7 +219,7 @@ b = BackgroundParams(linPoly = true)
 ```
 
 # See also
-[background_model](@ref) for evaluating the background model.
+- [background_model](@ref) for evaluating the background model
 """
 Base.@kwdef struct BackgroundParams
     quadPoly::Union{QuadPolyParams,Bool} = false

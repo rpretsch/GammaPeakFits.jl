@@ -15,7 +15,7 @@ Uses `Distributions.jl` for the normal distribution implementation.
 - Vector: an array of evaluated Gaussian amplitudes at each element of `x` counts/keV
 
 # See also
-[`GaussianParams`](@ref) for the parameters.
+- [`GaussianParams`](@ref) for the parameters
 """
 function gaussian(x::AbstractFloat, params::GaussianParams)
     return params.A * pdf(Normal(params.mu, params.sigma), x)
@@ -42,7 +42,7 @@ smooth step from Compton scattering.
 - Vector: an array of evaluated Compton step heights at each element of `x` in counts/keV
 
 # See also
-[`ComptonParams`](@ref) for the parameters.
+- [`ComptonParams`](@ref) for the parameters
 """
 function compton(x::AbstractFloat, params::ComptonParams)
     return params.h/2 * erfc((x - params.mu)/(sqrt(2) * params.sigma))
@@ -73,7 +73,7 @@ Uses the complementary error function (`erfc`) from `SpecialFunctions.jl`.
 - Vector: an array of evaluated tail amplitudes at each element of `x` in counts/keV
 
 # See also
-[`ExGaussianParams`](@ref) for the parameters.
+- [`ExGaussianParams`](@ref) for the parameters
 """
 function exGaussian(x::AbstractFloat, params::ExGaussianParams)
     return params.A * params.lambda/2 *
@@ -154,7 +154,7 @@ Evaluate a scaled quadratic polynomial term at `x`.
   counts/keV
 
 # See also
-[`QuadPolyParams`](@ref) for the parameter structure.
+- [`QuadPolyParams`](@ref) for the parameter structure
 """
 function quad_polynomial(x::AbstractFloat, params::QuadPolyParams)
     return params.C * (x - params.mu)^2
@@ -182,7 +182,7 @@ Evaluate a scaled linear polynomial term at `x`.
   counts/keV
 
 # See also
-[`LinPolyParams`](@ref) for the parameter structure.
+- [`LinPolyParams`](@ref) for the parameter structure
 """
 function lin_polynomial(x::AbstractFloat, params::LinPolyParams)
     return params.C * (x - params.mu)
@@ -210,7 +210,7 @@ Uses `x` to set wether to return as a scalar or vector.
 - Vector: an array of constant coefficient in counts/keV
 
 # See also
-[`ConstPolyParams`](@ref) for the parameter structure.
+- [`ConstPolyParams`](@ref) for the parameter structure
 """
 function const_polynomial(x::AbstractFloat, params::ConstPolyParams)
     return params.C
@@ -248,7 +248,7 @@ background_model(1.0:4096.0, b)
 ```
 
 # See also
-[`BackgroundParams`](@ref) for the parameters.
+- [`BackgroundParams`](@ref) for the parameters
 """
 function background_model(x::AbstractFloat, params::BackgroundParams)
     result = zero(float(x))

@@ -2,6 +2,8 @@
 
 [![Build Status](https://github.com/rpretsch/GammaPeakFits.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/rpretsch/GammaPeakFits.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Julia Version](https://img.shields.io/badge/julia-%3E%3D1.10-blue)](https://julialang.org)
+[![Coverage](https://codecov.io/gh/rpretsch/GammaPeakFits/branch/main/graph/badge.svg)](https://codecov.io/gh/rpretsch/GammaPeakFits)
+[![Aqua QA](https://juliatesting.github.io/Aqua.jl/dev/assets/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
 Bayesian gamma-ray peak fitting on a binned energy spectrum with a composable shape model and Poisson likelihood, built on
 [BAT.jl](https://github.com/bat/BAT.jl).

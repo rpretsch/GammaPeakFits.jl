@@ -5,10 +5,10 @@ Provides parametric models for gamma-peak shapes (Gaussian core, Compton edge, e
 tails) and polynomial backgrounds, along with utilities to construct `BAT.jl` priors and 
 posteriors.
 
-> !!! note "Work in progress":
-> The ex-Gaussian tail functionality is currently incomplete. The [`exGaussian`](@ref)
-> evaluation function exists, but tail components are not yet wired into 
-> [`build_prior`](@ref) or [`build_posterior`](@ref).
+!!! note "Work in progress":
+The ex-Gaussian tail functionality is currently incomplete. The [`exGaussian`](@ref)
+evaluation function exists, but tail components are not yet wired into 
+[`build_prior`](@ref) or [`build_posterior`](@ref).
 
 # Exports
 
@@ -20,12 +20,16 @@ posteriors.
 - Data: [`SpectrumData`](@ref)
 
 ## Model evaluation
-- [`gaussian`](@ref), [`compton`](@ref), [`exGaussian`](@ref),
+- Components: [`gaussian`](@ref), [`compton`](@ref), [`exGaussian`](@ref),
   [`quad_polynomial`](@ref), [`lin_polynomial`](@ref), [`const_polynomial`](@ref)
-- [`peak_model`](@ref), [`background_model`](@ref), [`full_model`](@ref)
+- Combined models: [`peak_model`](@ref), [`background_model`](@ref), [`full_model`](@ref)
 
 ## Fitting
 - [`poisson_ll`](@ref), [`build_prior`](@ref), [`build_posterior`](@ref)
+
+## Utils
+- [`plot_data`](@ref), [`cut_data`](@ref), [`get_peak_features`](@ref)
+
 
 # Quick start
 
@@ -47,6 +51,7 @@ posterior = build_posterior(data, prior)
 module GammaPeakFits
 
 using BAT
+using CairoMakie
 using Distributions
 using QuadGK: quadgk
 using SpecialFunctions: erfc
@@ -55,6 +60,7 @@ using ValueShapes: NamedTupleDist
 include("types.jl")
 include("models.jl")
 include("fitting.jl")
+include("utils.jl")
 
 # Types — component parameters
 export GaussianParams
@@ -89,5 +95,10 @@ export full_model
 export poisson_ll
 export build_prior
 export build_posterior
+
+# Utils
+export plot_data
+export cut_data
+export get_peak_features
 
 end

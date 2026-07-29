@@ -5,6 +5,7 @@ authors = ["Rene Pretsch"]
 
 [deps]
 BAT = "c0cd4b16-88b7-57fa-983b-ab80aecada7e"
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 NamedArrays = "86f7a689-2022-50b4-a561-43c23ac3c673"
 QuadGK = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
@@ -13,6 +14,7 @@ ValueShapes = "136a8f8c-c49b-4edb-8b98-f3d64d48be8f"
 
 [compat]
 BAT = "4.0.9"
+CairoMakie = "0.15.13"
 Distributions = "0.25.129"
 NamedArrays = "0.10.5"
 QuadGK = "2.11.3"

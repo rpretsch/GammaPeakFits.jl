@@ -1,0 +1,29 @@
+name: FormatCheck
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  format-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v3
+      - name: Install JuliaFormatter
+        run: julia -e 'using Pkg; Pkg.add("JuliaFormatter")'
+      - name: Check formatting
+        run: |
+          julia -e '
+          using JuliaFormatter
+          format(".")
+          out = read(`git diff --name-only`, String)
+          if !isempty(out)
+              @error "Files not formatted:" out
+              foreach(println, split(out, "\n"))
+              exit(1)
+          end'

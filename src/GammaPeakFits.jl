@@ -5,11 +5,6 @@ Provides parametric models for gamma-peak shapes (Gaussian core, Compton edge, e
 tails) and polynomial backgrounds, along with utilities to construct `BAT.jl` priors and 
 posteriors.
 
-!!! note "Work in progress":
-The ex-Gaussian tail functionality is currently incomplete. The [`exGaussian`](@ref)
-evaluation function exists, but tail components are not yet wired into 
-[`build_prior`](@ref) or [`build_posterior`](@ref).
-
 # Exports
 
 ## Types
@@ -73,13 +68,22 @@ fit_modelParams = ModelParams(peak = peak_params, background = background_params
 peak_height, peak_area = get_peak_features(fit_data, MU, SIGMA) # (counts/keV, counts)
 
 # Build the prior
-prior = build_prior(fit_modelParams, MU, SIGMA, peak_height, peak_area)
+prior = build_prior(
+            fit_modelParams, 
+            MU, 
+            SIGMA;
+            peak_height = peak_height, 
+            peak_area = peak_area
+        )
 
 # Build the posterior
 posterior = build_posterior(fit_modelParams, prior)
 
 # Sample with BAT.jl
-# result = bat_sample(posterior, TransformedMCMC(proposal=RandomWalk(), nsteps=10^5, nchains=4))
+# result = bat_sample(
+               posterior, 
+               TransformedMCMC(proposal=RandomWalk(), nsteps=10^5, nchains=4)
+            )
 ```
 """
 module GammaPeakFits
@@ -88,7 +92,7 @@ using BAT
 using CairoMakie
 using Distributions
 using QuadGK: quadgk
-using SpecialFunctions: erfc
+using SpecialFunctions: erfc, erfcx
 using ValueShapes: NamedTupleDist
 
 include("types.jl")

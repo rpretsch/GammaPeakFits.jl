@@ -4,7 +4,8 @@
     SIGMA = 10.0
     A = 1000.0
     H = 50.0
-    LAMBDA = 0.1
+    TAU = 0.1
+    IS_LOWENERGYTAIL = true
     C_QUAD = 1.0
     C_LIN = 10.0
     C_CONST = 100.0
@@ -20,18 +21,24 @@
         end
 
         @testset "ComptonParams" begin
-            compton_params = ComptonParams(h = 50.0, mu = MU, sigma = SIGMA)
-            @test compton_params.h == 50.0
+            compton_params = ComptonParams(h = H, mu = MU, sigma = SIGMA)
+            @test compton_params.h == H
             @test compton_params.mu == MU
             @test compton_params.sigma == SIGMA
             @test compton_params isa ComptonParams{Float64}
         end
 
         @testset "ExGaussianParams" begin
-            exGaussian_params =
-                ExGaussianParams(A = 500.0, lambda = LAMBDA, mu = MU, sigma = SIGMA)
-            @test exGaussian_params.A == 500.0
-            @test exGaussian_params.lambda == LAMBDA
+            exGaussian_params = ExGaussianParams(
+                A = A,
+                tau = TAU,
+                is_lowEnergyTail = IS_LOWENERGYTAIL,
+                mu = MU,
+                sigma = SIGMA,
+            )
+            @test exGaussian_params.A == A
+            @test exGaussian_params.tau == TAU
+            @test exGaussian_params.is_lowEnergyTail == IS_LOWENERGYTAIL
             @test exGaussian_params.mu == MU
             @test exGaussian_params.sigma == SIGMA
             @test exGaussian_params isa ExGaussianParams{Float64}

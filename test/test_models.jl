@@ -5,7 +5,8 @@
     X_ARRAY = [MU-3*SIGMA, MU-2*SIGMA, MU-SIGMA, MU, MU+SIGMA, MU+2*SIGMA, MU+3*SIGMA]
     A = 1000.0
     H = 50.0
-    LAMBDA = 0.1
+    TAU = 0.1
+    IS_LOWENERGYTAIL = true
     C_QUAD = 1.0
     C_LIN = 10.0
     C_CONST = 100.0
@@ -36,14 +37,19 @@
 
         @testset "exGaussian" begin
 
-            exGaussian_params =
-                ExGaussianParams(A = A, lambda = LAMBDA, mu = MU, sigma = SIGMA)
+            exGaussian_params = ExGaussianParams(
+                A = A,
+                tau = TAU,
+                is_lowEnergyTail = IS_LOWENERGYTAIL,
+                mu = MU,
+                sigma = SIGMA,
+            )
             result = exGaussian(X_ARRAY, exGaussian_params)
             @test result == exGaussian.(X_ARRAY, Ref(exGaussian_params))
 
-            expected = @. A * LAMBDA/2 *
-               exp(LAMBDA/2 * (2 * MU + LAMBDA * SIGMA^2 - 2 * X_ARRAY)) *
-               erfc((MU + LAMBDA * SIGMA^2 - X_ARRAY)/(sqrt(2) * SIGMA))
+            expected = @. A / (2 * TAU) *
+               exp(-1/2 * ((X_ARRAY - MU)/SIGMA)^2) *
+               erfcx(1/sqrt(2) * SIGMA/TAU - (-1)^IS_LOWENERGYTAIL * (X_ARRAY - MU)/SIGMA)
             @test result == expected
 
         end
@@ -160,5 +166,5 @@
         end
 
     end
-    
+
 end

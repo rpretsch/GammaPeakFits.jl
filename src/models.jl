@@ -72,13 +72,22 @@ Uses the complementary error function (`erfc`) from `SpecialFunctions.jl`.
 - Scalar: the evaluated ex-Gaussian tail amplitude at `x` in counts/keV
 - Vector: an array of evaluated tail amplitudes at each element of `x` in counts/keV
 
+# Throws
+- An `ArgumentError` if either `params.sigma` and `params.tau` are negative or zero
+
 # See also
 - [`ExGaussianParams`](@ref) for the parameters
 """
 function exGaussian(x::AbstractFloat, params::ExGaussianParams)
-    return params.A * params.lambda/2 *
-           exp(params.lambda/2 * (2 * params.mu + params.lambda * params.sigma^2 - 2 * x)) *
-           erfc((params.mu + params.lambda * params.sigma^2 - x)/(sqrt(2) * params.sigma))
+    tau = params.tau
+    tau <= 0 && throw(ArgumentError("`tau` can't be zero or negative"))
+    sigma = params.sigma
+    sigma <= 0 && throw(ArgumentError("`sigma` can't be zero or negative"))
+    mu = params.mu
+    is_lowEnergyTail = params.is_lowEnergyTail
+    return params.A / (2 * tau) *
+           exp(-1/2 * ((x - mu)/sigma)^2) *
+           erfcx(1/sqrt(2) * sigma/tau - (-1)^is_lowEnergyTail * (x - mu)/sigma)
 end
 function exGaussian(x::AbstractVector{<:AbstractFloat}, params::ExGaussianParams)
     return exGaussian.(x, Ref(params))

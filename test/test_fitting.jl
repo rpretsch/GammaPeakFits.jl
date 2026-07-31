@@ -69,9 +69,9 @@
             @test_throws ArgumentError build_prior(
                 model_params,
                 MU,
-                SIGMA,
-                PEAK_HEIGHT,
-                PEAK_AREA,
+                SIGMA;
+                peak_height = PEAK_HEIGHT,
+                peak_area = PEAK_AREA,
             )
 
         end
@@ -79,7 +79,13 @@
         @testset "Always includes mu prior" begin
 
             model_params = ModelParams(background = BackgroundParams(constPoly = true))
-            prior = build_prior(model_params, MU, SIGMA, PEAK_HEIGHT, PEAK_AREA)
+            prior = build_prior(
+                model_params,
+                MU,
+                SIGMA;
+                peak_height = PEAK_HEIGHT,
+                peak_area = PEAK_AREA,
+            )
             @test hasproperty(prior, :mu)
             @test prior.mu isa Normal
             @test prior.mu.μ == MU
@@ -89,13 +95,24 @@
         @testset "sigma prior conditional on peak width components" begin
 
             model_params_noSigma = ModelParams(peak = PeakParams(compton = true))
-            prior_noSigma =
-                build_prior(model_params_noSigma, MU, SIGMA, PEAK_HEIGHT, PEAK_AREA)
+            prior_noSigma = build_prior(
+                model_params_noSigma,
+                MU,
+                SIGMA,
+                peak_height = PEAK_HEIGHT,
+                peak_area = PEAK_AREA,
+            )
             @test !hasproperty(prior_noSigma, :sigma)
 
             model_params_sigma = ModelParams(peak = PeakParams(gaussian = true))
 
-            prior_sigma = build_prior(model_params_sigma, MU, SIGMA, PEAK_HEIGHT, PEAK_AREA)
+            prior_sigma = build_prior(
+                model_params_sigma,
+                MU,
+                SIGMA,
+                peak_height = PEAK_HEIGHT,
+                peak_area = PEAK_AREA,
+            )
             @test hasproperty(prior_sigma, :sigma)
             @test prior_sigma.sigma.untruncated isa Normal
             @test prior_sigma.sigma.untruncated.μ == SIGMA
@@ -105,14 +122,26 @@
         @testset "Prior bounds use the passed parameters" begin
 
             model_params = ModelParams(peak = PeakParams(gaussian = true, compton = true))
-            prior = build_prior(model_params, MU, SIGMA, PEAK_HEIGHT, PEAK_AREA)
+            prior = build_prior(
+                model_params,
+                MU,
+                SIGMA;
+                peak_height = PEAK_HEIGHT,
+                peak_area = PEAK_AREA,
+            )
             @test prior.gaussian_A isa Uniform
             @test prior.gaussian_A.b == PEAK_AREA
             @test prior.compton_h isa Uniform
             @test prior.compton_h.b == PEAK_HEIGHT
 
             model_params = ModelParams(background = BackgroundParams(constPoly = true))
-            prior = build_prior(model_params, MU, SIGMA, PEAK_HEIGHT, PEAK_AREA)
+            prior = build_prior(
+                model_params,
+                MU,
+                SIGMA;
+                peak_height = PEAK_HEIGHT,
+                peak_area = PEAK_AREA,
+            )
             @test prior.constPoly_C isa Uniform
             @test prior.constPoly_C.b == PEAK_HEIGHT
 
@@ -121,15 +150,81 @@
         @testset "Return type" begin
 
             model_params = ModelParams(peak = PeakParams(gaussian = true))
-            prior = build_prior(model_params, MU, SIGMA, PEAK_HEIGHT, PEAK_AREA)
+            prior = build_prior(
+                model_params,
+                MU,
+                SIGMA;
+                peak_height = PEAK_HEIGHT,
+                peak_area = PEAK_AREA,
+            )
             @test prior isa NamedTupleDist
+
+        end
+
+        @testset "Throws on missing parameters" begin
+
+            @testset "gaussian requires peak_area" begin
+                model_params = ModelParams(peak = PeakParams(gaussian = true))
+                @test_throws ArgumentError build_prior(
+                    model_params,
+                    MU,
+                    SIGMA;
+                    peak_height = PEAK_HEIGHT,
+                )
+            end
+
+            @testset "compton requires peak_height" begin
+                model_params = ModelParams(peak = PeakParams(compton = true))
+                @test_throws ArgumentError build_prior(
+                    model_params,
+                    MU,
+                    SIGMA;
+                    peak_area = PEAK_AREA,
+                )
+            end
+
+            @testset "constPoly requires peak_height" begin
+                model_params = ModelParams(background = BackgroundParams(constPoly = true))
+                @test_throws ArgumentError build_prior(
+                    model_params,
+                    MU,
+                    SIGMA;
+                    peak_area = PEAK_AREA,
+                )
+            end
+
+            @testset "lowEnergyTail requires peak_area" begin
+                model_params = ModelParams(peak = PeakParams(lowEnergyTail = true))
+                @test_throws ArgumentError build_prior(
+                    model_params,
+                    MU,
+                    SIGMA;
+                    peak_height = PEAK_HEIGHT,
+                )
+            end
+
+            @testset "highEnergyTail requires peak_area" begin
+                model_params = ModelParams(peak = PeakParams(highEnergyTail = true))
+                @test_throws ArgumentError build_prior(
+                    model_params,
+                    MU,
+                    SIGMA;
+                    peak_height = PEAK_HEIGHT,
+                )
+            end
 
         end
 
         @testset "Disabled components produce no prior entries" begin
 
             model_params = ModelParams(peak = PeakParams(gaussian = true))
-            prior = build_prior(model_params, MU, SIGMA, PEAK_HEIGHT, PEAK_AREA)
+            prior = build_prior(
+                model_params,
+                MU,
+                SIGMA;
+                peak_height = PEAK_HEIGHT,
+                peak_area = PEAK_AREA,
+            )
             @test hasproperty(prior, :gaussian_A)
             @test !hasproperty(prior, :compton_h)
             @test !hasproperty(prior, :quadPoly_C)
@@ -144,7 +239,13 @@
             peak = PeakParams(gaussian = true),
             background = BackgroundParams(constPoly = true),
         )
-        prior = build_prior(model_params, MU, SIGMA, PEAK_HEIGHT, PEAK_AREA)
+        prior = build_prior(
+            model_params,
+            MU,
+            SIGMA;
+            peak_height = PEAK_HEIGHT,
+            peak_area = PEAK_AREA,
+        )
 
         @testset "Return type" begin
 
@@ -156,7 +257,13 @@
         @testset "Posterior with only peak (no background)" begin
 
             module_params_peak = ModelParams(peak = PeakParams(gaussian = true))
-            prior_peak = build_prior(module_params_peak, MU, SIGMA, PEAK_HEIGHT, PEAK_AREA)
+            prior_peak = build_prior(
+                module_params_peak,
+                MU,
+                SIGMA;
+                peak_height = PEAK_HEIGHT,
+                peak_area = PEAK_AREA,
+            )
             posterior = build_posterior(DATA, prior_peak)
             @test posterior isa PosteriorMeasure
 
@@ -164,10 +271,15 @@
 
         @testset "Posterior with only background (no peak)" begin
 
-            moduel_params_background =
+            model_params_background =
                 ModelParams(background = BackgroundParams(constPoly = true))
-            prior_background =
-                build_prior(moduel_params_background, MU, SIGMA, PEAK_HEIGHT, PEAK_AREA)
+            prior_background = build_prior(
+                model_params_background,
+                MU,
+                SIGMA;
+                peak_height = PEAK_HEIGHT,
+                peak_area = PEAK_AREA,
+            )
             posterior = build_posterior(DATA, prior_background)
             @test posterior isa PosteriorMeasure
 

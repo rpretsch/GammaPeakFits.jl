@@ -39,7 +39,7 @@ end
     build_prior(
         params::ModelParams,
         mu::Real,
-        sigma::Real,
+        sigma::Real;
         peak_height::Union{<:Real,Nothing},
         peak_area::Union{<:Real,Nothing},
     )
@@ -57,10 +57,12 @@ to `true` or to a concrete parameter struct receive a weakly informative prior.
 - `peak_area::Union{<:Real,Nothing}`: approximate integrated peak area in counts
 
 # Returns
-A `NamedTupleDist` (via `distprod`) over the enabled component parameters.
+- A `NamedTupleDist` (via `distprod`) over the enabled component parameters
 
 # Throws
-`ArgumentError` if both `peak` and `params.background` are `nothing`.
+- An `ArgumentError` if both `params.peak` and `params.background` are `nothing`
+- An `ArgumentError` if either `peak_height` or `peak_area` where not supplied when they 
+  were needed
 
 # Details
 
@@ -72,10 +74,10 @@ The following priors are defined per enabled component:
 | `:sigma` | `truncated(Normal(sigma, 0.6), 0, Inf)` | `peak.gaussian`, `peak.lowEnergyTail`, `peak.highEnergyTail` |
 | `:gaussian_A` | `Uniform(0, peak_area)` | `peak.gaussian` |
 | `:compton_h` | `Uniform(0, peak_height)` | `peak.compton` |
-| `:lowEnergyTail_A` | TODO | `peak.lowEnergyTail` |
-| `:lowEnergyTail_lambda` | TODO | `peak.lowEnergyTail` |
-| `:highEnergyTail_A` | TODO | `peak.highEnergyTail` |
-| `:highEnergyTail_lambda` | TODO | `peak.highEnergyTail` |
+| `:lowEnergyTail_A` | `Uniform(0, peak_area)` | `peak.lowEnergyTail` |
+| `:lowEnergyTail_tau` | Uniform(eps(), 10) | `peak.lowEnergyTail` |
+| `:highEnergyTail_A` | `Uniform(0, peak_area)` | `peak.highEnergyTail` |
+| `:highEnergyTail_tau` | Uniform(eps(), 10) | `peak.highEnergyTail` |
 | `:quadPoly_C` | `Uniform(-1, 1)` | `background.quadPoly` |
 | `:linPoly_C` | `Uniform(-10, 10)` | `background.linPoly` |
 | `:constPoly_C` | `Uniform(0, peak_height)` | `background.constPoly` |
@@ -88,7 +90,7 @@ The following priors are defined per enabled component:
 function build_prior(
     params::ModelParams,
     mu::Real,
-    sigma::Real,
+    sigma::Real;
     peak_height::Union{<:Real,Nothing} = nothing,
     peak_area::Union{<:Real,Nothing} = nothing,
 )
@@ -127,11 +129,17 @@ function build_prior(
         end
 
         if peak_params.lowEnergyTail !== false
-            # TODO
+            isnothing(peak_area) &&
+                throw(ArgumentError("`peak_area` required for `lowEnergyTail` component"))
+            push!(priors, :lowEnergyTail_A => Uniform(0, peak_area))
+            push!(priors, :lowEnergyTail_tau => Uniform(eps(), 10))
         end
 
         if peak_params.highEnergyTail !== false
-            # TODO
+            isnothing(peak_area) &&
+                throw(ArgumentError("`peak_area` required for `highEnergyTail` component"))
+            push!(priors, :highEnergyTail_A => Uniform(0, peak_area))
+            push!(priors, :highEnergyTail_tau => Uniform(eps(), 10))
         end
     end
 
@@ -173,8 +181,8 @@ only checks pre-computed `Bool` flags on each sample.
 function build_posterior(data::SpectrumData, priors::NamedTupleDist)
     has_gaussian = hasproperty(priors, :gaussian_A)
     has_compton = hasproperty(priors, :compton_h)
-    has_lowEnergyTail = hasproperty(priors, :lowEnergyTail_TODO) # TODO
-    has_highEnergyTail = hasproperty(priors, :highEnergyTail_TODO) # TODO
+    has_lowEnergyTail = hasproperty(priors, :lowEnergyTail_tau)
+    has_highEnergyTail = hasproperty(priors, :highEnergyTail_tau)
     has_quadPoly = hasproperty(priors, :quadPoly_C)
     has_linPoly = hasproperty(priors, :linPoly_C)
     has_constPoly = hasproperty(priors, :constPoly_C)
@@ -199,8 +207,24 @@ function build_posterior(data::SpectrumData, priors::NamedTupleDist)
                 ComptonParams(h = params.compton_h, mu = params.mu, sigma = params.sigma) :
                 false
 
-            lowEnergyTail_params = has_lowEnergyTail ? false : false  # TODO
-            highEnergyTail_params = has_highEnergyTail ? false : false  # TODO
+            lowEnergyTail_params =
+                has_lowEnergyTail ?
+                ExGaussianParams(
+                    A = params.lowEnergyTail_A,
+                    tau = params.lowEnergyTail_tau,
+                    is_lowEnergyTail = true,
+                    mu = params.mu,
+                    sigma = params.sigma,
+                ) : false
+            highEnergyTail_params =
+                has_highEnergyTail ?
+                ExGaussianParams(
+                    A = params.heighEnergyTail_A,
+                    tau = params.highEnergyTail_tau,
+                    is_lowEnergyTail = false,
+                    mu = params.mu,
+                    sigma = params.sigma,
+                ) : false
 
             peak = PeakParams(
                 gaussian = gaussian_params,

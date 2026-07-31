@@ -5,7 +5,8 @@
 [![Coverage](https://codecov.io/gh/rpretsch/GammaPeakFits/branch/main/graph/badge.svg)](https://codecov.io/gh/rpretsch/GammaPeakFits)
 [![Aqua QA](https://juliatesting.github.io/Aqua.jl/dev/assets/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 
-Bayesian gamma-ray peak fitting on a binned energy spectrum with a composable shape model and Poisson likelihood, built on
+Bayesian gamma-ray peak fitting on a binned energy spectrum with a composable
+shape model and Poisson likelihood, built on
 [BAT.jl](https://github.com/bat/BAT.jl).
 
 ## File Structure
@@ -28,7 +29,8 @@ GammaPeakFits/
 
 ## Installation
 
-This package is unregistered. Install it by cloning the repository and adding it with Julia's package manager:
+This package is unregistered. Install it by cloning the repository and adding 
+it with Julia's package manager:
 
 ### For users
 
@@ -55,15 +57,17 @@ Each component can be enabled or disabled:
 - Set it to `false` (default): the component is excluded.
 - Set it to `true`: the component is included in the fit using its prior.
 
-The entire peak or background can be disabled by setting the corresponding field in `ModelParams` to `nothing`.
+The entire peak or background can be disabled by setting the corresponding 
+field in `ModelParams` to `nothing`.
 
 ### Peak
 
 #### Gaussian Core
 
 ```math
-f(x) = \frac{A}{\sigma\sqrt{2\pi}} \,
+f(x) = \frac{A}{\sqrt{2\pi\sigma}}\, 
        \exp\!\left(-\frac{(x-\mu)^2}{2\sigma^2}\right)
+       
 ```
 
 | Parameter | Unit | Description |
@@ -75,8 +79,8 @@ f(x) = \frac{A}{\sigma\sqrt{2\pi}} \,
 #### Compton-Edge Step
 
 ```math
-f(x) = \frac{h}{2} \,
-       \text{erfc}\!\left(\frac{x-\mu}{\sigma\sqrt{2}}\right)
+f(x) = \frac{h}{2}\,
+       \text{erfc}\!\left(\frac{x-\mu}{\sqrt{2}\sigma}\right)
 ```
 
 | Parameter | Unit | Description |
@@ -87,25 +91,25 @@ f(x) = \frac{h}{2} \,
 
 #### Ex-Gaussian Tails
 
-> **WIP**: Tail evaluation is implemented, but tail priors and posterior reconstruction are not yet wired into `build_prior` /
-> `build_posterior`.
-
 The ex-Gaussian component models asymmetric peak tailing (low- or high-energy):
 
 ```math
-f(x) = \frac{A\lambda}{2} \,
-       \exp\!\left(\frac{\lambda}{2}
-       (2\mu + \lambda\sigma^2 - 2x)\right) \,
-       \text{erfc}\!\left(
-       \frac{\mu + \lambda\sigma^2 - x}{\sigma\sqrt{2}}\right)
+f(x) = \frac{A}{2\tau}\,
+       \exp\!\left(-\frac{1}{2}\left(\frac{x-\mu}{\sigma}\right)^2\right)\,
+       \text{erfcx}\!\left(\frac{1}{\sqrt{2}}\left(\frac{\sigma}{\tau}
+       \pm\frac{x-\mu}{\sigma}\right)\right)
 ```
 
 | Parameter | Unit | Description |
 | --- | --- | --- |
 | `A` | counts | Total integrated tail area |
-| `lambda` | 1/keV | Rate parameter of the exponential tail |
-| `mu` | keV | Centroid position |
-| `sigma` | keV | Standard deviation |
+| `tau` | keV | Exponent relaxation time of the exponential tail |
+| `is_lowEnergyTail` | Boolean | Tail direction (`true`/`false` for low-/high-energy tails respectively) |
+| `mu` | keV | Centroid position of the gaussian |
+| `sigma` | keV | Standard deviation of the gaussian |
+
+The low-/high-energy tails correspond to a `-`/`+` sign for the `±` sign above
+respectively.
 
 ### Background
 
@@ -185,13 +189,22 @@ fit_modelParams = ModelParams(peak = peak_params, background = background_params
 peak_height, peak_area = get_peak_features(fit_data, MU, SIGMA) # (counts/keV, counts)
 
 # Build the prior
-prior = build_prior(fit_modelParams, MU, SIGMA, peak_height, peak_area)
+prior = build_prior(
+            fit_modelParams, 
+            MU, 
+            SIGMA; 
+            peak_height = peak_height, 
+            peak_area = peak_area,
+       )
 
 # Build the posterior
 posterior = build_posterior(fit_modelParams, prior)
 
 # Sample with BAT.jl
-# result = bat_sample(posterior, TransformedMCMC(proposal=RandomWalk(), nsteps=10^5, nchains=4))
+# result = bat_sample(
+#              posterior, 
+#              TransformedMCMC(proposal=RandomWalk(), nsteps=10^5, nchains=4)
+#          )
 ```
 
 ## License

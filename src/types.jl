@@ -65,26 +65,30 @@ model low- or high-energy tailing in gamma peaks.
 
 # Fields
 - `A::T`: total integrated tail area in counts
-- `lambda::T`: rate parameter of the exponential tail in 1/keV
-- `mu::T`: centroid position of the peak on the x-axis in keV
-- `sigma::T`: standard deviation of the Gaussian core (`sigma > 0`) in keV
+- `tau::T`: Exponent relaxation time of the exponential tail in keV
+- `is_lowEnergyTail::Bool`: Tail direction (`true`/`false` for low-/high-energy tails  
+  respectively)
+- `mu::T`: centroid position of the Gaussian core on the x-axis in keV
+- `sigma::T`: standard deviation of the Gaussian core in keV
 
 # Mathematical definition
 
 ```math
-f(x) = \\frac{A\\lambda}{2} \\,
-       \\exp\\!\\left(\\frac{\\lambda}{2}
-       (2\\mu + \\lambda\\sigma^2 - 2x)\\right) \\,
-       \\operatorname{erfc}\\!\\left(
-       \\frac{\\mu + \\lambda\\sigma^2 - x}{\\sigma\\sqrt{2}}\\right)
+f(x) = \\frac{A}{2\\tau}\\,
+       \\exp\\!\\left(-\\frac{1}{2}\\left(\\frac{x-\\mu}{\\sigma}\\right)^2\\right)\\,
+       \\text{erfcx}\\!\\left(\\frac{1}{\\sqrt{2}}\\left(\\frac{\\sigma}{\\tau}
+       \\pm\\cdot\\frac{x-\\mu}{\\sigma}\\right)\\right)
 ```
+
+The low-/high-energy tails correspond to a `-`/`+` sign for the `±` sign above respectively.
 
 # See also
 - [`exGaussian`](@ref) for evaluating the tail component
 """
 Base.@kwdef struct ExGaussianParams{T<:AbstractFloat}
     A::T
-    lambda::T
+    tau::T
+    is_lowEnergyTail::Bool
     mu::T
     sigma::T
 end

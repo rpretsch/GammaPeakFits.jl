@@ -219,7 +219,7 @@ function build_posterior(data::SpectrumData, priors::NamedTupleDist)
             highEnergyTail_params =
                 has_highEnergyTail ?
                 ExGaussianParams(
-                     A = params.highEnergyTail_A,
+                    A = params.highEnergyTail_A,
                     tau = params.highEnergyTail_tau,
                     is_lowEnergyTail = false,
                     mu = params.mu,

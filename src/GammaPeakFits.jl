@@ -34,18 +34,52 @@ evaluation function exists, but tail components are not yet wired into
 # Quick start
 
 ```julia
-mu = 2048.0
-sigma = 10.0
+# Fitting constants that have to be provided, but still will be fitted around the here
+# specified value
+MU = 2048.0 # keV
+SIGMA = 10.0 # keV
 
-# Specify model components
-peak = PeakParams(gaussian = true, compton = true)
-bg = BackgroundParams(constPoly = true)
-model = ModelParams(peak = peak, background = bg)
+# Generate data
+A = 1000.0              # counts
+C_const = 100.0         # counts/keV
+lower_limit = 1.0       # keV
+upper_limit = 4096.0    # keV
+bin_size = 0.5          # keV
 
-# Build prior and posterior
-prior = build_prior(model, mu, sigma, peak_height = 100.0, peak_area = 1000.0)
-data = SpectrumData(bin_centers = 1.0:4096.0, weights = counts, bin_size = 1.0)
-posterior = build_posterior(data, prior)
+gaussian_params = GaussianParams(A = A, mu = MU, sigma = SIGMA)
+peak_params = PeakParams(gaussian = gaussian_params)
+constPoly_params = ConstPolyParams(C = C_const)
+background_params = BackgroundParams(constPoly = constPoly_params)
+generation_modelParams = ModelParams(peak = peak_params, background = background_params)
+data = SpectrumData(lower_limit, upper_limit, bin_size, generation_modelParams)
+
+# or use existing data instead
+# data = SpectrumData(
+#            bin_centers = loaded_binCenters,   # keV
+#            weights = loaded_weigths,          # counts/bin
+#            bin_size = loaded_binSize,         # keV
+#        )
+
+# cut appropriate fit window
+window_size = 50.0 # keV
+fit_data = cut_data(data, MU, window_size)
+
+# Specify which components to include for fitting
+peak_params = PeakParams(gaussian = true)
+background_params = BackgroundParams(constPoly = true)
+fit_modelParams = ModelParams(peak = peak_params, background = background_params)
+
+# Get needed peak features
+peak_height, peak_area = get_peak_features(fit_data, MU, SIGMA) # (counts/keV, counts)
+
+# Build the prior
+prior = build_prior(fit_modelParams, MU, SIGMA, peak_height, peak_area)
+
+# Build the posterior
+posterior = build_posterior(fit_modelParams, prior)
+
+# Sample with BAT.jl
+# result = bat_sample(posterior, TransformedMCMC(proposal=RandomWalk(), nsteps=10^5, nchains=4))
 ```
 """
 module GammaPeakFits

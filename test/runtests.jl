@@ -15,12 +15,13 @@ using ValueShapes: NamedTupleDist
     if isempty(ARGS) || "types" in ARGS
         include("test_types.jl")
     end
+    
     if isempty(ARGS) || "models" in ARGS
         include("test_models.jl")
     end
+
     if isempty(ARGS) || "fitting" in ARGS
         include("test_fitting.jl")
     end
-
 
 end

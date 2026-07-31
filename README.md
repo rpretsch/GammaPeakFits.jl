@@ -26,6 +26,28 @@ GammaPeakFits/
 └── README.md
 ```
 
+## Installation
+
+This package is unregistered. Install it by cloning the repository and adding it with Julia's package manager:
+
+### For users
+
+```shell
+julia using Pkg Pkg.add(url="https://github.com/rpretsch/GammaPeakFits.jl.git")
+```
+
+### For development
+
+```shell
+julia using Pkg Pkg.develop(url="https://github.com/rpretsch/GammaPeakFits.jl.git")
+```
+
+Or if already cloned locally:
+
+```shell
+Pkg.develop(path="/path/to/GammaPeakFits")
+```
+
 ## Model Components
 
 Each component can be enabled or disabled:

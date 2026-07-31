@@ -82,7 +82,8 @@ dividing by`bin_size`.
 - `sigma::AbstractFloat`: estimated standard deviation in keV
 
 # Returns
-- `(peak_height, peak_area) :: Tuple{Float64, Float64}` — both in counts/keV
+- A tuple `(peak_height, peak_area)` containing the estimated height and area of the peak,
+  both in counts/keV
 
 # See also
 - [`SpectrumData`](@ref) for the data struct

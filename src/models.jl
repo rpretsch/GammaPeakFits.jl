@@ -266,7 +266,10 @@ function background_model(x::AbstractVector{<:AbstractFloat}, params::Background
 end
 
 """
-    full_model(x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}, params::ModelParams)
+    full_model(
+        x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}, 
+        params::ModelParams,
+    )
 
 Evaluate the complete gamma-peak model (peak shape + background) at `x`.
 

@@ -274,9 +274,46 @@ Container for binned energy spectrum data.
 - `bin_centers::AbstractVector{T}`: bin center(s) in keV
 - `weights::AbstractVector{U}`: observed count(s) per bin
 - `bin_size::T`: width of each bin in keV
+
+# Constructors
+
+    SpectrumData(
+        lower_limit::AbstractFloat, 
+        upper_limit::AbstractFloat, 
+        bin_size::AbstractFloat, 
+        params::ModelParams
+    )
+
+Generate synthetic spectrum data from a model over a uniform grid of 
+`(lower_limit):bin_size:(upper_limit)`, then sampling Poisson-distributed counts for each 
+bin.
+
+# Arguments
+- `lower_limit::AbstractFloat`: start of the energy range in keV
+- `upper_limit::AbstractFloat`: end of the energy range in keV
+- `bin_size::AbstractFloat`: width of each bin in keV
+- `params::ModelParams`: model parameters used to compute expected counts
+
+# Returns
+- A `SpectrumData` object
+
+# See also
+- [`full_model`](@ref) for the used model
 """
-Base.@kwdef struct SpectrumData{T<:AbstractFloat, U<:Integer}
+Base.@kwdef struct SpectrumData{T<:AbstractFloat,U<:Integer}
     bin_centers::AbstractVector{T}
     weights::AbstractVector{U}
     bin_size::T
+end
+
+function SpectrumData(
+    lower_limit::AbstractFloat,
+    upper_limit::AbstractFloat,
+    bin_size::AbstractFloat,
+    params::ModelParams,
+)
+    bin_centers = range(lower_limit, upper_limit; step = bin_size)
+    expected_counts = full_model(bin_centers, params)
+    weights = rand.(Poisson.(expected_counts))
+    return SpectrumData(bin_centers = bin_centers, weights = weights, bin_size = bin_size)
 end

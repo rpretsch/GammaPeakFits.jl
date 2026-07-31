@@ -158,5 +158,7 @@
             @test full_model(X_ARRAY, model_params) == fill(0.0, length(X_ARRAY))
 
         end
+
     end
+    
 end

@@ -116,15 +116,33 @@
 
         @testset "SpectrumData" begin
 
-            data = SpectrumData(
-                bin_centers = collect(1.0:4096.0),
-                weights = zeros(Int64, 4096),
-                bin_size = 1.0,
-            )
-            @test data.bin_centers isa AbstractVector{Float64}
-            @test data.weights isa AbstractVector{Int64}
-            @test data.bin_size == 1.0
-            @test data isa SpectrumData{Float64,Int64}
+            @testset "inner constructor" begin
+
+                data = SpectrumData(
+                    bin_centers = collect(1.0:4096.0),
+                    weights = zeros(Int64, 4096),
+                    bin_size = 1.0,
+                )
+                @test data.bin_centers isa AbstractVector{Float64}
+                @test data.weights isa AbstractVector{Int64}
+                @test data.bin_size == 1.0
+                @test data isa SpectrumData{Float64,Int64}
+
+            end
+
+            @testset "outer constructor" begin
+
+                gaussian_params = GaussianParams(A = A, mu = MU, sigma = SIGMA)
+                model_params = ModelParams(peak = PeakParams(gaussian = gaussian_params))
+
+                data = SpectrumData(1.0, 4096.0, 0.5, model_params)
+                @test data.bin_centers isa AbstractVector{Float64}
+                @test length(data.bin_centers) == 8191
+                @test data.weights isa AbstractVector{Int64}
+                @test data.bin_size == 0.5
+                @test data isa SpectrumData{Float64,Int64}
+
+            end
 
         end
 

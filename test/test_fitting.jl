@@ -11,6 +11,7 @@
         bin_size = 1.0,
     )
     C_CONST = 100.0
+    C_LIN = 10.0
 
     @testset "poisson_ll" begin
 
@@ -49,8 +50,16 @@
 
         end
 
-    end
+        @testset "Reject negative model" begin
 
+            model_params = ModelParams(
+                background = BackgroundParams(linPoly = LinPolyParams(C = C_LIN, mu = MU)),
+            )
+            @test isinf(poisson_ll(DATA, model_params))
+
+        end
+
+    end
 
     @testset "build_prior" begin
 
@@ -163,5 +172,7 @@
             @test posterior isa PosteriorMeasure
 
         end
+
     end
+
 end

@@ -65,7 +65,7 @@ field in `ModelParams` to `nothing`.
 #### Gaussian Core
 
 ```math
-f(x) = \frac{A}{\sqrt{2\pi\sigma}}\, 
+f(x) = \frac{A}{\sqrt{2\pi}\sigma}\, 
        \exp\!\left(-\frac{(x-\mu)^2}{2\sigma^2}\right)
        
 ```
@@ -198,7 +198,7 @@ prior = build_prior(
        )
 
 # Build the posterior
-posterior = build_posterior(fit_modelParams, prior)
+posterior = build_posterior(fit_data, prior)
 
 # Sample with BAT.jl
 # result = bat_sample(

@@ -153,8 +153,8 @@
 
         @testset "background_model ignores false" begin
 
-            backround_params = BackgroundParams()
-            @test background_model(X_ARRAY, backround_params) == fill(0.0, length(X_ARRAY))
+            background_params = BackgroundParams()
+            @test background_model(X_ARRAY, background_params) == fill(0.0, length(X_ARRAY))
 
         end
 

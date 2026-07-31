@@ -77,12 +77,12 @@ prior = build_prior(
         )
 
 # Build the posterior
-posterior = build_posterior(fit_modelParams, prior)
+posterior = build_posterior(fit_data, prior)
 
 # Sample with BAT.jl
 # result = bat_sample(
-               posterior, 
-               TransformedMCMC(proposal=RandomWalk(), nsteps=10^5, nchains=4)
+#              posterior, 
+#              TransformedMCMC(proposal=RandomWalk(), nsteps=10^5, nchains=4)
             )
 ```
 """

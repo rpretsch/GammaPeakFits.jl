@@ -98,7 +98,7 @@
             prior_noSigma = build_prior(
                 model_params_noSigma,
                 MU,
-                SIGMA,
+                SIGMA;
                 peak_height = PEAK_HEIGHT,
                 peak_area = PEAK_AREA,
             )
@@ -109,7 +109,7 @@
             prior_sigma = build_prior(
                 model_params_sigma,
                 MU,
-                SIGMA,
+                SIGMA;
                 peak_height = PEAK_HEIGHT,
                 peak_area = PEAK_AREA,
             )

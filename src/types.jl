@@ -13,7 +13,7 @@ Additional parameters for a scaled Gaussian (normal) peak component.
 # Mathematical definition
 
 ```math
-f(x) = \\frac{A}{\\sigma\\sqrt{2\\pi}} \\,
+f(x) = \\frac{A}{\\sqrt{2\\pi}\\sigma} \\,
        \\exp\\!\\left(-\\frac{(x-\\mu)^2}{2\\sigma^2}\\right)
 ```
 
@@ -99,7 +99,7 @@ end
 Aggregate container for all components that form a gamma-ray peak.
 
 Each component is optional — set the corresponding field to `false` to exclude it. 
-Setting it to `true` instead of specifiying a `Params` object allows for controlling which 
+Setting it to `true` instead of specifying a `Params` object allows for controlling which 
 component is used in the fitting process (See [build_prior](@ref)).
 `mu` and `sigma` are usually the same between all model components.
 
@@ -279,6 +279,8 @@ function SpectrumData(
 ) where {T<:AbstractFloat}
     bin_centers = range(lower_limit, upper_limit; step = bin_size)
     expected_counts = full_model(bin_centers, params)
+    any(expected_counts .< 0) &&
+        throw(ArgumentError("Model produced negative expected counts; check parameters."))
     weights = rand.(Poisson.(expected_counts))
     return SpectrumData(bin_centers = bin_centers, weights = weights, bin_size = bin_size)
 end

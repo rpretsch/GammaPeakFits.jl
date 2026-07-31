@@ -129,7 +129,7 @@ function build_prior(
         if peak_params.lowEnergyTail !== false
             # TODO
         end
-        
+
         if peak_params.highEnergyTail !== false
             # TODO
         end
@@ -146,7 +146,7 @@ function build_prior(
         end
     end
 
-    return distprod(priors)
+    return distprod(; priors...)
 end
 
 """

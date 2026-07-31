@@ -170,8 +170,7 @@ only checks pre-computed `Bool` flags on each sample.
 - `priors`: the prior distribution (result of [`build_prior`](@ref))
 
 # Returns
-- A `PosteriorMeasure` wrapping the log-likelihood and prior, ready for
-  [`bat_sample`](@ref).
+- A `PosteriorMeasure` wrapping the log-likelihood and prior
 
 # See also
 - [`build_prior`](@ref) for constructing the prior

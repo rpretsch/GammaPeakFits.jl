@@ -105,18 +105,6 @@ component is used in the fitting process (See [build_prior](@ref)).
 - `lowEnergyTail::Union{ExGaussianParams,Bool}`: ex-Gaussian low-energy tail
 - `highEnergyTail::Union{ExGaussianParams,Bool}`: ex-Gaussian high-energy tail
 
-# Examples
-
-```julia
-# Specify a model with values
-mu = 2048.0
-sigma = 10.0
-p = PeakParams(gaussian = GaussianParams(A = 1000.0, mu = mu, sigma = sigma))
-
-# Enable specific components for later fitting
-p = PeakParams(gaussian = true)
-```
-
 # See also
 - [`peak_model`](@ref) for evaluating the combined peak shape
 - [`GaussianParams`](@ref), [`ComptonParams`](@ref), and [`ExGaussianParams`] for the
@@ -207,17 +195,6 @@ component is used in the fitting process (See [build_prior](@ref)).
 - `linPoly::Union{LinPolyParams,Bool}`: linear polynomial term
 - `constPoly::Union{ConstPolyParams,Bool}`: constant polynomial term
 
-# Examples
-
-```julia
-# Specify a model with values
-mu = 2048.0
-b = BackgroundParams(linPoly = LinPolyParams(C = 1.0, mu = mu))
-
-# Enable specific components for later fitting
-b = BackgroundParams(linPoly = true)
-```
-
 # See also
 - [background_model](@ref) for evaluating the background model
 """
@@ -239,22 +216,6 @@ Each component is optional — unset fields are `nothing` and are skipped during
 - `peak::Union{PeakParams,Nothing}`: peak shape parameters (Gaussian, Compton edge, 
   tails)
 - `background::Union{BackgroundParams,Nothing}`: quadratic background parameters
-
-# Examples
-
-```julia
-# Specify a model with values
-mu = 2048.0
-sigma = 10.0
-p = PeakParams(gaussian = GaussianParams(A = 100.0, mu = mu, sigma = sigma))
-b = BackgroundParams(linPoly = LinPolyParams(C = 1.0, mu = mu))
-m = ModelParams(peak = p, background = b)
-
-# Enable specific components for later fitting
-p = PeakParams(gaussian = true)
-b = BackgroundParams(linPoly = true)
-m = ModelParams(peak = p, background = b)
-```
 
 # See also
 - [`full_model`](@ref) for evaluating the combined model
@@ -278,20 +239,20 @@ Container for binned energy spectrum data.
 # Constructors
 
     SpectrumData(
-        lower_limit::AbstractFloat, 
-        upper_limit::AbstractFloat, 
-        bin_size::AbstractFloat, 
+        lower_limit::T, 
+        upper_limit::T, 
+        bin_size::T, 
         params::ModelParams
-    )
+    ) {T<:AbstractFloat}
 
 Generate synthetic spectrum data from a model over a uniform grid of 
 `(lower_limit):bin_size:(upper_limit)`, then sampling Poisson-distributed counts for each 
 bin.
 
 # Arguments
-- `lower_limit::AbstractFloat`: start of the energy range in keV
-- `upper_limit::AbstractFloat`: end of the energy range in keV
-- `bin_size::AbstractFloat`: width of each bin in keV
+- `lower_limit::T`: start of the energy range in keV
+- `upper_limit::T`: end of the energy range in keV
+- `bin_size::T`: width of each bin in keV
 - `params::ModelParams`: model parameters used to compute expected counts
 
 # Returns
@@ -307,11 +268,11 @@ Base.@kwdef struct SpectrumData{T<:AbstractFloat,U<:Integer}
 end
 
 function SpectrumData(
-    lower_limit::AbstractFloat,
-    upper_limit::AbstractFloat,
-    bin_size::AbstractFloat,
+    lower_limit::T,
+    upper_limit::T,
+    bin_size::T,
     params::ModelParams,
-)
+) where {T<:AbstractFloat}
     bin_centers = range(lower_limit, upper_limit; step = bin_size)
     expected_counts = full_model(bin_centers, params)
     weights = rand.(Poisson.(expected_counts))

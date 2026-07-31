@@ -40,8 +40,8 @@ end
         params::ModelParams,
         mu::Real,
         sigma::Real,
-        peak_height::Real,
-        peak_area::Real,
+        peak_height::Union{<:Real,Nothing},
+        peak_area::Union{<:Real,Nothing},
     )
 
 Construct a prior distribution over the model parameters for Bayesian fitting.
@@ -53,14 +53,14 @@ to `true` or to a concrete parameter struct receive a weakly informative prior.
 - `params::ModelParams`: model specification indicating which components are enabled
 - `mu::Real`: expected centroid position of the peak in keV
 - `sigma::Real`: expected standard deviation of the Gaussian core in keV
-- `peak_height::Real`: approximate peak height in counts/keV
-- `peak_area::Real`: approximate integrated peak area in counts
+- `peak_height::Union{<:Real,Nothing}`: approximate peak height in counts/keV
+- `peak_area::Union{<:Real,Nothing}`: approximate integrated peak area in counts
 
 # Returns
 A `NamedTupleDist` (via `distprod`) over the enabled component parameters.
 
 # Throws
-`ArgumentError` if both `params.peak` and `params.background` are `nothing`.
+`ArgumentError` if both `peak` and `params.background` are `nothing`.
 
 # Details
 
@@ -80,17 +80,6 @@ The following priors are defined per enabled component:
 | `:linPoly_C` | `Uniform(-10, 10)` | `background.linPoly` |
 | `:constPoly_C` | `Uniform(0, peak_height)` | `background.constPoly` |
 
-# Examples
-
-```julia
-mu = 2048.0
-sigma = 10.0
-p = PeakParams(gaussian = true, compton = true)
-b = BackgroundParams(constPoly = true)
-m = ModelParams(peak = p, background = b)
-prior = build_prior(m, mu, sigma, 100.0, 1000.0)
-```
-
 # See also
 - [`ModelParams`](@ref), [`PeakParams`](@ref), [`BackgroundParams`](@ref) for the model
   specification
@@ -100,42 +89,64 @@ function build_prior(
     params::ModelParams,
     mu::Real,
     sigma::Real,
-    peak_height::Real,
-    peak_area::Real,
+    peak_height::Union{<:Real,Nothing} = nothing,
+    peak_area::Union{<:Real,Nothing} = nothing,
 )
-    if (isnothing(params.peak) && isnothing(params.background))
+    peak_params = params.peak
+    background_params = params.background
+
+    if (isnothing(peak_params) && isnothing(background_params))
         throw(ArgumentError("No model specified"))
     end
 
-    priors = Dict()
-    priors[:mu] = Normal(mu, 0.6)
-    if !isnothing(params.peak) && (
-        params.peak.gaussian !== false ||
-        params.peak.lowEnergyTail !== false ||
-        params.peak.highEnergyTail !== false
-    )
-        priors[:sigma] = truncated(Normal(sigma, 0.6), 0, Inf)
+    priors = []
+
+    push!(priors, :mu => Normal(mu, 0.6))
+
+    has_gaussian_or_tail =
+        !isnothing(peak_params) && (
+            peak_params.gaussian !== false ||
+            peak_params.lowEnergyTail !== false ||
+            peak_params.highEnergyTail !== false
+        )
+    if has_gaussian_or_tail
+        push!(priors, :sigma => truncated(Normal(sigma, 0.6), 0, Inf))
     end
 
-    if !isnothing(params.peak)
-        params.peak.gaussian !== false && (priors[:gaussian_A] = Uniform(0, peak_area))
-        params.peak.compton !== false && (priors[:compton_h] = Uniform(0, peak_height))
-        if params.peak.lowEnergyTail !== false
+    if !isnothing(peak_params)
+        if peak_params.gaussian !== false
+            isnothing(peak_area) &&
+                throw(ArgumentError("`peak_area` required for `gaussian` component"))
+            push!(priors, :gaussian_A => Uniform(0, peak_area))
+        end
+
+        if peak_params.compton !== false
+            isnothing(peak_height) &&
+                throw(ArgumentError("`peak_height` required for `compton` component"))
+            push!(priors, :compton_h => Uniform(0, peak_height))
+        end
+
+        if peak_params.lowEnergyTail !== false
             # TODO
         end
-        if params.peak.highEnergyTail !== false
+        
+        if peak_params.highEnergyTail !== false
             # TODO
         end
     end
 
-    if !isnothing(params.background)
-        params.background.quadPoly !== false && (priors[:quadPoly_C] = Uniform(-1, 1))
-        params.background.linPoly !== false && (priors[:linPoly_C] = Uniform(-10, 10))
-        params.background.constPoly !== false &&
-            (priors[:constPoly_C] = Uniform(0, peak_height))
+    if !isnothing(background_params)
+        background_params.quadPoly !== false && push!(priors, :quadPoly_C => Uniform(-1, 1))
+        background_params.linPoly !== false && push!(priors, :linPoly_C => Uniform(-10, 10))
+
+        if background_params.constPoly !== false
+            isnothing(peak_height) &&
+                throw(ArgumentError("`peak_height` required for `constPoly` component"))
+            push!(priors, :constPoly_C => Uniform(0, peak_height))
+        end
     end
 
-    return distprod(; priors...)
+    return distprod(priors)
 end
 
 """
@@ -153,20 +164,6 @@ only checks pre-computed `Bool` flags on each sample.
 # Returns
 - A `PosteriorMeasure` wrapping the log-likelihood and prior, ready for
   [`bat_sample`](@ref).
-
-# Examples
-
-```julia
-mu = 2048.0
-sigma = 10.0
-data = SpectrumData(bin_centers = 1.0:4096.0, weights = counts, bin_size = 1.0)
-
-p = PeakParams(gaussian = true, compton = true)
-b = BackgroundParams(constPoly = true)
-m = ModelParams(peak = p, background = b)
-prior = build_prior(m, mu, sigma, 100.0, 1000.0)
-posterior = build_posterior(data, prior)
-```
 
 # See also
 - [`build_prior`](@ref) for constructing the prior

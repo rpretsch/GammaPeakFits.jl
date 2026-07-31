@@ -101,15 +101,6 @@ exclude it.
 - Scalar: the summed peak amplitude at `x` in counts/keV
 - Vector: an array of summed peak amplitudes at each element of `x` in counts/keV
 
-# Examples
-
-```julia
-mu = 2048.0
-sigma = 10.0
-p = PeakParams(gaussian = GaussianParams(A = 100.0, mu = mu, sigma = sigma))
-peak_model(1.0:4096.0, p)
-```
-
 # See also
 - [`PeakParams`](@ref) for the parameters
 - [`gaussian`](@ref), [`compton`](@ref), and [`exGaussian`](@ref) for the components
@@ -239,14 +230,6 @@ Each term is optional — set the corresponding field to `false` in
 - Scalar: the evaluated quadratic background value at `x` in counts/keV
 - Vector: an array of evaluated background values at each element of `x` in counts/keV
 
-# Examples
-
-```julia
-mu = 2048.0
-b = BackgroundParams(linPoly = LinPolyParams(C = 100.0, mu = mu))
-background_model(1.0:4096.0, b)
-```
-
 # See also
 - [`BackgroundParams`](@ref) for the parameters
 """
@@ -285,17 +268,6 @@ enable it.
 # Returns
 - Scalar: the evaluated model value (peak + background) at `x` in counts/keV
 - Vector: an array of total model values at each element of `x` in counts/keV
-
-# Examples
-
-```julia
-mu = 2048.0
-sigma = 10.0
-p = PeakParams(gaussian = GaussianParams(A = 100.0, mu = mu, sigma = sigma))
-b = BackgroundParams(linPoly = LinPolyParams(C = 100.0, mu = mu))
-m = ModelParams(peak = p, background = b)
-full_model(1.0:4096.0, m)
-```
 
 # See also
 - [`ModelParams`](@ref) for the parameters

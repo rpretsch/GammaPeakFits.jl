@@ -83,7 +83,7 @@ dividing by`bin_size`.
 
 # Returns
 - A tuple `(peak_height, peak_area)` containing the estimated height and area of the peak,
-  both in counts/keV
+  in (counts/keV, counts)
 
 # See also
 - [`SpectrumData`](@ref) for the data struct
@@ -91,14 +91,12 @@ dividing by`bin_size`.
 """
 function get_peak_features(data::SpectrumData, mu::AbstractFloat, sigma::AbstractFloat)
 
-    # counts/bin
     peak_mask = (mu - 3 * sigma) .<= data.bin_centers .<= (mu + 3 * sigma)
-    peak_height = maximum(data.weights[peak_mask])
-    peak_area = 6 * sigma * peak_height
+    peak_height = maximum(data.weights[peak_mask])  # counts/bin
+    peak_area = 6 * sigma * peak_height             # counts/bin * keV
 
-    # Convert to counts/keV
-    peak_height_kev = peak_height / data.bin_size
-    peak_area_keV = peak_area / data.bin_size
+    peak_height_kev = peak_height / data.bin_size   # counts/keV
+    peak_area_keV = peak_area / data.bin_size       # counts
 
     return peak_height_kev, peak_area_keV
 end

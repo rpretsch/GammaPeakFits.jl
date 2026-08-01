@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - main
-    tags: '*'
+    tags: ['*']
   pull_request:
   workflow_dispatch:
 jobs:
@@ -27,6 +27,6 @@ jobs:
           out = read(`git diff --name-only`, String)
           if !isempty(out)
               @error "Files not formatted:" out
-              foreach(println, split(out, ", "))
+              foreach(println, split(out, "\n"))
               exit(1)
           end'

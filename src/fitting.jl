@@ -105,13 +105,14 @@ function build_prior(
 
     push!(priors, :mu => Normal(mu, 0.6))
 
-    has_gaussian_or_tail =
+    needs_sigma =
         !isnothing(peak_params) && (
             peak_params.gaussian !== false ||
             peak_params.lowEnergyTail !== false ||
-            peak_params.highEnergyTail !== false
+            peak_params.highEnergyTail !== false ||
+            peak_params.compton !== false
         )
-    if has_gaussian_or_tail
+    if needs_sigma
         push!(priors, :sigma => truncated(Normal(sigma, 0.6), 0, Inf))
     end
 

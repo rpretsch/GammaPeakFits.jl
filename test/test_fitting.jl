@@ -92,9 +92,10 @@
 
         end
 
-        @testset "sigma prior conditional on peak width components" begin
+        @testset "sigma prior conditional on peak components" begin
 
-            model_params_noSigma = ModelParams(peak = PeakParams(compton = true))
+            model_params_noSigma =
+                ModelParams(background = BackgroundParams(quadPoly = true))
             prior_noSigma = build_prior(
                 model_params_noSigma,
                 MU,

@@ -51,7 +51,7 @@ data = SpectrumData(lower_limit, upper_limit, bin_size, generation_modelParams)
 # or use existing data instead
 # data = SpectrumData(
 #            bin_centers = loaded_binCenters,   # keV
-#            weights = loaded_weigths,          # counts/bin
+#            weights = loaded_weights,          # counts/bin
 #            bin_size = loaded_binSize,         # keV
 #        )
 
@@ -83,7 +83,7 @@ posterior = build_posterior(fit_data, prior)
 # result = bat_sample(
 #              posterior, 
 #              TransformedMCMC(proposal=RandomWalk(), nsteps=10^5, nchains=4)
-            )
+#          )
 ```
 """
 module GammaPeakFits

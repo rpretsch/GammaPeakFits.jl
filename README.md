@@ -35,19 +35,20 @@ it with Julia's package manager:
 ### For users
 
 ```shell
-julia using Pkg Pkg.add(url="https://github.com/rpretsch/GammaPeakFits.jl.git")
+julia -e 'using Pkg; Pkg.add(url="https://github.com/rpretsch/GammaPeakFits.jl.git")'
+
 ```
 
 ### For development
 
 ```shell
-julia using Pkg Pkg.develop(url="https://github.com/rpretsch/GammaPeakFits.jl.git")
+julia -e 'using Pkg; Pkg.develop(url="https://github.com/rpretsch/GammaPeakFits.jl.git")'
 ```
 
 Or if already cloned locally:
 
 ```shell
-Pkg.develop(path="/path/to/GammaPeakFits")
+julia -e 'using Pkg; Pkg.develop(path="/path/to/GammaPeakFits")'
 ```
 
 ## Model Components
@@ -172,7 +173,7 @@ data = SpectrumData(lower_limit, upper_limit, bin_size, generation_modelParams)
 # or use existing data instead
 # data = SpectrumData(
 #            bin_centers = loaded_binCenters,   # keV
-#            weights = loaded_weigths,          # counts/bin
+#            weights = loaded_weights,          # counts/bin
 #            bin_size = loaded_binSize,         # keV
 #        )
 

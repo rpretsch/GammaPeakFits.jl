@@ -28,7 +28,7 @@ function plot_data(data::SpectrumData, mu::Union{<:AbstractFloat,Nothing} = noth
         gap = 0,
         strokewidth = 0,
     )
-    !isnothing(mu) && vlines!(mu)
+    !isnothing(mu) && vlines!(ax, mu, color = :red)
 
     return fig, ax
 end

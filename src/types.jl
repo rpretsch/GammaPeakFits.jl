@@ -190,7 +190,7 @@ end
 Aggregate container for all components that form the background model.
 
 Each component is optional — set the corresponding field to `false` to exclude it. 
-Setting it to `true` instead of specifiying a `Params` object allows for controlling which 
+Setting it to `true` instead of specifying a `Params` object allows for controlling which 
 component is used in the fitting process (See [build_prior](@ref)).
 `mu` is usually the same between all model components.
 

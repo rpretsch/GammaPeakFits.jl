@@ -199,7 +199,7 @@ end
 
 Evaluate a constant polynomial term.
 
-Uses `x` to set wether to return as a scalar or vector.
+Uses `x` to set whether to return as a scalar or vector.
 
 # Arguments
 - `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: sets the return type

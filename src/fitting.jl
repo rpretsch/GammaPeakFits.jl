@@ -61,7 +61,7 @@ to `true` or to a concrete parameter struct receive a weakly informative prior.
 
 # Throws
 - An `ArgumentError` if both `params.peak` and `params.background` are `nothing`
-- An `ArgumentError` if either `peak_height` or `peak_area` where not supplied when they 
+- An `ArgumentError` if either `peak_height` or `peak_area` were not supplied when they 
   were needed
 
 # Details
@@ -71,7 +71,7 @@ The following priors are defined per enabled component:
 | Symbol | Prior | Component |
 | --- | --- | --- |
 | `:mu` | `Normal(mu, 0.6)` | all |
-| `:sigma` | `truncated(Normal(sigma, 0.6), 0, Inf)` | `peak.gaussian`, `peak.lowEnergyTail`, `peak.highEnergyTail` |
+| `:sigma` | `truncated(Normal(sigma, 0.6), 0, Inf)` | all `peak` components |
 | `:gaussian_A` | `Uniform(0, peak_area)` | `peak.gaussian` |
 | `:compton_h` | `Uniform(0, peak_height)` | `peak.compton` |
 | `:lowEnergyTail_A` | `Uniform(0, peak_area)` | `peak.lowEnergyTail` |

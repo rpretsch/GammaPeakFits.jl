@@ -7,7 +7,7 @@
     PEAK_AREA = 1000.0
     DATA = SpectrumData(
         bin_centers = collect(2040.0:1.0:2050.0),
-        weights = ones(Integer, 11),
+        weights = ones(Int, 11),
         bin_size = 1.0,
     )
     C_CONST = 100.0

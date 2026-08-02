@@ -277,8 +277,8 @@ function SpectrumData(
     bin_size::T,
     params::ModelParams,
 ) where {T<:AbstractFloat}
-    bin_centers = range(lower_limit, upper_limit; step = bin_size)
-    expected_counts = full_model(bin_centers, params)
+    bin_centers = collect(range(lower_limit, upper_limit; step = bin_size))
+    expected_counts = full_model(bin_centers, params) .* bin_size
     any(expected_counts .< 0) &&
         throw(ArgumentError("Model produced negative expected counts; check parameters."))
     weights = rand.(Poisson.(expected_counts))

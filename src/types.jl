@@ -66,7 +66,7 @@ model low- or high-energy tailing in gamma peaks.
 # Fields
 - `A::T`: total integrated tail area in counts
 - `tau::T`: Exponent relaxation time of the exponential tail in keV
-- `is_lowEnergyTail::Bool`: Tail direction (`true`/`false` for low-/high-energy tails  
+- `is_lowEnergyTail::Bool`: Tail direction (`true`/`false` for low-/high-energy tails,
   respectively)
 - `mu::T`: centroid position of the Gaussian core on the x-axis in keV
 - `sigma::T`: standard deviation of the Gaussian core in keV
@@ -75,12 +75,24 @@ model low- or high-energy tailing in gamma peaks.
 
 ```math
 f(x) = \\frac{A}{2\\tau}\\,
-       \\exp\\!\\left(-\\frac{1}{2}\\left(\\frac{x-\\mu}{\\sigma}\\right)^2\\right)\\,
-       \\text{erfcx}\\!\\left(\\frac{1}{\\sqrt{2}}\\left(\\frac{\\sigma}{\\tau}
-       \\pm\\cdot\\frac{x-\\mu}{\\sigma}\\right)\\right)
+       \\exp\\!\\left(\\frac{1}{2}\\left(\\frac{\\sigma}{\\tau}\\right)^2
+       \\pm\\frac{x-\\mu}{\\tau}\\right)\\,
+       \\text{erfc}\\!\\left(\\frac{1}{\\sqrt{2}}\\left(\\frac{\\sigma}{\\tau}
+       \\pm\\frac{x-\\mu}{\\sigma}\\right)\\right)
 ```
 
-The low-/high-energy tails correspond to a `-`/`+` sign for the `±` sign above respectively.
+The low-/high-energy tails correspond to a ``+``/``-`` sign for the ``\\pm`` sign above, respectively.
+
+For numerical stability this is evaluated in log-space as
+
+```math
+\\log f(x) = \\log A - \\log(2\\tau) 
+             -\\frac{1}{2} \\left(\\frac{x-\\mu}{\\sigma}\\right)^2 
+             +\\text{logerfcx}\\!\\left(\\frac{1}{\\sqrt{2}}\\left(\\frac{\\sigma}{\\tau}
+             \\pm\\frac{x-\\mu}{\\sigma}\\right)\\right)
+```
+
+using `SpecialFunctions.logerfcx`. 
 
 # See also
 - [`exGaussian`](@ref) for evaluating the tail component

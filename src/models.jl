@@ -61,7 +61,8 @@ end
 Evaluate an exponentially modified Gaussian (ex-Gaussian) tail component at `x`.
 
 Used to model asymmetric peak tailing.
-Uses the complementary error function (`erfc`) from `SpecialFunctions.jl`.
+Is evaluated in log-space using the `SpecialFunctions.logerfcx` for numerical stability
+reasons.
 
 # Arguments
 - `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to 
@@ -84,10 +85,11 @@ function exGaussian(x::AbstractFloat, params::ExGaussianParams)
     sigma = params.sigma
     sigma <= 0 && throw(ArgumentError("`sigma` can't be zero or negative"))
     mu = params.mu
-    is_lowEnergyTail = params.is_lowEnergyTail
-    return params.A / (2 * tau) *
-           exp(-1/2 * ((x - mu)/sigma)^2) *
-           erfcx(1/sqrt(2) * (sigma/tau - (-1)^is_lowEnergyTail * (x - mu)/sigma))
+
+    logf =
+        log(params.A) - log(2 * tau) - 1/2 * ((x - mu)/sigma)^2 +
+        logerfcx(1/sqrt(2) * (sigma/tau - (-1)^params.is_lowEnergyTail * (x - mu)/sigma))
+    return exp(logf)
 end
 function exGaussian(x::AbstractVector{<:AbstractFloat}, params::ExGaussianParams)
     return exGaussian.(x, Ref(params))

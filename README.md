@@ -114,8 +114,9 @@ The ex-Gaussian component models asymmetric peak tailing (low- or high-energy):
 
 ```math
 f(x) = \frac{A}{2\tau}\,
-       \exp\!\left(-\frac{1}{2}\left(\frac{x-\mu}{\sigma}\right)^2\right)\,
-       \text{erfcx}\!\left(\frac{1}{\sqrt{2}}\left(\frac{\sigma}{\tau}
+       \exp\!\left(\frac{1}{2}\left(\frac{\sigma}{\tau}\right)^2
+       \pm\frac{x-\mu}{\tau}\right)\,
+       \text{erfc}\!\left(\frac{1}{\sqrt{2}}\left(\frac{\sigma}{\tau}
        \pm\frac{x-\mu}{\sigma}\right)\right)
 ```
 
@@ -123,12 +124,23 @@ f(x) = \frac{A}{2\tau}\,
 | --- | --- | --- |
 | `A` | counts | Total integrated tail area |
 | `tau` | keV | Exponent relaxation time of the exponential tail |
-| `is_lowEnergyTail` | Boolean | Tail direction (`true`/`false` for low-/high-energy tails respectively) |
+| `is_lowEnergyTail` | Boolean | Tail direction (`true`/`false` for low-/high-energy tails, respectively) |
 | `mu` | keV | Centroid position of the gaussian |
 | `sigma` | keV | Standard deviation of the gaussian |
 
-The low-/high-energy tails correspond to a `-`/`+` sign for the `±` sign above
-respectively.
+The low-/high-energy tails correspond to a $+$/$-$ sign for the $\pm$ sign
+above, respectively.
+
+For numerical stability this is evaluated in log-space as
+
+```math
+\log f(x) = \log A - \log(2\tau) 
+            -\frac{1}{2}\left(\frac{x-\mu}{\sigma}\right)^2 
+            +\text{logerfcx}\!\left(\frac{1}{\sqrt{2}}\left(\frac{\sigma}{\tau}
+            \pm\frac{x-\mu}{\sigma}\right)\right)
+```
+
+using `SpecialFunctions.logerfcx`.
 
 ### Background
 

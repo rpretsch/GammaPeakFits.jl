@@ -71,7 +71,7 @@ The following priors are defined per enabled component:
 | Symbol | Prior | Component |
 | --- | --- | --- |
 | `:mu` | `Normal(mu, 0.6)` | all |
-| `:sigma` | `truncated(Normal(sigma, 0.6), 0, Inf)` | all `peak` components |
+| `:sigma` | `truncated(Normal(sigma, 0.6), eps(), Inf)` | all `peak` components |
 | `:gaussian_A` | `Uniform(0, peak_area)` | `peak.gaussian` |
 | `:compton_h` | `Uniform(0, peak_height)` | `peak.compton` |
 | `:lowEnergyTail_A` | `Uniform(0, peak_area)` | `peak.lowEnergyTail` |
@@ -113,7 +113,7 @@ function build_prior(
             peak_params.compton !== false
         )
     if needs_sigma
-        push!(priors, :sigma => truncated(Normal(sigma, 0.6), 0, Inf))
+        push!(priors, :sigma => truncated(Normal(sigma, 0.6), eps(), Inf))
     end
 
     if !isnothing(peak_params)

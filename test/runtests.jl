@@ -3,7 +3,7 @@ using Test
 
 using BAT: PosteriorMeasure
 using Distributions
-using SpecialFunctions: erfc, erfcx
+using SpecialFunctions: erfc, logerfcx
 using ValueShapes: NamedTupleDist
 
 @testset "GammaPeakFits.jl" begin

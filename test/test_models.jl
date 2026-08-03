@@ -47,9 +47,11 @@
             result = exGaussian(X_ARRAY, exGaussian_params)
             @test result == exGaussian.(X_ARRAY, Ref(exGaussian_params))
 
-            expected = @. A / (2 * TAU) *
-               exp(-1/2 * ((X_ARRAY - MU)/SIGMA)^2) *
-               erfcx(1/sqrt(2) * SIGMA/TAU - (-1)^IS_LOWENERGYTAIL * (X_ARRAY - MU)/SIGMA)
+            expected = @. exp(
+                log(A) - log(2 * TAU) - 1/2 * ((X_ARRAY - MU)/SIGMA)^2 + logerfcx(
+                    1/sqrt(2) * (SIGMA/TAU - (-1)^IS_LOWENERGYTAIL * (X_ARRAY - MU)/SIGMA),
+                ),
+            )
             @test result == expected
 
         end

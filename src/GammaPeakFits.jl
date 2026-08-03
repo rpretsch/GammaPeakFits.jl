@@ -92,7 +92,7 @@ using BAT
 using CairoMakie
 using Distributions
 using QuadGK: quadgk
-using SpecialFunctions: erfc, erfcx
+using SpecialFunctions: erfc, logerfcx
 using ValueShapes: NamedTupleDist
 
 include("types.jl")

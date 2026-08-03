@@ -87,7 +87,7 @@ function exGaussian(x::AbstractFloat, params::ExGaussianParams)
     is_lowEnergyTail = params.is_lowEnergyTail
     return params.A / (2 * tau) *
            exp(-1/2 * ((x - mu)/sigma)^2) *
-           erfcx(1/sqrt(2) * sigma/tau - (-1)^is_lowEnergyTail * (x - mu)/sigma)
+           erfcx(1/sqrt(2) * (sigma/tau - (-1)^is_lowEnergyTail * (x - mu)/sigma))
 end
 function exGaussian(x::AbstractVector{<:AbstractFloat}, params::ExGaussianParams)
     return exGaussian.(x, Ref(params))

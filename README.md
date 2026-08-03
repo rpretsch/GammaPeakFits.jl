@@ -1,9 +1,28 @@
 # GammaPeakFits
 
-[![Build Status](https://github.com/rpretsch/GammaPeakFits.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/rpretsch/GammaPeakFits.jl/actions/workflows/CI.yml?query=branch%3Amain)
-[![Julia Version](https://img.shields.io/badge/julia-%3E%3D1.10-blue)](https://julialang.org)
-[![Coverage](https://codecov.io/gh/rpretsch/GammaPeakFits/branch/main/graph/badge.svg)](https://codecov.io/gh/rpretsch/GammaPeakFits)
-[![Aqua QA](https://juliatesting.github.io/Aqua.jl/dev/assets/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
+| Documentation | Build Status |
+|:-------------:|:------------:|
+| [![Stable Docs][docs-stable-img]][docs-stable-url][![Dev Docs][docs-dev-img]][docs-dev-url][![Julia Version][julia-img]][julia-url] [![License][license-img]](LICENSE) | [![Build Status][CI-img]][CI-url] [![Coverage][Cov-img]][Cov-url] [![Aqua QA][aqua-img]][aqua-url] |
+
+[docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg
+[docs-stable-url]: https://rpretsch.github.io/GammaPeakFits.jl/stable/
+
+[docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
+[docs-dev-url]: https://rpretsch.github.io/GammaPeakFits.jl/dev/
+
+[julia-img]: https://img.shields.io/badge/julia-%3E%3D1.10-blue
+[julia-url]: https://julialang.org
+
+[license-img]: http://img.shields.io/badge/license-MIT-brightgreen.svg
+
+[CI-img]: https://github.com/rpretsch/GammaPeakFits.jl/actions/workflows/CI.yml/badge.svg?branch=main
+[CI-url]: https://github.com/rpretsch/GammaPeakFits.jl/actions/workflows/CI.yml?query=branch%3Amain
+
+[Cov-img]: https://codecov.io/gh/rpretsch/GammaPeakFits/branch/main/graph/badge.svg
+[Cov-url]: https://codecov.io/gh/rpretsch/GammaPeakFits
+
+[aqua-img]: https://juliatesting.github.io/Aqua.jl/dev/assets/badge.svg
+[aqua-url]: https://github.com/JuliaTesting/Aqua.jl
 
 Bayesian gamma-ray peak fitting on a binned energy spectrum with a composable
 shape model and Poisson likelihood, built on
@@ -36,7 +55,6 @@ it with Julia's package manager:
 
 ```shell
 julia -e 'using Pkg; Pkg.add(url="https://github.com/rpretsch/GammaPeakFits.jl.git")'
-
 ```
 
 ### For development

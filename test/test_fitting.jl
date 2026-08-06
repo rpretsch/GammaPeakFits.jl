@@ -253,6 +253,19 @@
             posterior = build_posterior(DATA, prior)
             @test posterior isa PosteriorMeasure
 
+            v = (mu = MU, sigma = SIGMA, gaussian_A = A, constPoly_C = C_CONST)
+            expected = poisson_ll(
+                DATA,
+                ModelParams(
+                    peak = PeakParams(
+                        gaussian = GaussianParams(A = A, mu = MU, sigma = SIGMA),
+                    ),
+                    background = BackgroundParams(constPoly = ConstPolyParams(C = C_CONST)),
+                ),
+            )
+            @test posterior.likelihood._log_f(v) == expected
+            @test isfinite(expected)
+
         end
 
         @testset "Posterior with only peak (no background)" begin
@@ -267,6 +280,18 @@
             )
             posterior = build_posterior(DATA, prior_peak)
             @test posterior isa PosteriorMeasure
+
+            v = (mu = MU, sigma = SIGMA, gaussian_A = A)
+            expected = poisson_ll(
+                DATA,
+                ModelParams(
+                    peak = PeakParams(
+                        gaussian = GaussianParams(A = A, mu = MU, sigma = SIGMA),
+                    ),
+                ),
+            )
+            @test posterior.likelihood._log_f(v) == expected
+            @test isfinite(expected)
 
         end
 
@@ -283,6 +308,33 @@
             )
             posterior = build_posterior(DATA, prior_background)
             @test posterior isa PosteriorMeasure
+
+            v = (mu = MU, constPoly_C = C_CONST)
+            expected = poisson_ll(
+                DATA,
+                ModelParams(
+                    background = BackgroundParams(constPoly = ConstPolyParams(C = C_CONST)),
+                ),
+            )
+            @test posterior.likelihood._log_f(v) == expected
+            @test isfinite(expected)
+
+        end
+
+        @testset "Unphysical parameters give -Inf" begin
+
+            model_params = ModelParams(background = BackgroundParams(linPoly = true))
+            prior = build_prior(
+                model_params,
+                MU,
+                SIGMA;
+                peak_height = PEAK_HEIGHT,
+                peak_area = PEAK_AREA,
+            )
+            posterior = build_posterior(DATA, prior)
+
+            v = (mu = MU, linPoly_C = C_LIN)
+            @test posterior.likelihood._log_f(v) == -Inf
 
         end
 

@@ -145,9 +145,21 @@
                 data = SpectrumData(1.0, 4096.0, 0.5, model_params)
                 @test data.bin_centers isa AbstractVector{Float64}
                 @test length(data.bin_centers) == 8191
+                @test length(data.weights) == 8191
                 @test data.weights isa AbstractVector{Int64}
                 @test data.bin_size == 0.5
                 @test data isa SpectrumData{Float64,Int64}
+
+            end
+
+            @testset "outer constructor throws on negative expected counts" begin
+
+                model_params = ModelParams(
+                    background = BackgroundParams(
+                        linPoly = LinPolyParams(C = -1.0, mu = 0.0),
+                    ),
+                )
+                @test_throws ArgumentError SpectrumData(1.0, 10.0, 1.0, model_params)
 
             end
 

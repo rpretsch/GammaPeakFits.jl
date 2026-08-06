@@ -6,7 +6,6 @@
     A = 1000.0
     H = 50.0
     TAU = 0.1
-    IS_LOWENERGYTAIL = true
     C_QUAD = 1.0
     C_LIN = 10.0
     C_CONST = 100.0
@@ -33,26 +32,102 @@
             expected = @. H/2 * erfc((X_ARRAY - MU) / (sqrt(2) * SIGMA))
             @test result == expected
 
+            @testset "throws on non-positive sigma" begin
+
+                invalid_params = ComptonParams(h = H, mu = MU, sigma = 0.0)
+                @test_throws ArgumentError compton(MU, invalid_params)
+
+                invalid_params = ComptonParams(h = H, mu = MU, sigma = -SIGMA)
+                @test_throws ArgumentError compton(MU, invalid_params)
+
+            end
+
         end
 
         @testset "exGaussian" begin
 
-            exGaussian_params = ExGaussianParams(
-                A = A,
-                tau = TAU,
-                is_lowEnergyTail = IS_LOWENERGYTAIL,
-                mu = MU,
-                sigma = SIGMA,
-            )
-            result = exGaussian(X_ARRAY, exGaussian_params)
-            @test result == exGaussian.(X_ARRAY, Ref(exGaussian_params))
+            @testset "low-energy tail" begin
 
-            expected = @. exp(
-                log(A) - log(2 * TAU) - 1/2 * ((X_ARRAY - MU)/SIGMA)^2 + logerfcx(
-                    1/sqrt(2) * (SIGMA/TAU - (-1)^IS_LOWENERGYTAIL * (X_ARRAY - MU)/SIGMA),
-                ),
-            )
-            @test result == expected
+                exGaussian_params = ExGaussianParams(
+                    A = A,
+                    tau = TAU,
+                    is_lowEnergyTail = true,
+                    mu = MU,
+                    sigma = SIGMA,
+                )
+                result = exGaussian(X_ARRAY, exGaussian_params)
+                @test result == exGaussian.(X_ARRAY, Ref(exGaussian_params))
+
+                expected = @. exp(
+                    log(A) - log(2 * TAU) - 1/2 * ((X_ARRAY - MU)/SIGMA)^2 +
+                    logerfcx(1/sqrt(2) * (SIGMA/TAU + (X_ARRAY - MU)/SIGMA)),
+                )
+                @test result == expected
+
+            end
+
+            @testset "high-energy tail" begin
+
+                exGaussian_params = ExGaussianParams(
+                    A = A,
+                    tau = TAU,
+                    is_lowEnergyTail = false,
+                    mu = MU,
+                    sigma = SIGMA,
+                )
+                result = exGaussian(X_ARRAY, exGaussian_params)
+
+                expected = @. exp(
+                    log(A) - log(2 * TAU) - 1/2 * ((X_ARRAY - MU)/SIGMA)^2 +
+                    logerfcx(1/sqrt(2) * (SIGMA/TAU - (X_ARRAY - MU)/SIGMA)),
+                )
+                @test result == expected
+
+            end
+
+            @testset "throws on non-positive tau" begin
+
+                invalid_params = ExGaussianParams(
+                    A = A,
+                    tau = 0.0,
+                    is_lowEnergyTail = true,
+                    mu = MU,
+                    sigma = SIGMA,
+                )
+                @test_throws ArgumentError exGaussian(MU, invalid_params)
+
+                invalid_params = ExGaussianParams(
+                    A = A,
+                    tau = -TAU,
+                    is_lowEnergyTail = true,
+                    mu = MU,
+                    sigma = SIGMA,
+                )
+                @test_throws ArgumentError exGaussian(MU, invalid_params)
+
+            end
+
+            @testset "throws on non-positive sigma" begin
+
+                invalid_params = ExGaussianParams(
+                    A = A,
+                    tau = TAU,
+                    is_lowEnergyTail = true,
+                    mu = MU,
+                    sigma = 0.0,
+                )
+                @test_throws ArgumentError exGaussian(MU, invalid_params)
+
+                invalid_params = ExGaussianParams(
+                    A = A,
+                    tau = TAU,
+                    is_lowEnergyTail = true,
+                    mu = MU,
+                    sigma = -SIGMA,
+                )
+                @test_throws ArgumentError exGaussian(MU, invalid_params)
+
+            end
 
         end
 

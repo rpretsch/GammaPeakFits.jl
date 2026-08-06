@@ -24,4 +24,8 @@ using ValueShapes: NamedTupleDist
         include("test_fitting.jl")
     end
 
+    if isempty(ARGS) || "utils" in ARGS
+        include("test_utils.jl")
+    end
+
 end

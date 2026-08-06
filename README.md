@@ -37,18 +37,20 @@ GammaPeakFits/
 │   ├── GammaPeakFits.jl    Main module: imports, exports, and includes
 │   ├── types.jl            Parameter structs for model components and containers
 │   ├── models.jl           Model evaluation functions
-│   └── fitting.jl          Poisson likelihood, prior and posterior construction
+│   ├── fitting.jl          Poisson likelihood, prior and posterior construction
+│   └── test_utils.jl       Data slicing, plotting and peak-feature extraction
 ├── test/
 │   ├── runtests.jl         Top-level test runner
 │   ├── test_types.jl       Struct construction and field default tests
 │   ├── test_models.jl      Model evaluation and Bool sentinel guard tests
-│   └── test_fitting.jl     Prior, posterior, and likelihood tests
+│   ├── test_fitting.jl     Prior, posterior, and likelihood tests
+│   └── test_utils.jl       Data slicing and peak-feature tests
 └── README.md
 ```
 
 ## Installation
 
-This package is unregistered. Install it by cloning the repository and adding 
+This package is unregistered. Install it by cloning the repository and adding
 it with Julia's package manager:
 
 ### For users
@@ -76,7 +78,7 @@ Each component can be enabled or disabled:
 - Set it to `false` (default): the component is excluded.
 - Set it to `true`: the component is included in the fit using its prior.
 
-The entire peak or background can be disabled by setting the corresponding 
+The entire peak or background can be disabled by setting the corresponding
 field in `ModelParams` to `nothing`.
 
 ### Peak

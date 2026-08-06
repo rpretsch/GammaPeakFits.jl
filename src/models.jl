@@ -41,10 +41,15 @@ smooth step from Compton scattering.
 - Scalar: the evaluated Compton step height at `x` in counts/keV
 - Vector: an array of evaluated Compton step heights at each element of `x` in counts/keV
 
+# Throws
+- An `ArgumentError` if `params.sigma` is negative or zero
+
 # See also
 - [`ComptonParams`](@ref) for the parameters
 """
 function compton(x::AbstractFloat, params::ComptonParams)
+    sigma = params.sigma
+    sigma <= 0 && throw(ArgumentError("`sigma` can't be zero or negative"))
     return params.h/2 * erfc((x - params.mu)/(sqrt(2) * params.sigma))
 end
 function compton(x::AbstractVector{<:AbstractFloat}, params::ComptonParams)

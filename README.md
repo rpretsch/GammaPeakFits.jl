@@ -2,7 +2,7 @@
 
 | Documentation | Build Status |
 |:-------------:|:------------:|
-| [![Stable Docs][docs-stable-img]][docs-stable-url][![Dev Docs][docs-dev-img]][docs-dev-url][![Julia Version][julia-img]][julia-url] [![License][license-img]](LICENSE) | [![Build Status][CI-img]][CI-url] [![Coverage][Cov-img]][Cov-url] [![Aqua QA][aqua-img]][aqua-url] |
+| [![Stable Docs][docs-stable-img]][docs-stable-url] [![Dev Docs][docs-dev-img]][docs-dev-url] [![Julia Version][julia-img]][julia-url] [![License][license-img]](LICENSE) | [![Build Status][CI-img]][CI-url] [![Coverage][Cov-img]][Cov-url] [![Aqua QA][aqua-img]][aqua-url] |
 
 [docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg
 [docs-stable-url]: https://rpretsch.github.io/GammaPeakFits.jl/stable/
@@ -130,7 +130,7 @@ f(x) = \frac{A}{2\tau}\,
 | `mu` | keV | Centroid position of the gaussian |
 | `sigma` | keV | Standard deviation of the gaussian |
 
-The low-/high-energy tails correspond to a $+$/$-$ sign for the $\pm$ sign
+The low-/high-energy tails correspond to a $+$ / $-$ sign for the $\pm$ sign
 above, respectively.
 
 For numerical stability this is evaluated in log-space as

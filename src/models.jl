@@ -273,8 +273,7 @@ end
 Evaluate the complete gamma-peak model (peak shape + background) at `x`.
 
 Combines [`peak_model`](@ref) and [`background_model`](@ref). Each term is optional — set
-the corresponding field to `false` in [`ModelParams`](@ref) to exclude it, or `true` to
-enable it.
+the corresponding field to `nothing` in [`ModelParams`](@ref) to exclude it.
 
 # Arguments
 - `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to 

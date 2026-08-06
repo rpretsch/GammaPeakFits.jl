@@ -20,8 +20,6 @@ jobs:
       - name: Check formatting
         run: |
           julia -e '
-          using Pkg
-          Pkg.add("JuliaFormatter")
           using JuliaFormatter
           format(".")
           out = read(`git diff --name-only`, String)

@@ -38,7 +38,7 @@ GammaPeakFits/
 │   ├── types.jl            Parameter structs for model components and containers
 │   ├── models.jl           Model evaluation functions
 │   ├── fitting.jl          Poisson likelihood, prior and posterior construction
-│   └── test_utils.jl       Data slicing, plotting and peak-feature extraction
+│   └── utils.jl            Data slicing, plotting and peak-feature extraction
 ├── test/
 │   ├── runtests.jl         Top-level test runner
 │   ├── test_types.jl       Struct construction and field default tests

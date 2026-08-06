@@ -22,6 +22,9 @@ posteriors.
 ## Fitting
 - [`poisson_ll`](@ref), [`build_prior`](@ref), [`build_posterior`](@ref)
 
+## Integrals
+- [`numerical_integral`](@ref), [`analytical_integral`](@ref)
+
 ## Utils
 - [`plot_data`](@ref), [`cut_data`](@ref), [`get_peak_features`](@ref)
 
@@ -94,12 +97,13 @@ using CairoMakie
 using DensityInterface: logfuncdensity
 using Distributions
 using QuadGK: quadgk
-using SpecialFunctions: erfc, logerfcx
+using SpecialFunctions: erf, erfc, logerfcx
 using ValueShapes: NamedTupleDist
 
 include("types.jl")
 include("models.jl")
 include("fitting.jl")
+include("integrals.jl")
 include("utils.jl")
 
 # Types — component parameters
@@ -135,6 +139,18 @@ export full_model
 export poisson_ll
 export build_prior
 export build_posterior
+
+# Integrals - combined
+export numerical_integral
+export analytical_integral
+
+# Integrals - components
+export gaussian_integral
+export compton_integral
+export exGaussian_integral
+export quadPoly_integral
+export linPoly_integral
+export constPoly_integral
 
 # Utils
 export plot_data

@@ -256,8 +256,8 @@ function build_posterior(data::SpectrumData, priors::NamedTupleDist)
         end
 
         model_params = ModelParams(peak = peak, background = background)
-        return LogDVal(poisson_ll(data, model_params))
+        return poisson_ll(data, model_params)
     end
 
-    return PosteriorMeasure(_log_likelihood, priors)
+    return PosteriorMeasure(logfuncdensity(_log_likelihood), priors)
 end

@@ -90,6 +90,7 @@ module GammaPeakFits
 
 using BAT
 using CairoMakie
+using DensityInterface: logfuncdensity
 using Distributions
 using QuadGK: quadgk
 using SpecialFunctions: erfc, logerfcx

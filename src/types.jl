@@ -250,6 +250,7 @@ Container for binned energy spectrum data.
 
 # Fields
 - `bin_centers::AbstractVector{T}`: bin center(s) in keV
+- `bin_edges::AbstractVector{T}`: bin edges in keV
 - `weights::AbstractVector{U}`: observed count(s) per bin
 - `bin_size::T`: width of each bin in keV
 
@@ -280,6 +281,7 @@ bin.
 """
 Base.@kwdef struct SpectrumData{T<:AbstractFloat,U<:Integer}
     bin_centers::AbstractVector{T}
+    bin_edges::AbstractVector{T}
     weights::AbstractVector{U}
     bin_size::T
 end
@@ -291,9 +293,16 @@ function SpectrumData(
     params::ModelParams,
 ) where {T<:AbstractFloat}
     bin_centers = collect(range(lower_limit, upper_limit; step = bin_size))
+    bin_edges =
+        collect(range(lower_limit - bin_size/2, upper_limit + bin_size/2; step = bin_size))
     expected_counts = full_model(bin_centers, params) .* bin_size
     any(expected_counts .< 0) &&
         throw(ArgumentError("Model produced negative expected counts; check parameters."))
     weights = rand.(Poisson.(expected_counts))
-    return SpectrumData(bin_centers = bin_centers, weights = weights, bin_size = bin_size)
+    return SpectrumData(
+        bin_centers = bin_centers,
+        bin_edges = bin_edges,
+        weights = weights,
+        bin_size = bin_size,
+    )
 end

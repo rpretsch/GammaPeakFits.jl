@@ -2,6 +2,7 @@
 
     DATA = SpectrumData(
         bin_centers = collect(1.0:10.0),
+        bin_edges = collect(0.5:10.5),
         weights = collect(1:10),
         bin_size = 1.0,
     )
@@ -9,8 +10,8 @@
     @testset "cut_data" begin
 
         cut = cut_data(DATA, 5.0, 4.0)
-        @test cut.bin_centers == [3.0, 4.0, 5.0, 6.0, 7.0]
-        @test cut.weights == [3, 4, 5, 6, 7]
+        @test cut.bin_centers == [4.0, 5.0, 6.0]
+        @test cut.weights == [4, 5, 6]
         @test cut.bin_size == 1.0
         @test cut isa SpectrumData{Float64,Int}
 
@@ -29,6 +30,7 @@
         @testset "Converts counts/bin to counts/keV via bin_size" begin
             data = SpectrumData(
                 bin_centers = [1.0, 3.0, 5.0],
+                bin_edges = [0.0, 2.0, 4.0, 6.0],
                 weights = [10, 20, 30],
                 bin_size = 2.0,
             )

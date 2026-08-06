@@ -51,6 +51,7 @@ data = SpectrumData(lower_limit, upper_limit, bin_size, generation_modelParams)
 # or use existing data instead
 # data = SpectrumData(
 #            bin_centers = loaded_binCenters,   # keV
+             bin_edges = loaded_binEdges        # keV
 #            weights = loaded_weights,          # counts/bin
 #            bin_size = loaded_binSize,         # keV
 #        )

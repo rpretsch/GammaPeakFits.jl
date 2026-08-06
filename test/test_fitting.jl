@@ -7,6 +7,7 @@
     PEAK_AREA = 1000.0
     DATA = SpectrumData(
         bin_centers = collect(2040.0:1.0:2050.0),
+        bin_edges = collect(2039.5:1.0:2050.5),
         weights = ones(Int, 11),
         bin_size = 1.0,
     )
@@ -17,7 +18,12 @@
 
         @testset "Basic likelihood with constant model" begin
 
-            data = SpectrumData(bin_centers = [2048.0], weights = [10], bin_size = 1.0)
+            data = SpectrumData(
+                bin_centers = [2048.0],
+                bin_edges = [2047.5, 2048.5],
+                weights = [10],
+                bin_size = 1.0,
+            )
             model_params = ModelParams(
                 background = BackgroundParams(constPoly = ConstPolyParams(C = C_CONST)),
             )

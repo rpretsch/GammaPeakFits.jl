@@ -38,7 +38,7 @@ end
 
 Slice a spectrum to a region of interest centered on a peak.
 
-Only bins whose centers lie within `[mu - window_size/2, mu + window_size/2]` are retained.
+Only bins that lie entirely within `[mu - window_size/2, mu + window_size/2]` are retained.
 
 # Arguments
 - `data::SpectrumData`: binned spectrum data
@@ -53,11 +53,13 @@ Only bins whose centers lie within `[mu - window_size/2, mu + window_size/2]` ar
 """
 function cut_data(data::SpectrumData, mu::AbstractFloat, window_size::AbstractFloat)
 
-    mask = (mu - window_size/2) .<= data.bin_centers .<= (mu + window_size/2)
+    mask_edges = (mu - window_size/2) .<= data.bin_edges .<= (mu + window_size/2)
+    mask_centers = mask_edges[1:(end-1)] .& mask_edges[2:end]
 
     return SpectrumData(
-        bin_centers = data.bin_centers[mask],
-        weights = data.weights[mask],
+        bin_centers = data.bin_centers[mask_centers],
+        bin_edges = data.bin_edges[mask_edges],
+        weights = data.weights[mask_centers],
         bin_size = data.bin_size,
     )
 end

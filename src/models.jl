@@ -122,7 +122,7 @@ exclude it.
 - [`gaussian`](@ref), [`compton`](@ref), and [`exGaussian`](@ref) for the components
 """
 function peak_model(x::AbstractFloat, params::PeakParams)
-    result = zero(float(x))
+    result = zero(x)
     isa(params.gaussian, GaussianParams) && (result += gaussian(x, params.gaussian))
     isa(params.compton, ComptonParams) && (result += compton(x, params.compton))
     isa(params.highEnergyTail, ExGaussianParams) &&
@@ -132,7 +132,7 @@ function peak_model(x::AbstractFloat, params::PeakParams)
     return result
 end
 function peak_model(x::AbstractVector{<:AbstractFloat}, params::PeakParams)
-    result = zeros(float(eltype(x)), length(x))
+    result = zeros(eltype(x), length(x))
     isa(params.gaussian, GaussianParams) && (result .+= gaussian(x, params.gaussian))
     isa(params.compton, ComptonParams) && (result .+= compton(x, params.compton))
     isa(params.highEnergyTail, ExGaussianParams) &&
@@ -250,14 +250,14 @@ Each term is optional — set the corresponding field to `false` in
 - [`BackgroundParams`](@ref) for the parameters
 """
 function background_model(x::AbstractFloat, params::BackgroundParams)
-    result = zero(float(x))
+    result = zero(x)
     !isa(params.quadPoly, Bool) && (result += quad_polynomial(x, params.quadPoly))
     !isa(params.linPoly, Bool) && (result += lin_polynomial(x, params.linPoly))
     !isa(params.constPoly, Bool) && (result += const_polynomial(x, params.constPoly))
     return result
 end
 function background_model(x::AbstractVector{<:AbstractFloat}, params::BackgroundParams)
-    result = zeros(float(eltype(x)), length(x))
+    result = zeros(eltype(x), length(x))
     !isa(params.quadPoly, Bool) && (result .+= quad_polynomial(x, params.quadPoly))
     !isa(params.linPoly, Bool) && (result .+= lin_polynomial(x, params.linPoly))
     !isa(params.constPoly, Bool) && (result .+= const_polynomial(x, params.constPoly))
@@ -289,14 +289,14 @@ the corresponding field to `nothing` in [`ModelParams`](@ref) to exclude it.
 - [`peak_model`](@ref), and [`background_model`](@ref) for the components
 """
 function full_model(x::AbstractFloat, params::ModelParams)
-    result = zero(float(x))
+    result = zero(x)
     isa(params.peak, PeakParams) && (result += peak_model(x, params.peak))
     isa(params.background, BackgroundParams) &&
         (result += background_model(x, params.background))
     return result
 end
 function full_model(x::AbstractVector{<:AbstractFloat}, params::ModelParams)
-    result = zeros(float(eltype(x)), length(x))
+    result = zeros(eltype(x), length(x))
     isa(params.peak, PeakParams) && (result .+= peak_model(x, params.peak))
     isa(params.background, BackgroundParams) &&
         (result .+= background_model(x, params.background))

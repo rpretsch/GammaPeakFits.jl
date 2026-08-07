@@ -23,7 +23,10 @@ posteriors.
 - [`poisson_ll`](@ref), [`build_prior`](@ref), [`build_posterior`](@ref)
 
 ## Integrals
-- [`numerical_integral`](@ref), [`analytical_integral`](@ref)
+- Components: [`gaussian_integral`](@ref), [`compton_integral`](@ref), 
+  [`exGaussian_integral`](@ref), [`quadPoly_integral`](@ref), [`linPoly_integral`](@ref), 
+  [`constPoly_integral`](@ref)
+- Combined integrals: [`numerical_integral`](@ref), [`analytical_integral`](@ref)
 
 ## Utils
 - [`plot_data`](@ref), [`cut_data`](@ref), [`get_peak_features`](@ref)

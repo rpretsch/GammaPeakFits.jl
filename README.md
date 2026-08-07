@@ -37,12 +37,14 @@ GammaPeakFits/
 │   ├── GammaPeakFits.jl    Main module: imports, exports, and includes
 │   ├── types.jl            Parameter structs for model components and containers
 │   ├── models.jl           Model evaluation functions
+│   ├── integrals.jl        Model integration functions
 │   ├── fitting.jl          Poisson likelihood, prior and posterior construction
 │   └── utils.jl            Data slicing, plotting and peak-feature extraction
 ├── test/
 │   ├── runtests.jl         Top-level test runner
 │   ├── test_types.jl       Struct construction and field default tests
-│   ├── test_models.jl      Model evaluation and Bool sentinel guard tests
+│   ├── test_models.jl      Model evaluation tests
+│   ├── test_integrals.jl   Model integration tests
 │   ├── test_fitting.jl     Prior, posterior, and likelihood tests
 │   └── test_utils.jl       Data slicing and peak-feature tests
 └── README.md
@@ -204,9 +206,8 @@ data = SpectrumData(lower_limit, upper_limit, bin_size, generation_modelParams)
 
 # or use existing data instead
 # data = SpectrumData(
-#            bin_centers = loaded_binCenters,   # keV
-#            weights = loaded_weights,          # counts/bin
-#            bin_size = loaded_binSize,         # keV
+#            loaded_binCenters,     # keV
+#            loaded_weights,        # counts/bin
 #        )
 
 # cut appropriate fit window

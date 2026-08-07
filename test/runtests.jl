@@ -20,6 +20,10 @@ using ValueShapes: NamedTupleDist
         include("test_models.jl")
     end
 
+    if isempty(ARGS) || "integrals" in ARGS
+        include("test_integrals.jl")
+    end
+
     if isempty(ARGS) || "fitting" in ARGS
         include("test_fitting.jl")
     end

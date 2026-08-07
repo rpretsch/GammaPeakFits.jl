@@ -1,9 +1,10 @@
 """
     numerical_integral(data::SpectrumData, params::ModelParams)
 
-Integrate the [`full_model`](@ref) numerically over each energy bin using `QuadGK.quadgk`.
+Integrate the [`full_model`](@ref) numerically over each energy bin of size `bin_size` 
+using `QuadGK.quadgk`.
 
-Skips model components that were set to `false`.
+Skips model components that were set to `false` (or `nothing` for container fields).
 
 # Arguments
 - `data::SpectrumData`: binned spectrum data
@@ -20,8 +21,8 @@ function numerical_integral(data::SpectrumData, params::ModelParams)
     return first.(
         quadgk.(
             x -> full_model(x, params),
-            data.bin_centers .- data.bin_size/2,
-            data.bin_centers .+ data.bin_size/2,
+            data.bin_edges[1:(end-1)],
+            data.bin_edges[2:end],
         ),
     )
 end
@@ -29,9 +30,9 @@ end
 """
     analytical_integral(data::SpectrumData, params::ModelParams)
 
-Integrate the full model analytically over each energy bin.
+Integrate the [`full_model`](@ref) analytically over each energy bin of size `bin_size`.
 
-Skips model components that were set to `false`.
+Skips model components that were set to `false` (or `nothing` for container fields).
 
 # Arguments
 - `data::SpectrumData`: binned spectrum data
@@ -44,6 +45,7 @@ Skips model components that were set to `false`.
 - [`gaussian_integral`](@ref), [`compton_integral`](@ref), [`exGaussian_integral`](@ref),
   [`quadPoly_integral`](@ref), [`linPoly_integral`](@ref), and [`constPoly_integral`](@ref)
   for the individual components
+- [`full_model`](@ref) for the integrated model
 - [`ModelParams`](@ref) for the model params
 """
 function analytical_integral(data::SpectrumData, params::ModelParams)
@@ -76,6 +78,15 @@ Integrate the scaled Gaussian component analytically over each energy bin.
 
 Uses `SpecialFunctions.erf`.
 
+# Mathematical definition
+
+```math
+F(x) = \\frac{A}{2}\\,
+       \\text{erf}\\!\\left(\\frac{x-\\mu}{\\sqrt{2}\\sigma}\\right)
+```
+
+The count in a bin is `F(e_{i+1}) - F(e_i)` at the stored bin edges ``e``.
+
 # Arguments
 - `data::SpectrumData`: binned spectrum data
 - `params::GaussianParams`: Gaussian component parameters
@@ -84,14 +95,15 @@ Uses `SpecialFunctions.erf`.
 - An array of expected Gaussian counts per bin
 
 # See also
-- [`gaussian`](@ref) for the pointwise model
+- [`gaussian`](@ref) for the component model
 - [`GaussianParams`](@ref) for the parameters
 """
 function gaussian_integral(data::SpectrumData, params::GaussianParams)
-    return @. params.A/2 * (
-        erf((data.bin_edges[2:end] - params.mu)/(sqrt(2) * params.sigma)) -
-        erf((data.bin_edges[1:(end-1)] - params.mu)/(sqrt(2) * params.sigma))
-    )
+    function _antiderivative(x::AbstractFloat, params::GaussianParams)
+        return params.A/2 * erf((x - params.mu)/(sqrt(2) * params.sigma))
+    end
+    antiderivative_values = _antiderivative.(data.bin_edges, Ref(params))
+    return antiderivative_values[2:end] .- antiderivative_values[1:(end-1)]
 end
 
 """
@@ -99,8 +111,15 @@ end
 
 Integrate the Compton-edge step function component analytically over each energy bin.
 
-!!! warning "Not implemented"
-    TODO: this function has not been implemented yet.
+# Mathematical definition
+
+```math
+F(x) = (x-\\mu)\\,f(x) - \\frac{h\\sigma}{\\sqrt{2\\pi}}\\,
+       \\exp\\!\\left(-\\frac{(x-\\mu)^2}{2\\sigma^2}\\right)
+```
+
+The count in a bin is `F(e_{i+1}) - F(e_i)` at the stored bin edges ``e``, and ``f(x)`` 
+being the model component itself.
 
 # Arguments
 - `data::SpectrumData`: binned spectrum data
@@ -110,11 +129,17 @@ Integrate the Compton-edge step function component analytically over each energy
 - An array of expected Compton counts per bin
 
 # See also
-- [`compton`](@ref) for the pointwise model
+- [`compton`](@ref) for the component model
 - [`ComptonParams`](@ref) for the parameters
 """
 function compton_integral(data::SpectrumData, params::ComptonParams)
-    return # TODO
+    function _antiderivative(x::AbstractFloat, params::ComptonParams)
+        return (x - params.mu) * compton(x, params) -
+               params.h * params.sigma / sqrt(2 * pi) *
+               exp(-(x - params.mu)^2 / (2 * params.sigma^2))
+    end
+    antiderivative_values = _antiderivative.(data.bin_edges, Ref(params))
+    return antiderivative_values[2:end] .- antiderivative_values[1:(end-1)]
 end
 
 """
@@ -122,8 +147,17 @@ end
 
 Integrate the ex-Gaussian tail component analytically over each energy bin.
 
-!!! warning "Not implemented"
-    TODO: this function has not been implemented yet.
+# Mathematical definition
+
+```math
+F(x) = \\frac{A}{2}\\,\\text{erf}\\!\\left(\\frac{x-\\mu}{\\sqrt{2}\\sigma}\\right)
+       \\pm\\tau f(x)
+```
+
+The count in a bin is `F(e_{i+1}) - F(e_i)` at the stored bin edges ``e``, and ``f(x)`` 
+being the model component itself. 
+The low-/high-energy tails correspond to a ``+``/``-`` sign for the ``\\pm`` sign above,
+respectively.
 
 # Arguments
 - `data::SpectrumData`: binned spectrum data
@@ -133,17 +167,30 @@ Integrate the ex-Gaussian tail component analytically over each energy bin.
 - An array of expected tail counts per bin
 
 # See also
-- [`exGaussian`](@ref) for the pointwise model
+- [`exGaussian`](@ref) for the component model
 - [`ExGaussianParams`](@ref) for the parameters
 """
 function exGaussian_integral(data::SpectrumData, params::ExGaussianParams)
-    return # TODO
+    function _antiderivative(x::AbstractFloat, params::ExGaussianParams)
+        return params.A/2 * erf((x - params.mu)/(sqrt(2) * params.sigma)) -
+               (-1)^params.is_lowEnergyTail * params.tau * exGaussian(x, params)
+    end
+    antiderivative_values = _antiderivative.(data.bin_edges, Ref(params))
+    return antiderivative_values[2:end] .- antiderivative_values[1:(end-1)]
 end
 
 """
     quadPoly_integral(data::SpectrumData, params::QuadPolyParams)
 
 Integrate the quadratic polynomial component analytically over each energy bin.
+
+# Mathematical definition
+
+```math
+F(x) = \\frac{C}{3}\\,(x-\\mu)^3
+```
+
+The count in a bin is `F(e_{i+1}) - F(e_i)` at the stored bin edges ``e``.
 
 # Arguments
 - `data::SpectrumData`: binned spectrum data
@@ -153,19 +200,29 @@ Integrate the quadratic polynomial component analytically over each energy bin.
 - An array of expected quadratic background counts per bin
 
 # See also
-- [`quad_polynomial`](@ref) for the pointwise model
+- [`quad_polynomial`](@ref) for the component model
 - [`QuadPolyParams`](@ref) for the parameters
 """
 function quadPoly_integral(data::SpectrumData, params::QuadPolyParams)
-    return @. params.C/3 * (
-        (data.bin_edges[2:end] - params.mu)^3 - (data.bin_edges[1:(end-1)] - params.mu)^3
-    )
+    function _antiderivative(x::AbstractFloat, params::QuadPolyParams)
+        return params.C/3 * (x - params.mu)^3
+    end
+    antiderivative_values = _antiderivative.(data.bin_edges, Ref(params))
+    return antiderivative_values[2:end] .- antiderivative_values[1:(end-1)]
 end
 
 """
     linPoly_integral(data::SpectrumData, params::LinPolyParams)
 
 Integrate the linear polynomial component analytically over each energy bin.
+
+# Mathematical definition
+
+```math
+F(x) = \\frac{C}{2}\\,x\\,(x - 2\\mu)
+```
+
+The count in a bin is `F(e_{i+1}) - F(e_i)` at the stored bin edges ``e``.
 
 # Arguments
 - `data::SpectrumData`: binned spectrum data
@@ -175,20 +232,29 @@ Integrate the linear polynomial component analytically over each energy bin.
 - An array of expected linear background counts per bin
 
 # See also
-- [`lin_polynomial`](@ref) for the pointwise model
+- [`lin_polynomial`](@ref) for the component model
 - [`LinPolyParams`](@ref) for the parameters
 """
 function linPoly_integral(data::SpectrumData, params::LinPolyParams)
-    return @. params.C/2 * (
-        data.bin_edges[2:end] * (data.bin_edges[2:end] - 2 * params.mu) -
-        data.bin_edges[1:(end-1)] * (data.bin_edges[1:(end-1)] - 2 * params.mu)
-    )
+    function _antiderivative(x::AbstractFloat, params::LinPolyParams)
+        return params.C/2 * x * (x - 2 * params.mu)
+    end
+    antiderivative_values = _antiderivative.(data.bin_edges, Ref(params))
+    return antiderivative_values[2:end] .- antiderivative_values[1:(end-1)]
 end
 
 """
     constPoly_integral(data::SpectrumData, params::ConstPolyParams)
 
 Integrate the constant polynomial component analytically over each energy bin.
+
+# Mathematical definition
+
+```math
+F(x) = C\\,x
+```
+
+The count in a bin is `F(e_{i+1}) - F(e_i)` at the stored bin edges ``e``.
 
 # Arguments
 - `data::SpectrumData`: binned spectrum data
@@ -198,9 +264,13 @@ Integrate the constant polynomial component analytically over each energy bin.
 - An array of expected constant background counts per bin
 
 # See also
-- [`const_polynomial`](@ref) for the pointwise model
+- [`const_polynomial`](@ref) for the component model
 - [`ConstPolyParams`](@ref) for the parameters
 """
 function constPoly_integral(data::SpectrumData, params::ConstPolyParams)
-    return @. params.C * (data.bin_edges[2:end] - data.bin_edges[1:(end-1)])
+    function _antiderivative(x::AbstractFloat, params::ConstPolyParams)
+        return params.C * x
+    end
+    antiderivative_values = _antiderivative.(data.bin_edges, Ref(params))
+    return antiderivative_values[2:end] .- antiderivative_values[1:(end-1)]
 end

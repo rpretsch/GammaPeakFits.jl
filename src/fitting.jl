@@ -4,7 +4,7 @@
 Compute the Poisson log-likelihood for the model given observed counts.
 
 The expected count in each bin is obtained by integrating [`full_model`](@ref) over the bin 
-width `bin_size` using `QuadGK.jl`.
+width `bin_size`.
 The log-probability of the observed integer count `weight` is then evaluated under a
 Poisson distribution with that expected rate.
 
@@ -21,13 +21,7 @@ Poisson distribution with that expected rate.
 - [`ModelParams`](@ref) for the parameter structure
 """
 function poisson_ll(data::SpectrumData, params::ModelParams)
-    expected_counts = first.(
-        quadgk.(
-            x -> full_model(x, params),
-            data.bin_centers .- data.bin_size/2,
-            data.bin_centers .+ data.bin_size/2,
-        ),
-    )
+    expected_counts = numerical_integral(data, params)
     if any(expected_counts .< 0)
         return -Inf
     end

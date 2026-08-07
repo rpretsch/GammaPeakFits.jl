@@ -5,6 +5,13 @@ Evaluate a scaled Gaussian (normal) distribution at `x`.
 
 Uses `Distributions.jl` for the normal distribution implementation.
 
+# Mathematical definition
+
+```math
+f(x) = \\frac{A}{\\sqrt{2\\pi}\\sigma} \\,
+       \\exp\\!\\left(-\\frac{(x-\\mu)^2}{2\\sigma^2}\\right)
+```
+
 # Arguments
 - `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to 
   evaluate in keV
@@ -31,6 +38,13 @@ Evaluate a Compton-edge step function component at `x`.
 
 Uses the complementary error function (`erfc`) from `SpecialFunctions.jl` to model the
 smooth step from Compton scattering.
+
+# Mathematical definition
+
+```math
+f(x) = \\frac{h}{2}\\,
+       \\text{erfc}\\!\\left(\\frac{x-\\mu}{\\sigma\\sqrt{2}}\\right)
+```
 
 # Arguments
 - `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to 
@@ -68,6 +82,28 @@ Evaluate an exponentially modified Gaussian (ex-Gaussian) tail component at `x`.
 Used to model asymmetric peak tailing.
 Is evaluated in log-space using the `SpecialFunctions.logerfcx` for numerical stability
 reasons.
+
+# Mathematical definition
+
+```math
+f(x) = \\frac{A}{2\\tau}\\,
+       \\exp\\!\\left(\\frac{1}{2}\\left(\\frac{\\sigma}{\\tau}\\right)^2
+       \\pm\\frac{x-\\mu}{\\tau}\\right)\\,
+       \\text{erfc}\\!\\left(\\frac{1}{\\sqrt{2}}\\left(\\frac{\\sigma}{\\tau}
+       \\pm\\frac{x-\\mu}{\\sigma}\\right)\\right)
+```
+
+The low-/high-energy tails correspond to a ``+``/``-`` sign for the ``\\pm`` sign above,
+respectively. 
+
+For numerical stability this is evaluated in log-space as
+
+```math
+\\log f(x) = \\log A - \\log(2\\tau) 
+             -\\frac{1}{2} \\left(\\frac{x-\\mu}{\\sigma}\\right)^2 
+             +\\text{logerfcx}\\!\\left(\\frac{1}{\\sqrt{2}}\\left(\\frac{\\sigma}{\\tau}
+             \\pm\\frac{x-\\mu}{\\sigma}\\right)\\right)
+```
 
 # Arguments
 - `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to 
@@ -107,6 +143,15 @@ Evaluate the combined peak shape (Gaussian + Compton edge + ex-Gaussian tails) a
 
 Each term is optional — set the corresponding field to `false` in [`PeakParams`](@ref) to 
 exclude it.
+
+# Mathematical definition
+
+```math
+f_{\\text{peak}}(x) =
+    f_{\\text{G}}(x) + f_{\\text{C}}(x) + f_{\\text{eG,low}}(x) + f_{\\text{eG,high}}(x)
+```
+
+where each term is optional.
 
 # Arguments
 - `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to 
@@ -150,6 +195,12 @@ end
 
 Evaluate a scaled quadratic polynomial term at `x`.
 
+# Mathematical definition
+
+```math
+f(x) = C \\cdot (x - \\mu)^2
+```
+
 # Arguments
 - `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to
   evaluate in keV
@@ -177,6 +228,12 @@ end
     )
 
 Evaluate a scaled linear polynomial term at `x`.
+
+# Mathematical definition
+
+```math
+f(x) = C \\cdot (x - \\mu)
+```
 
 # Arguments
 - `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to
@@ -208,6 +265,12 @@ Evaluate a constant polynomial term.
 
 Uses `x` to set whether to return as a scalar or vector.
 
+# Mathematical definition
+
+```math
+f(x) = C
+```
+
 # Arguments
 - `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: sets the return type
 - `params::ConstPolyParams`: polynomial parameters
@@ -236,6 +299,15 @@ Evaluate the combined background (polynomial of 2nd order) at `x`.
 
 Each term is optional — set the corresponding field to `false` in 
 [`BackgroundParams`](@ref) to exclude it.
+
+# Mathematical definition
+
+```math
+f_{\\text{bg}}(x) =
+    C_q\\,(x - \\mu_q)^2 + C_l\\,(x - \\mu_l) + C_c
+```
+
+where each term is optional.
 
 # Arguments
 - `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to
@@ -274,6 +346,12 @@ Evaluate the complete gamma-peak model (peak shape + background) at `x`.
 
 Combines [`peak_model`](@ref) and [`background_model`](@ref). Each term is optional — set
 the corresponding field to `nothing` in [`ModelParams`](@ref) to exclude it.
+
+# Mathematical definition
+
+```math
+f(x) = f_{\\text{peak}}(x) + f_{\\text{bg}}(x)
+```
 
 # Arguments
 - `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to 

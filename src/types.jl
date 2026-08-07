@@ -43,7 +43,7 @@ error function.
 
 ```math
 f(x) = \\frac{h}{2} \\,
-       \\operatorname{erfc}\\!\\left(\\frac{x-\\mu}{\\sigma\\sqrt{2}}\\right)
+       \\text{erfc}\\!\\left(\\frac{x-\\mu}{\\sigma\\sqrt{2}}\\right)
 ```
 
 # See also
@@ -81,7 +81,8 @@ f(x) = \\frac{A}{2\\tau}\\,
        \\pm\\frac{x-\\mu}{\\sigma}\\right)\\right)
 ```
 
-The low-/high-energy tails correspond to a ``+``/``-`` sign for the ``\\pm`` sign above, respectively.
+The low-/high-energy tails correspond to a ``+``/``-`` sign for the ``\\pm`` sign above, 
+respectively.
 
 For numerical stability this is evaluated in log-space as
 

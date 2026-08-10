@@ -1,5 +1,5 @@
 """
-    poisson_ll(data::SpectrumData, params::ModelParams, configs::Configs)
+    poisson_ll(data::SpectrumData, params::ModelParams, configs::FitConfigs)
 
 Compute the Poisson log-likelihood for the model given observed counts.
 
@@ -11,7 +11,7 @@ Poisson distribution with that expected rate.
 # Arguments
 - `data::SpectrumData`: data container
 - `params::ModelParams`: model parameters
-- `configs::Configs`: Fitting configurations
+- `configs::FitConfigs`: Fitting configurations
 
 # Returns
 - `-Inf` if any expected counts are negative or non-finite (unphysical model configuration)
@@ -24,15 +24,16 @@ Poisson distribution with that expected rate.
 - [`full_model`](@ref) for the underlying model
 - [`ModelParams`](@ref) for the parameter structure
 """
-function poisson_ll(data::SpectrumData, params::ModelParams, configs::Configs)
-    if configs.integration_method == :numerical
+function poisson_ll(data::SpectrumData, params::ModelParams, configs::FitConfigs)
+    integration_method = configs.integration_method
+    if integration_method == :numerical
         expected_counts = numerical_integral(data, params)
-    elseif configs.integration_method == :analytical
+    elseif integration_method == :analytical
         expected_counts = analytical_integral(data, params)
-    elseif configs.integration_method == :midpoint
+    elseif integration_method == :midpoint
         expected_counts = midpoint_integral(data, params)
     else
-        throw(ArgumentError("Unknown `integration_method`: $(configs.integration_method)"))
+        throw(ArgumentError("Unknown `integration_method`: $(integration_method)"))
     end
     any(x -> (x < 0 || !isfinite(x)), expected_counts) && return -Inf
     result_vector = logpdf.(Poisson.(expected_counts), data.weights)
@@ -42,7 +43,7 @@ end
 """
     build_prior(
         params::ModelParams,
-        configs::Configs;
+        configs::FitConfigs;
         peak_height::Union{<:Real,Nothing},
         peak_area::Union{<:Real,Nothing},
     )
@@ -53,11 +54,11 @@ Components that are `false` (or `nothing` for container fields) are skipped. Com
 to `true` or to a concrete parameter struct receive a weakly informative prior.
 
 The expected peak centroid `configs.mu` and core width `configs.sigma`, as well as all prior
-widths and bounds, are taken from [`Configs`](@ref) and can be tuned there.
+widths and bounds, are taken from [`FitConfigs`](@ref) and can be tuned there.
 
 # Arguments
 - `params::ModelParams`: model specification indicating which components are enabled
-- `configs::Configs`: fitting configuration
+- `configs::FitConfigs`: fitting configuration
 - `peak_height::Union{<:Real,Nothing}`: approximate peak height in counts/keV. Optional for 
   some model configurations. Default: `nothing`
 - `peak_area::Union{<:Real,Nothing}`: approximate integrated peak area in counts. Optional 
@@ -77,32 +78,33 @@ The following priors are defined per enabled component:
 
 | Symbol | Prior | Component |
 | --- | --- | --- |
-| `:mu` | `Normal(configs.mu, configs.mu_std)` | all except `background.constPoly` |
-| `:sigma` | `truncated(Normal(configs.sigma, configs.sigma_std), eps(), Inf)` | all `peak` components |
+| `:mu` | `Normal(configs.mu, prior_configs.mu_std)` | all except `background.constPoly` |
+| `:sigma` | `truncated(Normal(configs.sigma, prior_configs.sigma_std), eps(), Inf)` | all `peak` components |
 | `:gaussian_A` | `Uniform(0, peak_area)` | `peak.gaussian` |
 | `:compton_h` | `Uniform(0, peak_height)` | `peak.compton` |
 | `:lowEnergyTail_A` | `Uniform(0, peak_area)` | `peak.lowEnergyTail` |
-| `:lowEnergyTail_tau` | `Uniform(eps(), configs.lowEnergyTail_tau_upper)` | `peak.lowEnergyTail` |
+| `:lowEnergyTail_tau` | `Uniform(eps(), prior_configs.lowEnergyTail_tau_upper)` | `peak.lowEnergyTail` |
 | `:highEnergyTail_A` | `Uniform(0, peak_area)` | `peak.highEnergyTail` |
-| `:highEnergyTail_tau` | `Uniform(eps(), configs.highEnergyTail_tau_upper)` | `peak.highEnergyTail` |
-| `:quadPoly_C` | `Uniform(configs.quadPoly_C_limits)` | `background.quadPoly` |
-| `:linPoly_C` | `Uniform(configs.linPoly_C_limits)` | `background.linPoly` |
+| `:highEnergyTail_tau` | `Uniform(eps(), prior_configs.highEnergyTail_tau_upper)` | `peak.highEnergyTail` |
+| `:quadPoly_C` | `Uniform(prior_configs.quadPoly_C_limits)` | `background.quadPoly` |
+| `:linPoly_C` | `Uniform(prior_configs.linPoly_C_limits)` | `background.linPoly` |
 | `:constPoly_C` | `Uniform(0, peak_height)` | `background.constPoly` |
 
 # See also
-- [`Configs`](@ref) for tuning the prior centers, widths, and bounds
+- [`FitConfigs`](@ref) for tuning the prior centers, widths, and bounds
 - [`ModelParams`](@ref), [`PeakParams`](@ref), [`BackgroundParams`](@ref) for the model
   specification
 - [`poisson_ll`](@ref) for the likelihood that uses these priors
 """
 function build_prior(
     params::ModelParams,
-    configs::Configs;
+    configs::FitConfigs;
     peak_height::Union{<:Real,Nothing} = nothing,
     peak_area::Union{<:Real,Nothing} = nothing,
 )
     peak_params = params.peak
     background_params = params.background
+    prior_configs = configs.prior
 
     if (isnothing(peak_params) && isnothing(background_params))
         throw(ArgumentError("No model specified"))
@@ -118,7 +120,7 @@ function build_prior(
         ) ||
         !isnothing(background_params) &&
         (background_params.quadPoly !== false || background_params.linPoly !== false)
-    needs_mu && push!(priors, :mu => Normal(configs.mu, configs.mu_std))
+    needs_mu && push!(priors, :mu => Normal(configs.mu, prior_configs.mu_std))
 
     needs_sigma =
         !isnothing(peak_params) && (
@@ -129,7 +131,7 @@ function build_prior(
         )
     needs_sigma && push!(
         priors,
-        :sigma => truncated(Normal(configs.sigma, configs.sigma_std), eps(), Inf),
+        :sigma => truncated(Normal(configs.sigma, prior_configs.sigma_std), eps(), Inf),
     )
 
     if !isnothing(peak_params)
@@ -151,7 +153,7 @@ function build_prior(
             push!(priors, :lowEnergyTail_A => Uniform(0, peak_area))
             push!(
                 priors,
-                :lowEnergyTail_tau => Uniform(eps(), configs.lowEnergyTail_tau_upper),
+                :lowEnergyTail_tau => Uniform(eps(), prior_configs.lowEnergyTail_tau_upper),
             )
         end
 
@@ -161,16 +163,17 @@ function build_prior(
             push!(priors, :highEnergyTail_A => Uniform(0, peak_area))
             push!(
                 priors,
-                :highEnergyTail_tau => Uniform(eps(), configs.highEnergyTail_tau_upper),
+                :highEnergyTail_tau =>
+                    Uniform(eps(), prior_configs.highEnergyTail_tau_upper),
             )
         end
     end
 
     if !isnothing(background_params)
         background_params.quadPoly !== false &&
-            push!(priors, :quadPoly_C => Uniform(configs.quadPoly_C_limits...))
+            push!(priors, :quadPoly_C => Uniform(prior_configs.quadPoly_C_limits...))
         background_params.linPoly !== false &&
-            push!(priors, :linPoly_C => Uniform(configs.linPoly_C_limits...))
+            push!(priors, :linPoly_C => Uniform(prior_configs.linPoly_C_limits...))
 
         if background_params.constPoly !== false
             isnothing(peak_height) &&
@@ -183,14 +186,14 @@ function build_prior(
 end
 
 """
-    build_posterior(data::SpectrumData, priors::NamedTupleDist, configs::Configs)
+    build_posterior(data::SpectrumData, priors::NamedTupleDist, configs::FitConfigs)
 
 Construct a posterior measure from observed data and a prior distribution.
 
 # Arguments
 - `data::SpectrumData`: the observed spectrum data
 - `priors`: the prior distribution (result of [`build_prior`](@ref))
-- `configs::Configs`: Fitting configurations
+- `configs::FitConfigs`: Fitting configurations
 
 # Returns
 - A `PosteriorMeasure` wrapping the log-likelihood and prior
@@ -200,7 +203,7 @@ Construct a posterior measure from observed data and a prior distribution.
 - [`poisson_ll`](@ref) for the likelihood function
 - [`ModelParams`](@ref) for the model parameter structure
 """
-function build_posterior(data::SpectrumData, priors::NamedTupleDist, configs::Configs)
+function build_posterior(data::SpectrumData, priors::NamedTupleDist, configs::FitConfigs)
 
     function _log_likelihood(params::NamedTuple)
         model_params = ModelParams(params)

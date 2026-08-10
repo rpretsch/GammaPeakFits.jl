@@ -13,7 +13,7 @@
     )
     C_CONST = 100.0
     C_LIN = 10.0
-    CONFIGS = Configs(mu = MU, sigma = SIGMA, integration_method = :midpoint)
+    CONFIGS = FitConfigs(mu = MU, sigma = SIGMA, integration_method = :midpoint)
 
     @testset "poisson_ll" begin
 
@@ -75,17 +75,17 @@
             ll_analytical = poisson_ll(
                 DATA,
                 model_params,
-                Configs(mu = MU, sigma = SIGMA, integration_method = :analytical),
+                FitConfigs(mu = MU, sigma = SIGMA, integration_method = :analytical),
             )
             ll_numerical = poisson_ll(
                 DATA,
                 model_params,
-                Configs(mu = MU, sigma = SIGMA, integration_method = :numerical),
+                FitConfigs(mu = MU, sigma = SIGMA, integration_method = :numerical),
             )
             ll_midpoint = poisson_ll(
                 DATA,
                 model_params,
-                Configs(mu = MU, sigma = SIGMA, integration_method = :midpoint),
+                FitConfigs(mu = MU, sigma = SIGMA, integration_method = :midpoint),
             )
 
             @test isfinite(ll_analytical)
@@ -102,7 +102,7 @@
             @test_throws ArgumentError poisson_ll(
                 DATA,
                 model_params,
-                Configs(mu = MU, sigma = SIGMA, integration_method = :bogus),
+                FitConfigs(mu = MU, sigma = SIGMA, integration_method = :bogus),
             )
 
         end
@@ -277,9 +277,7 @@
 
         @testset "Configs values propagate into the priors" begin
 
-            configs = Configs(
-                mu = MU,
-                sigma = SIGMA,
+            prior_configs = PriorConfigs(
                 mu_std = 1.0,
                 sigma_std = 2.0,
                 lowEnergyTail_tau_upper = 5.0,
@@ -287,6 +285,7 @@
                 quadPoly_C_limits = (-2.0, 2.0),
                 linPoly_C_limits = (-3.0, 3.0),
             )
+            configs = FitConfigs(mu = MU, sigma = SIGMA, prior = prior_configs)
             model_params = ModelParams(
                 peak = PeakParams(
                     gaussian = true,

@@ -13,7 +13,7 @@ posteriors.
   [`ConstPolyParams`](@ref)
 - Containers: [`PeakParams`](@ref), [`BackgroundParams`](@ref), [`ModelParams`](@ref)
 - Data: [`SpectrumData`](@ref)
-- Fitting configuration: [`Configs`](@ref)
+- Configurations: [`PriorConfigs`](@ref), [`FitConfigs`](@ref)
 
 ## Model evaluation
 - Components: [`gaussian`](@ref), [`compton`](@ref), [`exGaussian`](@ref),
@@ -38,11 +38,10 @@ posteriors.
 using GammaPeakFits
 
 # Configurations
-configs = Configs(
-    mu = 2048.0,    # keV
-    sigma = 5.0,    # keV
-    integration_method = :analytical,
-    )
+configs = FitConfigs(
+              mu = 2048.0,  # keV
+              sigma = 5.0,  # keV
+          )
 
 # Generate data
 A = 1000.0              # counts
@@ -127,8 +126,9 @@ export ModelParams
 # Types - data
 export SpectrumData
 
-# Types - fitting configuration
-export Configs
+# Types - configurations
+export PriorConfigs
+export FitConfigs
 
 # Model evaluation - components
 export gaussian

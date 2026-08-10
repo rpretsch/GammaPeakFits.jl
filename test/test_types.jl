@@ -230,8 +230,7 @@
 
         @testset "FitConfigs" begin
 
-            configs =
-                FitConfigs(mu = 2048.0, sigma = 5.0)
+            configs = FitConfigs(mu = 2048.0, sigma = 5.0)
             @test configs.mu == 2048.0
             @test configs.sigma == 5.0
             @test configs.prior == PriorConfigs()

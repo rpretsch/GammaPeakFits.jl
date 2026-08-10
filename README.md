@@ -236,7 +236,7 @@ prior = build_prior(
             configs; 
             peak_height = peak_height, 
             peak_area = peak_area,
-       )
+        )
 
 # Build the posterior
 posterior = build_posterior(fit_data, prior, configs)

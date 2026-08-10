@@ -1,5 +1,5 @@
 """
-    poisson_ll(data::SpectrumData, params::ModelParams)
+    poisson_ll(data::SpectrumData, params::ModelParams, configs::Configs)
 
 Compute the Poisson log-likelihood for the model given observed counts.
 
@@ -11,17 +11,29 @@ Poisson distribution with that expected rate.
 # Arguments
 - `data::SpectrumData`: data container
 - `params::ModelParams`: model parameters
+- `configs::Configs`: Fitting configurations
 
 # Returns
 - `-Inf` if any expected counts are negative or non-finite (unphysical model configuration)
 - sum of log-likelihoods across bins (total log-likelihood) otherwise
 
+# Throws
+- An `ArgumentError` if `configs.integration_method` is unknown
+
 # See also
 - [`full_model`](@ref) for the underlying model
 - [`ModelParams`](@ref) for the parameter structure
 """
-function poisson_ll(data::SpectrumData, params::ModelParams)
-    expected_counts = numerical_integral(data, params)
+function poisson_ll(data::SpectrumData, params::ModelParams, configs::Configs)
+    if configs.integration_method == :numerical
+        expected_counts = numerical_integral(data, params)
+    elseif configs.integration_method == :analytical
+        expected_counts = analytical_integral(data, params)
+    elseif configs.integration_method == :midpoint
+        expected_counts = midpoint_integral(data, params)
+    else
+        throw(ArgumentError("Unknown `integration_method`: $(configs.integration_method)"))
+    end
     any(x -> (x < 0 || !isfinite(x)), expected_counts) && return -Inf
     result_vector = logpdf.(Poisson.(expected_counts), data.weights)
     return sum(result_vector)
@@ -157,13 +169,14 @@ function build_prior(
 end
 
 """
-    build_posterior(data::SpectrumData, priors::NamedTupleDist)
+    build_posterior(data::SpectrumData, priors::NamedTupleDist, configs::Configs)
 
 Construct a posterior measure from observed data and a prior distribution.
 
 # Arguments
 - `data::SpectrumData`: the observed spectrum data
 - `priors`: the prior distribution (result of [`build_prior`](@ref))
+- `configs::Configs`: Fitting configurations
 
 # Returns
 - A `PosteriorMeasure` wrapping the log-likelihood and prior
@@ -173,11 +186,11 @@ Construct a posterior measure from observed data and a prior distribution.
 - [`poisson_ll`](@ref) for the likelihood function
 - [`ModelParams`](@ref) for the model parameter structure
 """
-function build_posterior(data::SpectrumData, priors::NamedTupleDist)
+function build_posterior(data::SpectrumData, priors::NamedTupleDist, configs::Configs)
 
     function _log_likelihood(params::NamedTuple)
         model_params = ModelParams(params)
-        return poisson_ll(data, model_params)
+        return poisson_ll(data, model_params, configs)
     end
 
     return PosteriorMeasure(logfuncdensity(_log_likelihood), priors)

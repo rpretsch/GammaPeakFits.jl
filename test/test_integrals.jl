@@ -94,6 +94,41 @@
 
     end
 
+    @testset "midpoint_integral" begin
+
+        @testset "Exact for constant background" begin
+
+            model_params = ModelParams(
+                background = BackgroundParams(constPoly = ConstPolyParams(C = C_CONST)),
+            )
+
+            midpoint = midpoint_integral(data, model_params)
+            analytical = analytical_integral(data, model_params)
+            numerical = numerical_integral(data, model_params)
+
+            @test length(midpoint) == length(bin_centers)
+            @test midpoint == analytical
+            @test midpoint == numerical
+            @test all(==(C_CONST * BIN_SIZE), midpoint)
+
+        end
+
+        @testset "Approximates gaussian peak" begin
+
+            gaussian_params = GaussianParams(A = A, mu = MU, sigma = SIGMA)
+            model_params = ModelParams(peak = PeakParams(gaussian = gaussian_params))
+
+            midpoint = midpoint_integral(data, model_params)
+            numerical = numerical_integral(data, model_params)
+
+            @test length(midpoint) == length(bin_centers)
+            @test all(isfinite, midpoint)
+            @test isapprox(sum(midpoint), sum(numerical); rtol = 1e-3)
+
+        end
+
+    end
+
     @testset "analytical_integral matches numerical_integral" begin
 
         model_params = ModelParams(

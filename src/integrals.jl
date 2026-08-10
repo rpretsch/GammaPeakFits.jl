@@ -28,6 +28,29 @@ function numerical_integral(data::SpectrumData, params::ModelParams)
 end
 
 """
+    midpoint_integral(data::SpectrumData, params::ModelParams)
+
+Integrate the [`full_model`](@ref) via the midpoint rule over each energy bin of size 
+`bin_size`.
+
+Skips model components that were set to `false` (or `nothing` for container fields).
+
+# Arguments
+- `data::SpectrumData`: binned spectrum data
+- `params::ModelParams`: model parameters
+
+# Returns
+- An array of expected counts per bin
+
+# See also
+- [`full_model`](@ref) for the integrated model
+- [`ModelParams`](@ref) for the model params
+"""
+function midpoint_integral(data::SpectrumData, params::ModelParams)
+    return full_model(data.bin_centers, params) .* data.bin_size
+end
+
+"""
     analytical_integral(data::SpectrumData, params::ModelParams)
 
 Integrate the [`full_model`](@ref) analytically over each energy bin of size `bin_size`.

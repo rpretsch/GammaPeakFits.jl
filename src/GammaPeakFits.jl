@@ -13,6 +13,7 @@ posteriors.
   [`ConstPolyParams`](@ref)
 - Containers: [`PeakParams`](@ref), [`BackgroundParams`](@ref), [`ModelParams`](@ref)
 - Data: [`SpectrumData`](@ref)
+- Configuration: [`Configs`](@ref)
 
 ## Model evaluation
 - Components: [`gaussian`](@ref), [`compton`](@ref), [`exGaussian`](@ref),
@@ -38,6 +39,9 @@ posteriors.
 # specified value
 MU = 2048.0 # keV
 SIGMA = 5.0 # keV
+
+# Configurations
+configs = Configs(integration_method = :analytical)
 
 # Generate data
 A = 1000.0              # counts
@@ -81,7 +85,7 @@ prior = build_prior(
         )
 
 # Build the posterior
-posterior = build_posterior(fit_data, prior)
+posterior = build_posterior(fit_data, prior, configs)
 
 # Sample with BAT.jl
 # result = bat_sample(
@@ -122,6 +126,9 @@ export ModelParams
 # Types — data
 export SpectrumData
 
+# Types - configuration
+export Configs
+
 # Model evaluation — components
 export gaussian
 export compton
@@ -142,6 +149,7 @@ export build_posterior
 
 # Integrals - combined
 export numerical_integral
+export midpoint_integral
 export analytical_integral
 
 # Integrals - components

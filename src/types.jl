@@ -508,3 +508,16 @@ function SpectrumData(
         bin_size = bin_size,
     )
 end
+
+"""
+    Configs
+
+Configuration options for the fitting process.
+
+# Fields
+- `integration_method::Symbol`: the integration method used to compute expected bin counts.
+  Either `:analytical`, `:numerical`, or `:midpoint`
+"""
+Base.@kwdef struct Configs
+    integration_method::Symbol
+end

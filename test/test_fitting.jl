@@ -13,6 +13,7 @@
     )
     C_CONST = 100.0
     C_LIN = 10.0
+    CONFIGS = Configs(integration_method = :midpoint)
 
     @testset "poisson_ll" begin
 
@@ -27,7 +28,7 @@
             model_params = ModelParams(
                 background = BackgroundParams(constPoly = ConstPolyParams(C = C_CONST)),
             )
-            ll = poisson_ll(data, model_params)
+            ll = poisson_ll(data, model_params, CONFIGS)
             expected_ll = logpdf(Poisson(C_CONST), 10)
             @test ll == expected_ll
 
@@ -38,7 +39,7 @@
             model_params = ModelParams(
                 background = BackgroundParams(constPoly = ConstPolyParams(C = C_CONST)),
             )
-            ll = poisson_ll(DATA, model_params)
+            ll = poisson_ll(DATA, model_params, CONFIGS)
             @test ll isa AbstractFloat
             @test !isnan(ll)
             @test !isinf(ll)
@@ -50,7 +51,7 @@
             model_params = ModelParams(
                 peak = PeakParams(gaussian = GaussianParams(A = A, mu = MU, sigma = SIGMA)),
             )
-            ll = poisson_ll(DATA, model_params)
+            ll = poisson_ll(DATA, model_params, CONFIGS)
             @test ll isa AbstractFloat
             @test !isnan(ll)
 
@@ -61,7 +62,39 @@
             model_params = ModelParams(
                 background = BackgroundParams(linPoly = LinPolyParams(C = C_LIN, mu = MU)),
             )
-            @test isinf(poisson_ll(DATA, model_params))
+            @test isinf(poisson_ll(DATA, model_params, CONFIGS))
+
+        end
+
+        @testset "Integration method dispatch" begin
+
+            model_params = ModelParams(
+                background = BackgroundParams(constPoly = ConstPolyParams(C = C_CONST)),
+            )
+
+            ll_analytical =
+                poisson_ll(DATA, model_params, Configs(integration_method = :analytical))
+            ll_numerical =
+                poisson_ll(DATA, model_params, Configs(integration_method = :numerical))
+            ll_midpoint =
+                poisson_ll(DATA, model_params, Configs(integration_method = :midpoint))
+
+            @test isfinite(ll_analytical)
+            @test ll_analytical == ll_numerical
+            @test ll_analytical == ll_midpoint
+
+        end
+
+        @testset "Unknown integration method throws" begin
+
+            model_params = ModelParams(
+                background = BackgroundParams(constPoly = ConstPolyParams(C = C_CONST)),
+            )
+            @test_throws ArgumentError poisson_ll(
+                DATA,
+                model_params,
+                Configs(integration_method = :bogus),
+            )
 
         end
 
@@ -265,7 +298,7 @@
 
         @testset "Return type" begin
 
-            posterior = build_posterior(DATA, prior)
+            posterior = build_posterior(DATA, prior, CONFIGS)
             @test posterior isa PosteriorMeasure
 
             v = (mu = MU, sigma = SIGMA, gaussian_A = A, constPoly_C = C_CONST)
@@ -277,6 +310,7 @@
                     ),
                     background = BackgroundParams(constPoly = ConstPolyParams(C = C_CONST)),
                 ),
+                CONFIGS,
             )
             @test posterior.likelihood._log_f(v) == expected
             @test isfinite(expected)
@@ -293,7 +327,7 @@
                 peak_height = PEAK_HEIGHT,
                 peak_area = PEAK_AREA,
             )
-            posterior = build_posterior(DATA, prior_peak)
+            posterior = build_posterior(DATA, prior_peak, CONFIGS)
             @test posterior isa PosteriorMeasure
 
             v = (mu = MU, sigma = SIGMA, gaussian_A = A)
@@ -304,6 +338,7 @@
                         gaussian = GaussianParams(A = A, mu = MU, sigma = SIGMA),
                     ),
                 ),
+                CONFIGS,
             )
             @test posterior.likelihood._log_f(v) == expected
             @test isfinite(expected)
@@ -321,7 +356,7 @@
                 peak_height = PEAK_HEIGHT,
                 peak_area = PEAK_AREA,
             )
-            posterior = build_posterior(DATA, prior_background)
+            posterior = build_posterior(DATA, prior_background, CONFIGS)
             @test posterior isa PosteriorMeasure
 
             v = (mu = MU, constPoly_C = C_CONST)
@@ -330,6 +365,7 @@
                 ModelParams(
                     background = BackgroundParams(constPoly = ConstPolyParams(C = C_CONST)),
                 ),
+                CONFIGS,
             )
             @test posterior.likelihood._log_f(v) == expected
             @test isfinite(expected)
@@ -346,7 +382,7 @@
                 peak_height = PEAK_HEIGHT,
                 peak_area = PEAK_AREA,
             )
-            posterior = build_posterior(DATA, prior)
+            posterior = build_posterior(DATA, prior, CONFIGS)
 
             v = (mu = MU, linPoly_C = C_LIN)
             @test posterior.likelihood._log_f(v) == -Inf

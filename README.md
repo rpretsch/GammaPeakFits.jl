@@ -190,6 +190,9 @@ using GammaPeakFits
 MU = 2048.0 # keV
 SIGMA = 5.0 # keV
 
+# Configurations
+configs = Configs(integration_method = :analytical)
+
 # Generate data
 A = 1000.0              # counts
 C_const = 100.0         # counts/keV
@@ -232,7 +235,7 @@ prior = build_prior(
        )
 
 # Build the posterior
-posterior = build_posterior(fit_data, prior)
+posterior = build_posterior(fit_data, prior, configs)
 
 # Sample with BAT.jl
 # result = bat_sample(

@@ -221,6 +221,13 @@
 
         end
 
+        @testset "Configs" begin
+
+            configs = Configs(integration_method = :analytical)
+            @test configs.integration_method === :analytical
+
+        end
+
     end
 
 end

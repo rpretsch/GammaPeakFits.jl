@@ -13,7 +13,7 @@ posteriors.
   [`ConstPolyParams`](@ref)
 - Containers: [`PeakParams`](@ref), [`BackgroundParams`](@ref), [`ModelParams`](@ref)
 - Data: [`SpectrumData`](@ref)
-- Configuration: [`Configs`](@ref)
+- Fitting configuration: [`Configs`](@ref)
 
 ## Model evaluation
 - Components: [`gaussian`](@ref), [`compton`](@ref), [`exGaussian`](@ref),
@@ -35,13 +35,14 @@ posteriors.
 # Quick start
 
 ```julia
-# Fitting constants that have to be provided, but still will be fitted around the here
-# specified value
-MU = 2048.0 # keV
-SIGMA = 5.0 # keV
+using GammaPeakFits
 
 # Configurations
-configs = Configs(integration_method = :analytical)
+configs = Configs(
+    mu = 2048.0,    # keV
+    sigma = 5.0,    # keV
+    integration_method = :analytical,
+    )
 
 # Generate data
 A = 1000.0              # counts
@@ -50,7 +51,7 @@ lower_limit = 1.0       # keV
 upper_limit = 4096.0    # keV
 bin_size = 0.5          # keV
 
-gaussian_params = GaussianParams(A = A, mu = MU, sigma = SIGMA)
+gaussian_params = GaussianParams(A = A, mu = configs.mu, sigma = configs.sigma)
 peak_params = PeakParams(gaussian = gaussian_params)
 constPoly_params = ConstPolyParams(C = C_const)
 background_params = BackgroundParams(constPoly = constPoly_params)
@@ -65,7 +66,7 @@ data = SpectrumData(lower_limit, upper_limit, bin_size, generation_modelParams)
 
 # cut appropriate fit window
 window_size = 100.0 # keV
-fit_data = cut_data(data, MU, window_size)
+fit_data = cut_data(data, configs.mu, window_size)
 
 # Specify which components to include for fitting
 peak_params = PeakParams(gaussian = true)
@@ -73,13 +74,13 @@ background_params = BackgroundParams(constPoly = true)
 fit_modelParams = ModelParams(peak = peak_params, background = background_params)
 
 # Get needed peak features
-peak_height, peak_area = get_peak_features(fit_data, MU, SIGMA) # (counts/keV, counts)
+peak_height, peak_area = get_peak_features(fit_data, configs.mu, configs.sigma) 
+# (counts/keV, counts)
 
 # Build the prior
 prior = build_prior(
-            fit_modelParams, 
-            MU, 
-            SIGMA;
+            fit_modelParams,
+            configs;
             peak_height = peak_height, 
             peak_area = peak_area
         )
@@ -110,7 +111,7 @@ include("fitting.jl")
 include("integrals.jl")
 include("utils.jl")
 
-# Types — component parameters
+# Types - component parameters
 export GaussianParams
 export ComptonParams
 export ExGaussianParams
@@ -118,18 +119,18 @@ export QuadPolyParams
 export LinPolyParams
 export ConstPolyParams
 
-# Types — containers
+# Types - containers
 export PeakParams
 export BackgroundParams
 export ModelParams
 
-# Types — data
+# Types - data
 export SpectrumData
 
-# Types - configuration
+# Types - fitting configuration
 export Configs
 
-# Model evaluation — components
+# Model evaluation - components
 export gaussian
 export compton
 export exGaussian
@@ -137,7 +138,7 @@ export quad_polynomial
 export lin_polynomial
 export const_polynomial
 
-# Model evaluation — combined
+# Model evaluation - combined
 export peak_model
 export background_model
 export full_model

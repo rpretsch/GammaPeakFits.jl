@@ -223,8 +223,35 @@
 
         @testset "Configs" begin
 
-            configs = Configs(integration_method = :analytical)
-            @test configs.integration_method === :analytical
+            @testset "Defaults and custom values" begin
+
+                configs =
+                    Configs(mu = 2048.0, sigma = 5.0, integration_method = :analytical)
+                @test configs.mu == 2048.0
+                @test configs.sigma == 5.0
+                @test configs.integration_method === :analytical
+                @test configs isa Configs{Float64}
+
+                configs = Configs(
+                    mu = 4096.0,
+                    sigma = 20.0,
+                    mu_std = 1.0,
+                    sigma_std = 2.0,
+                    lowEnergyTail_tau_upper = 3.0,
+                    highEnergyTail_tau_upper = 4.0,
+                    quadPoly_C_limits = (-2.0, 2.0),
+                    linPoly_C_limits = (-3.0, 3.0),
+                )
+                @test configs.mu == 4096.0
+                @test configs.sigma == 20.0
+                @test configs.mu_std == 1.0
+                @test configs.sigma_std == 2.0
+                @test configs.lowEnergyTail_tau_upper == 3.0
+                @test configs.highEnergyTail_tau_upper == 4.0
+                @test configs.quadPoly_C_limits == (-2.0, 2.0)
+                @test configs.linPoly_C_limits == (-3.0, 3.0)
+
+            end
 
         end
 

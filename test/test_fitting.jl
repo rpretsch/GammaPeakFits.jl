@@ -13,7 +13,7 @@
     )
     C_CONST = 100.0
     C_LIN = 10.0
-    CONFIGS = Configs(integration_method = :midpoint)
+    CONFIGS = Configs(mu = MU, sigma = SIGMA, integration_method = :midpoint)
 
     @testset "poisson_ll" begin
 
@@ -72,12 +72,21 @@
                 background = BackgroundParams(constPoly = ConstPolyParams(C = C_CONST)),
             )
 
-            ll_analytical =
-                poisson_ll(DATA, model_params, Configs(integration_method = :analytical))
-            ll_numerical =
-                poisson_ll(DATA, model_params, Configs(integration_method = :numerical))
-            ll_midpoint =
-                poisson_ll(DATA, model_params, Configs(integration_method = :midpoint))
+            ll_analytical = poisson_ll(
+                DATA,
+                model_params,
+                Configs(mu = MU, sigma = SIGMA, integration_method = :analytical),
+            )
+            ll_numerical = poisson_ll(
+                DATA,
+                model_params,
+                Configs(mu = MU, sigma = SIGMA, integration_method = :numerical),
+            )
+            ll_midpoint = poisson_ll(
+                DATA,
+                model_params,
+                Configs(mu = MU, sigma = SIGMA, integration_method = :midpoint),
+            )
 
             @test isfinite(ll_analytical)
             @test ll_analytical == ll_numerical
@@ -93,7 +102,7 @@
             @test_throws ArgumentError poisson_ll(
                 DATA,
                 model_params,
-                Configs(integration_method = :bogus),
+                Configs(mu = MU, sigma = SIGMA, integration_method = :bogus),
             )
 
         end
@@ -107,8 +116,7 @@
             model_params = ModelParams()
             @test_throws ArgumentError build_prior(
                 model_params,
-                MU,
-                SIGMA;
+                CONFIGS;
                 peak_height = PEAK_HEIGHT,
                 peak_area = PEAK_AREA,
             )
@@ -120,8 +128,7 @@
             model_params = ModelParams(background = BackgroundParams(constPoly = true))
             prior = build_prior(
                 model_params,
-                MU,
-                SIGMA;
+                CONFIGS;
                 peak_height = PEAK_HEIGHT,
                 peak_area = PEAK_AREA,
             )
@@ -129,8 +136,7 @@
             model_params = ModelParams(peak = PeakParams(gaussian = true))
             prior = build_prior(
                 model_params,
-                MU,
-                SIGMA;
+                CONFIGS;
                 peak_height = PEAK_HEIGHT,
                 peak_area = PEAK_AREA,
             )
@@ -146,8 +152,7 @@
                 ModelParams(background = BackgroundParams(quadPoly = true))
             prior_noSigma = build_prior(
                 model_params_noSigma,
-                MU,
-                SIGMA;
+                CONFIGS;
                 peak_height = PEAK_HEIGHT,
                 peak_area = PEAK_AREA,
             )
@@ -157,8 +162,7 @@
 
             prior_sigma = build_prior(
                 model_params_sigma,
-                MU,
-                SIGMA;
+                CONFIGS;
                 peak_height = PEAK_HEIGHT,
                 peak_area = PEAK_AREA,
             )
@@ -173,8 +177,7 @@
             model_params = ModelParams(peak = PeakParams(gaussian = true, compton = true))
             prior = build_prior(
                 model_params,
-                MU,
-                SIGMA;
+                CONFIGS;
                 peak_height = PEAK_HEIGHT,
                 peak_area = PEAK_AREA,
             )
@@ -186,8 +189,7 @@
             model_params = ModelParams(background = BackgroundParams(constPoly = true))
             prior = build_prior(
                 model_params,
-                MU,
-                SIGMA;
+                CONFIGS;
                 peak_height = PEAK_HEIGHT,
                 peak_area = PEAK_AREA,
             )
@@ -201,8 +203,7 @@
             model_params = ModelParams(peak = PeakParams(gaussian = true))
             prior = build_prior(
                 model_params,
-                MU,
-                SIGMA;
+                CONFIGS;
                 peak_height = PEAK_HEIGHT,
                 peak_area = PEAK_AREA,
             )
@@ -216,8 +217,7 @@
                 model_params = ModelParams(peak = PeakParams(gaussian = true))
                 @test_throws ArgumentError build_prior(
                     model_params,
-                    MU,
-                    SIGMA;
+                    CONFIGS;
                     peak_height = PEAK_HEIGHT,
                 )
             end
@@ -226,8 +226,7 @@
                 model_params = ModelParams(peak = PeakParams(compton = true))
                 @test_throws ArgumentError build_prior(
                     model_params,
-                    MU,
-                    SIGMA;
+                    CONFIGS;
                     peak_area = PEAK_AREA,
                 )
             end
@@ -236,8 +235,7 @@
                 model_params = ModelParams(background = BackgroundParams(constPoly = true))
                 @test_throws ArgumentError build_prior(
                     model_params,
-                    MU,
-                    SIGMA;
+                    CONFIGS;
                     peak_area = PEAK_AREA,
                 )
             end
@@ -246,8 +244,7 @@
                 model_params = ModelParams(peak = PeakParams(lowEnergyTail = true))
                 @test_throws ArgumentError build_prior(
                     model_params,
-                    MU,
-                    SIGMA;
+                    CONFIGS;
                     peak_height = PEAK_HEIGHT,
                 )
             end
@@ -256,8 +253,7 @@
                 model_params = ModelParams(peak = PeakParams(highEnergyTail = true))
                 @test_throws ArgumentError build_prior(
                     model_params,
-                    MU,
-                    SIGMA;
+                    CONFIGS;
                     peak_height = PEAK_HEIGHT,
                 )
             end
@@ -269,14 +265,60 @@
             model_params = ModelParams(peak = PeakParams(gaussian = true))
             prior = build_prior(
                 model_params,
-                MU,
-                SIGMA;
+                CONFIGS;
                 peak_height = PEAK_HEIGHT,
                 peak_area = PEAK_AREA,
             )
             @test hasproperty(prior, :gaussian_A)
             @test !hasproperty(prior, :compton_h)
             @test !hasproperty(prior, :quadPoly_C)
+
+        end
+
+        @testset "Configs values propagate into the priors" begin
+
+            configs = Configs(
+                mu = MU,
+                sigma = SIGMA,
+                mu_std = 1.0,
+                sigma_std = 2.0,
+                lowEnergyTail_tau_upper = 5.0,
+                highEnergyTail_tau_upper = 6.0,
+                quadPoly_C_limits = (-2.0, 2.0),
+                linPoly_C_limits = (-3.0, 3.0),
+            )
+            model_params = ModelParams(
+                peak = PeakParams(
+                    gaussian = true,
+                    lowEnergyTail = true,
+                    highEnergyTail = true,
+                ),
+                background = BackgroundParams(quadPoly = true, linPoly = true),
+            )
+            prior = build_prior(
+                model_params,
+                configs;
+                peak_height = PEAK_HEIGHT,
+                peak_area = PEAK_AREA,
+            )
+
+            @test prior.mu isa Normal
+            @test prior.mu.μ == MU
+            @test prior.mu.σ == 1.0
+            @test prior.sigma.untruncated isa Normal
+            @test prior.sigma.untruncated.μ == SIGMA
+            @test prior.sigma.untruncated.σ == 2.0
+            @test prior.lowEnergyTail_tau isa Uniform
+            @test prior.lowEnergyTail_tau.a == eps()
+            @test prior.lowEnergyTail_tau.b == 5.0
+            @test prior.highEnergyTail_tau isa Uniform
+            @test prior.highEnergyTail_tau.b == 6.0
+            @test prior.quadPoly_C isa Uniform
+            @test prior.quadPoly_C.a == -2.0
+            @test prior.quadPoly_C.b == 2.0
+            @test prior.linPoly_C isa Uniform
+            @test prior.linPoly_C.a == -3.0
+            @test prior.linPoly_C.b == 3.0
 
         end
 
@@ -290,8 +332,7 @@
         )
         prior = build_prior(
             model_params,
-            MU,
-            SIGMA;
+            CONFIGS;
             peak_height = PEAK_HEIGHT,
             peak_area = PEAK_AREA,
         )
@@ -322,8 +363,7 @@
             module_params_peak = ModelParams(peak = PeakParams(gaussian = true))
             prior_peak = build_prior(
                 module_params_peak,
-                MU,
-                SIGMA;
+                CONFIGS;
                 peak_height = PEAK_HEIGHT,
                 peak_area = PEAK_AREA,
             )
@@ -351,8 +391,7 @@
                 ModelParams(background = BackgroundParams(constPoly = true))
             prior_background = build_prior(
                 model_params_background,
-                MU,
-                SIGMA;
+                CONFIGS;
                 peak_height = PEAK_HEIGHT,
                 peak_area = PEAK_AREA,
             )
@@ -377,8 +416,7 @@
             model_params = ModelParams(background = BackgroundParams(linPoly = true))
             prior = build_prior(
                 model_params,
-                MU,
-                SIGMA;
+                CONFIGS;
                 peak_height = PEAK_HEIGHT,
                 peak_area = PEAK_AREA,
             )

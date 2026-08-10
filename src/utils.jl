@@ -6,7 +6,7 @@ Plot a binned energy spectrum as a bar plot with optional marker for the peak ce
 # Arguments
 - `data::SpectrumData`: binned spectrum data to plot
 - `mu::Union{AbstractFloat,Nothing}`: optional centroid position to highlight with a 
-  vertical line
+  vertical line. Default: `nothing`
 
 # Returns
 - A tuple `(fig, ax)` of a `Makie.Figure` and `Makie.Axis`, suitable for further 

@@ -117,10 +117,12 @@ component is used in the fitting process (See [build_prior](@ref)).
 `mu` and `sigma` are usually the same between all model components.
 
 # Fields
-- `gaussian::Union{GaussianParams,Bool}`: main Gaussian peak shape
-- `compton::Union{ComptonParams,Bool}`: Compton-edge step function
-- `lowEnergyTail::Union{ExGaussianParams,Bool}`: ex-Gaussian low-energy tail
-- `highEnergyTail::Union{ExGaussianParams,Bool}`: ex-Gaussian high-energy tail
+- `gaussian::Union{GaussianParams,Bool}`: main Gaussian peak shape. Default: `false`
+- `compton::Union{ComptonParams,Bool}`: Compton-edge step function. Default: `false`
+- `lowEnergyTail::Union{ExGaussianParams,Bool}`: ex-Gaussian low-energy tail. 
+  Default: `false`
+- `highEnergyTail::Union{ExGaussianParams,Bool}`: ex-Gaussian high-energy tail.
+  Default: `false`
 
 # See also
 - [`peak_model`](@ref) for evaluating the combined peak shape
@@ -208,9 +210,9 @@ component is used in the fitting process (See [build_prior](@ref)).
 `mu` is usually the same between all model components.
 
 # Fields
-- `quadPoly::Union{QuadPolyParams,Bool}`: quadratic polynomial term
-- `linPoly::Union{LinPolyParams,Bool}`: linear polynomial term
-- `constPoly::Union{ConstPolyParams,Bool}`: constant polynomial term
+- `quadPoly::Union{QuadPolyParams,Bool}`: quadratic polynomial term. Default: `false`
+- `linPoly::Union{LinPolyParams,Bool}`: linear polynomial term. Default: `false`
+- `constPoly::Union{ConstPolyParams,Bool}`: constant polynomial term. Default: `false`
 
 # See also
 - [background_model](@ref) for evaluating the background model
@@ -231,8 +233,9 @@ Each component is optional — unset fields are `nothing` and are skipped during
 
 # Fields
 - `peak::Union{PeakParams,Nothing}`: peak shape parameters (Gaussian, Compton edge, 
-  tails)
-- `background::Union{BackgroundParams,Nothing}`: quadratic background parameters
+  tails). Default: `nothing`
+- `background::Union{BackgroundParams,Nothing}`: quadratic background parameters. 
+  Default: `nothing`
 
 # Constructors
 
@@ -424,4 +427,40 @@ function SpectrumData(
         throw(ArgumentError("Model produced negative expected counts; check parameters."))
     weights = rand.(Poisson.(expected_counts))
     return SpectrumData(bin_centers = bin_centers, weights = weights, bin_size = bin_size)
+end
+
+"""
+    Configs{T<:AbstractFloat}
+
+Configuration options for the fitting process.
+
+`mu` and `sigma` are required and have no default values. All remaining fields default to 
+reasonable values.
+
+# Fields
+- `mu::T`: expected centroid position of the peak in keV
+- `sigma::T`: expected standard deviation of the Gaussian core in keV
+- `mu_std::T`: standard deviation of the prior on `:mu` in keV. Default: `0.6`
+- `sigma_std::T`: standard deviation of the prior on `:sigma` in keV. Default: `0.6`
+- `lowEnergyTail_tau_upper::T`: upper bound of the `Uniform` prior on `:lowEnergyTail_tau` 
+  in keV. Default: `10.0`
+- `highEnergyTail_tau_upper::T`: upper bound of the `Uniform` prior on 
+  `:highEnergyTail_tau` in keV. Default: `10.0`
+- `quadPoly_C_limits::Tuple{T,T}`: `(lower, upper)` bounds of the `Uniform` prior on 
+  `:quadPoly_C` in counts/keV³. Default: `(-1.0, 1.0)`
+- `linPoly_C_limits::Tuple{T,T}`: `(lower, upper)` bounds of the `Uniform` prior on 
+  `:linPoly_C` in counts/keV². Default: `(-10.0, 10.0)`
+
+# See also
+- [`build_prior`](@ref) which consumes these configurations
+"""
+Base.@kwdef struct Configs{T<:AbstractFloat}
+    mu::T
+    sigma::T
+    mu_std::T = 0.6
+    sigma_std::T = 0.6
+    lowEnergyTail_tau_upper::T = 10.0
+    highEnergyTail_tau_upper::T = 10.0
+    quadPoly_C_limits::Tuple{T,T} = (-1.0, 1.0)
+    linPoly_C_limits::Tuple{T,T} = (-10.0, 10.0)
 end

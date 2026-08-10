@@ -36,8 +36,7 @@ end
 """
     build_prior(
         params::ModelParams,
-        mu::Real,
-        sigma::Real;
+        configs::Configs;
         peak_height::Union{<:Real,Nothing},
         peak_area::Union{<:Real,Nothing},
     )
@@ -47,12 +46,16 @@ Construct a prior distribution over the model parameters for Bayesian fitting.
 Components that are `false` (or `nothing` for container fields) are skipped. Components set 
 to `true` or to a concrete parameter struct receive a weakly informative prior.
 
+The expected peak centroid `configs.mu` and core width `configs.sigma`, as well as all prior
+widths and bounds, are taken from [`Configs`](@ref) and can be tuned there.
+
 # Arguments
 - `params::ModelParams`: model specification indicating which components are enabled
-- `mu::Real`: expected centroid position of the peak in keV
-- `sigma::Real`: expected standard deviation of the Gaussian core in keV
-- `peak_height::Union{<:Real,Nothing}`: approximate peak height in counts/keV
-- `peak_area::Union{<:Real,Nothing}`: approximate integrated peak area in counts
+- `configs::Configs`: fitting configuration
+- `peak_height::Union{<:Real,Nothing}`: approximate peak height in counts/keV. Optional for 
+  some model configurations. Default: `nothing`
+- `peak_area::Union{<:Real,Nothing}`: approximate integrated peak area in counts. Optional 
+  for some model configurations. Default: `nothing`
 
 # Returns
 - A `NamedTupleDist` (via `distprod`) over the enabled component parameters
@@ -68,27 +71,27 @@ The following priors are defined per enabled component:
 
 | Symbol | Prior | Component |
 | --- | --- | --- |
-| `:mu` | `Normal(mu, 0.6)` | all except `background.constPoly` |
-| `:sigma` | `truncated(Normal(sigma, 0.6), eps(), Inf)` | all `peak` components |
+| `:mu` | `Normal(configs.mu, configs.mu_std)` | all except `background.constPoly` |
+| `:sigma` | `truncated(Normal(configs.sigma, configs.sigma_std), eps(), Inf)` | all `peak` components |
 | `:gaussian_A` | `Uniform(0, peak_area)` | `peak.gaussian` |
 | `:compton_h` | `Uniform(0, peak_height)` | `peak.compton` |
 | `:lowEnergyTail_A` | `Uniform(0, peak_area)` | `peak.lowEnergyTail` |
-| `:lowEnergyTail_tau` | Uniform(eps(), 10) | `peak.lowEnergyTail` |
+| `:lowEnergyTail_tau` | `Uniform(eps(), configs.lowEnergyTail_tau_upper)` | `peak.lowEnergyTail` |
 | `:highEnergyTail_A` | `Uniform(0, peak_area)` | `peak.highEnergyTail` |
-| `:highEnergyTail_tau` | Uniform(eps(), 10) | `peak.highEnergyTail` |
-| `:quadPoly_C` | `Uniform(-1, 1)` | `background.quadPoly` |
-| `:linPoly_C` | `Uniform(-10, 10)` | `background.linPoly` |
+| `:highEnergyTail_tau` | `Uniform(eps(), configs.highEnergyTail_tau_upper)` | `peak.highEnergyTail` |
+| `:quadPoly_C` | `Uniform(configs.quadPoly_C_limits)` | `background.quadPoly` |
+| `:linPoly_C` | `Uniform(configs.linPoly_C_limits)` | `background.linPoly` |
 | `:constPoly_C` | `Uniform(0, peak_height)` | `background.constPoly` |
 
 # See also
+- [`Configs`](@ref) for tuning the prior centers, widths, and bounds
 - [`ModelParams`](@ref), [`PeakParams`](@ref), [`BackgroundParams`](@ref) for the model
   specification
 - [`poisson_ll`](@ref) for the likelihood that uses these priors
 """
 function build_prior(
     params::ModelParams,
-    mu::Real,
-    sigma::Real;
+    configs::Configs;
     peak_height::Union{<:Real,Nothing} = nothing,
     peak_area::Union{<:Real,Nothing} = nothing,
 )
@@ -109,7 +112,7 @@ function build_prior(
         ) ||
         !isnothing(background_params) &&
         (background_params.quadPoly !== false || background_params.linPoly !== false)
-    needs_mu && push!(priors, :mu => Normal(mu, 0.6))
+    needs_mu && push!(priors, :mu => Normal(configs.mu, configs.mu_std))
 
     needs_sigma =
         !isnothing(peak_params) && (
@@ -118,7 +121,10 @@ function build_prior(
             peak_params.highEnergyTail !== false ||
             peak_params.compton !== false
         )
-    needs_sigma && push!(priors, :sigma => truncated(Normal(sigma, 0.6), eps(), Inf))
+    needs_sigma && push!(
+        priors,
+        :sigma => truncated(Normal(configs.sigma, configs.sigma_std), eps(), Inf),
+    )
 
     if !isnothing(peak_params)
         if peak_params.gaussian !== false
@@ -137,20 +143,28 @@ function build_prior(
             isnothing(peak_area) &&
                 throw(ArgumentError("`peak_area` required for `lowEnergyTail` component"))
             push!(priors, :lowEnergyTail_A => Uniform(0, peak_area))
-            push!(priors, :lowEnergyTail_tau => Uniform(eps(), 10))
+            push!(
+                priors,
+                :lowEnergyTail_tau => Uniform(eps(), configs.lowEnergyTail_tau_upper),
+            )
         end
 
         if peak_params.highEnergyTail !== false
             isnothing(peak_area) &&
                 throw(ArgumentError("`peak_area` required for `highEnergyTail` component"))
             push!(priors, :highEnergyTail_A => Uniform(0, peak_area))
-            push!(priors, :highEnergyTail_tau => Uniform(eps(), 10))
+            push!(
+                priors,
+                :highEnergyTail_tau => Uniform(eps(), configs.highEnergyTail_tau_upper),
+            )
         end
     end
 
     if !isnothing(background_params)
-        background_params.quadPoly !== false && push!(priors, :quadPoly_C => Uniform(-1, 1))
-        background_params.linPoly !== false && push!(priors, :linPoly_C => Uniform(-10, 10))
+        background_params.quadPoly !== false &&
+            push!(priors, :quadPoly_C => Uniform(configs.quadPoly_C_limits...))
+        background_params.linPoly !== false &&
+            push!(priors, :linPoly_C => Uniform(configs.linPoly_C_limits...))
 
         if background_params.constPoly !== false
             isnothing(peak_height) &&

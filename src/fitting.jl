@@ -70,7 +70,7 @@ The following priors are defined per enabled component:
 
 | Symbol | Prior | Component |
 | --- | --- | --- |
-| `:mu` | `Normal(mu, 0.6)` | all |
+| `:mu` | `Normal(mu, 0.6)` | all except `background.constPoly` |
 | `:sigma` | `truncated(Normal(sigma, 0.6), eps(), Inf)` | all `peak` components |
 | `:gaussian_A` | `Uniform(0, peak_area)` | `peak.gaussian` |
 | `:compton_h` | `Uniform(0, peak_height)` | `peak.compton` |
@@ -102,8 +102,16 @@ function build_prior(
     end
 
     priors = []
-
-    push!(priors, :mu => Normal(mu, 0.6))
+    needs_mu =
+        !isnothing(peak_params) && (
+            peak_params.gaussian !== false ||
+            peak_params.lowEnergyTail !== false ||
+            peak_params.highEnergyTail !== false ||
+            peak_params.compton !== false
+        ) ||
+        !isnothing(background_params) &&
+        (background_params.quadPoly !== false || background_params.linPoly !== false)
+    needs_mu && push!(priors, :mu => Normal(mu, 0.6))
 
     needs_sigma =
         !isnothing(peak_params) && (
@@ -112,9 +120,7 @@ function build_prior(
             peak_params.highEnergyTail !== false ||
             peak_params.compton !== false
         )
-    if needs_sigma
-        push!(priors, :sigma => truncated(Normal(sigma, 0.6), eps(), Inf))
-    end
+    needs_sigma && push!(priors, :sigma => truncated(Normal(sigma, 0.6), eps(), Inf))
 
     if !isnothing(peak_params)
         if peak_params.gaussian !== false
@@ -179,83 +185,9 @@ only checks pre-computed `Bool` flags on each sample.
 - [`ModelParams`](@ref) for the model parameter structure
 """
 function build_posterior(data::SpectrumData, priors::NamedTupleDist)
-    has_gaussian = hasproperty(priors, :gaussian_A)
-    has_compton = hasproperty(priors, :compton_h)
-    has_lowEnergyTail = hasproperty(priors, :lowEnergyTail_tau)
-    has_highEnergyTail = hasproperty(priors, :highEnergyTail_tau)
-    has_quadPoly = hasproperty(priors, :quadPoly_C)
-    has_linPoly = hasproperty(priors, :linPoly_C)
-    has_constPoly = hasproperty(priors, :constPoly_C)
 
-    has_peak = has_gaussian || has_compton || has_lowEnergyTail || has_highEnergyTail
-    has_background = has_quadPoly || has_linPoly || has_constPoly
-
-    # Log-likelihood closure called by the BAT sampler with a NamedTuple of parameter
-    # values. Uses pre-computed Bool flags to determine which components to assemble.
     function _log_likelihood(params::NamedTuple)
-        if has_peak
-            gaussian_params =
-                has_gaussian ?
-                GaussianParams(
-                    A = params.gaussian_A,
-                    mu = params.mu,
-                    sigma = params.sigma,
-                ) : false
-
-            compton_params =
-                has_compton ?
-                ComptonParams(h = params.compton_h, mu = params.mu, sigma = params.sigma) :
-                false
-
-            lowEnergyTail_params =
-                has_lowEnergyTail ?
-                ExGaussianParams(
-                    A = params.lowEnergyTail_A,
-                    tau = params.lowEnergyTail_tau,
-                    is_lowEnergyTail = true,
-                    mu = params.mu,
-                    sigma = params.sigma,
-                ) : false
-            highEnergyTail_params =
-                has_highEnergyTail ?
-                ExGaussianParams(
-                    A = params.highEnergyTail_A,
-                    tau = params.highEnergyTail_tau,
-                    is_lowEnergyTail = false,
-                    mu = params.mu,
-                    sigma = params.sigma,
-                ) : false
-
-            peak = PeakParams(
-                gaussian = gaussian_params,
-                compton = compton_params,
-                lowEnergyTail = lowEnergyTail_params,
-                highEnergyTail = highEnergyTail_params,
-            )
-        else
-            peak = nothing
-        end
-
-        if has_background
-            quadPoly_params =
-                has_quadPoly ? QuadPolyParams(C = params.quadPoly_C, mu = params.mu) : false
-
-            linPoly_params =
-                has_linPoly ? LinPolyParams(C = params.linPoly_C, mu = params.mu) : false
-
-            constPoly_params =
-                has_constPoly ? ConstPolyParams(C = params.constPoly_C) : false
-
-            background = BackgroundParams(
-                quadPoly = quadPoly_params,
-                linPoly = linPoly_params,
-                constPoly = constPoly_params,
-            )
-        else
-            background = nothing
-        end
-
-        model_params = ModelParams(peak = peak, background = background)
+        model_params = ModelParams(params)
         return poisson_ll(data, model_params)
     end
 

@@ -234,13 +234,141 @@ Each component is optional — unset fields are `nothing` and are skipped during
   tails)
 - `background::Union{BackgroundParams,Nothing}`: quadratic background parameters
 
+# Constructors
+
+    ModelParams(params::NamedTuple)
+
+Build a concrete `ModelParams` from a flat `NamedTuple` of component parameter values (such 
+as a sample drawn from the distribution returned by [`build_prior`](@ref)).
+
+A component is enabled or disabled based on the presence of its keys:
+
+| Component | Required keys |
+| --- | --- |
+| `peak.gaussian` | `:gaussian_A` |
+| `peak.compton` | `:compton_h` |
+| `peak.lowEnergyTail` | `:lowEnergyTail_A`, `:lowEnergyTail_tau` |
+| `peak.highEnergyTail` | `:highEnergyTail_A`, `:highEnergyTail_tau` |
+| `background.quadPoly` | `:quadPoly_C` |
+| `background.linPoly` | `:linPoly_C` |
+| `background.constPoly` | `:constPoly_C` |
+
+`:mu` is shared by all components except `background.constPoly` and is required whenever 
+any peak or non-constant background component is present. `:sigma` is shared by all peak
+components and is required whenever any peak component is present.
+
+# Throws
+- An `ArgumentError` if only one key of the `:lowEnergyTail_A`/`:lowEnergyTail_tau` or
+  `:highEnergyTail_A`/`:highEnergyTail_tau` pair is provided
+- An `ArgumentError` if `:mu` is missing while a peak or non-constant background component
+  is present
+- An `ArgumentError` if `:sigma` is missing while a peak component is present
+
 # See also
 - [`full_model`](@ref) for evaluating the combined model
 - [`PeakParams`](@ref), and [`BackgroundParams`](@ref) for the component parameters
+- [`build_prior`](@ref) for constructing the `NamedTuple` distribution this constructor
+  consumes
 """
 Base.@kwdef struct ModelParams
     peak::Union{PeakParams,Nothing} = nothing
     background::Union{BackgroundParams,Nothing} = nothing
+end
+
+function ModelParams(params::NamedTuple)
+    has_gaussian = hasproperty(params, :gaussian_A)
+    has_compton = hasproperty(params, :compton_h)
+    has_lowEnergyTail =
+        hasproperty(params, :lowEnergyTail_tau) && hasproperty(params, :lowEnergyTail_A)
+    has_highEnergyTail =
+        hasproperty(params, :highEnergyTail_tau) && hasproperty(params, :highEnergyTail_A)
+    has_quadPoly = hasproperty(params, :quadPoly_C)
+    has_linPoly = hasproperty(params, :linPoly_C)
+    has_constPoly = hasproperty(params, :constPoly_C)
+
+    has_peak = has_gaussian || has_compton || has_lowEnergyTail || has_highEnergyTail
+    has_background = has_quadPoly || has_linPoly || has_constPoly
+
+    xor(hasproperty(params, :lowEnergyTail_A), hasproperty(params, :lowEnergyTail_tau)) &&
+        throw(
+            ArgumentError(
+                "Both or neither of `lowEnergyTail_A` and `lowEnergyTail_tau` must be provided",
+            ),
+        )
+    xor(hasproperty(params, :highEnergyTail_A), hasproperty(params, :highEnergyTail_tau)) &&
+        throw(
+            ArgumentError(
+                "Both or neither of `highEnergyTail_A` and `highEnergyTail_tau` must be provided",
+            ),
+        )
+
+    needs_mu = has_peak || has_quadPoly || has_linPoly
+    needs_mu && !hasproperty(params, :mu) && throw(ArgumentError("Need `mu` component"))
+
+    needs_sigma = has_peak
+    needs_sigma &&
+        !hasproperty(params, :sigma) &&
+        throw(ArgumentError("Need `sigma` component"))
+
+    if has_peak
+        gaussian_params =
+            has_gaussian ?
+            GaussianParams(A = params.gaussian_A, mu = params.mu, sigma = params.sigma) :
+            false
+
+        compton_params =
+            has_compton ?
+            ComptonParams(h = params.compton_h, mu = params.mu, sigma = params.sigma) :
+            false
+
+        lowEnergyTail_params =
+            has_lowEnergyTail ?
+            ExGaussianParams(
+                A = params.lowEnergyTail_A,
+                tau = params.lowEnergyTail_tau,
+                is_lowEnergyTail = true,
+                mu = params.mu,
+                sigma = params.sigma,
+            ) : false
+        highEnergyTail_params =
+            has_highEnergyTail ?
+            ExGaussianParams(
+                A = params.highEnergyTail_A,
+                tau = params.highEnergyTail_tau,
+                is_lowEnergyTail = false,
+                mu = params.mu,
+                sigma = params.sigma,
+            ) : false
+
+        peak = PeakParams(
+            gaussian = gaussian_params,
+            compton = compton_params,
+            lowEnergyTail = lowEnergyTail_params,
+            highEnergyTail = highEnergyTail_params,
+        )
+    else
+        peak = nothing
+    end
+
+    if has_background
+        quadPoly_params =
+            has_quadPoly ? QuadPolyParams(C = params.quadPoly_C, mu = params.mu) : false
+
+        linPoly_params =
+            has_linPoly ? LinPolyParams(C = params.linPoly_C, mu = params.mu) : false
+
+        constPoly_params = has_constPoly ? ConstPolyParams(C = params.constPoly_C) : false
+
+        background = BackgroundParams(
+            quadPoly = quadPoly_params,
+            linPoly = linPoly_params,
+            constPoly = constPoly_params,
+        )
+    else
+        background = nothing
+    end
+
+    return ModelParams(peak = peak, background = background)
 end
 
 """

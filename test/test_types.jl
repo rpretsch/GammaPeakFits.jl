@@ -119,6 +119,55 @@
             @test model_params.peak isa PeakParams
             @test isnothing(model_params.background)
 
+            @testset "NamedTuple constructor" begin
+
+                model = ModelParams((gaussian_A = A, mu = MU, sigma = SIGMA))
+                @test model.peak isa PeakParams
+                @test model.peak.gaussian isa GaussianParams
+                @test model.peak.gaussian.A == A
+                @test model.peak.gaussian.mu == MU
+                @test model.peak.gaussian.sigma == SIGMA
+                @test model.peak.compton === false
+                @test model.peak.lowEnergyTail === false
+                @test model.peak.highEnergyTail === false
+                @test isnothing(model.background)
+
+                @testset "Throws on missing mu" begin
+                    @test_throws ArgumentError ModelParams((gaussian_A = A, sigma = SIGMA))
+                end
+
+                @testset "Throws on missing sigma" begin
+                    @test_throws ArgumentError ModelParams((gaussian_A = A, mu = MU))
+                end
+
+                @testset "Throws on partial low-energy tail pair" begin
+                    @test_throws ArgumentError ModelParams((
+                        lowEnergyTail_A = A,
+                        mu = MU,
+                        sigma = SIGMA,
+                    ),)
+                    @test_throws ArgumentError ModelParams((
+                        lowEnergyTail_tau = TAU,
+                        mu = MU,
+                        sigma = SIGMA,
+                    ),)
+                end
+
+                @testset "Throws on partial high-energy tail pair" begin
+                    @test_throws ArgumentError ModelParams((
+                        highEnergyTail_A = A,
+                        mu = MU,
+                        sigma = SIGMA,
+                    ),)
+                    @test_throws ArgumentError ModelParams((
+                        highEnergyTail_tau = TAU,
+                        mu = MU,
+                        sigma = SIGMA,
+                    ),)
+                end
+
+            end
+
         end
 
         @testset "SpectrumData" begin

@@ -25,7 +25,6 @@ posteriors.
 ## Utils
 - [`plot_data`](@ref), [`cut_data`](@ref), [`get_peak_features`](@ref)
 
-
 # Quick start
 
 ```julia

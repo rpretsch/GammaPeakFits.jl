@@ -76,9 +76,18 @@
 
         end
 
-        @testset "Always includes mu prior" begin
+        @testset "mu prior always except in constPoly background" begin
 
             model_params = ModelParams(background = BackgroundParams(constPoly = true))
+            prior = build_prior(
+                model_params,
+                MU,
+                SIGMA;
+                peak_height = PEAK_HEIGHT,
+                peak_area = PEAK_AREA,
+            )
+            @test !hasproperty(prior, :mu)
+            model_params = ModelParams(peak = PeakParams(gaussian = true))
             prior = build_prior(
                 model_params,
                 MU,

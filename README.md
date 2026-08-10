@@ -186,7 +186,7 @@ using GammaPeakFits
 # Fitting constants that have to be provided, but still will be fitted around the here
 # specified value
 MU = 2048.0 # keV
-SIGMA = 10.0 # keV
+SIGMA = 5.0 # keV
 
 # Generate data
 A = 1000.0              # counts
@@ -210,7 +210,7 @@ data = SpectrumData(lower_limit, upper_limit, bin_size, generation_modelParams)
 #        )
 
 # cut appropriate fit window
-window_size = 50.0 # keV
+window_size = 100.0 # keV
 fit_data = cut_data(data, MU, window_size)
 
 # Specify which components to include for fitting

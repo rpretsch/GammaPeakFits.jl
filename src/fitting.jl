@@ -13,7 +13,7 @@ Poisson distribution with that expected rate.
 - `params::ModelParams`: model parameters
 
 # Returns
-- `-Inf` if any expected counts are negative (unphysical model configuration)
+- `-Inf` if any expected counts are negative or non-finite (unphysical model configuration)
 - sum of log-likelihoods across bins (total log-likelihood) otherwise
 
 # See also
@@ -28,9 +28,7 @@ function poisson_ll(data::SpectrumData, params::ModelParams)
             data.bin_centers .+ data.bin_size/2,
         ),
     )
-    if any(expected_counts .< 0)
-        return -Inf
-    end
+    any(x -> (x < 0 || !isfinite(x)), expected_counts) && return -Inf
     result_vector = logpdf.(Poisson.(expected_counts), data.weights)
     return sum(result_vector)
 end
@@ -168,9 +166,6 @@ end
     build_posterior(data::SpectrumData, priors::NamedTupleDist)
 
 Construct a posterior measure from observed data and a prior distribution.
-
-`hasproperty` checks are evaluated once at construction time; the log-likelihood closure
-only checks pre-computed `Bool` flags on each sample.
 
 # Arguments
 - `data::SpectrumData`: the observed spectrum data

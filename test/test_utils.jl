@@ -34,9 +34,18 @@
                 weights = [10, 20, 30],
                 bin_size = 2.0,
             )
-            height, area = get_peak_features(data, 3.0, 1.0)
-            @test height == 15.0   # 30 counts/bin / 2.0 keV/bin
-            @test area == 90.0     # 6 * 1.0 * 30 counts/bin / 2.0 keV/bin
+            height, area = get_peak_features(data, 3.0, 0.5)
+            @test height == 10.0   # 20 counts/bin / 2.0 keV/bin
+            @test area == 30.0     # 6 * 0.5 * 20 counts/bin / 2.0 keV/bin
+        end
+
+        @testset "Throws when peak region not contained in data" begin
+            data = SpectrumData(
+                bin_centers = [1.0, 3.0, 5.0],
+                weights = [10, 20, 30],
+                bin_size = 2.0,
+            )
+            @test_throws ArgumentError get_peak_features(data, 2.0, 1.0)
         end
 
     end

@@ -87,13 +87,29 @@ dividing by`bin_size`.
 - A tuple `(peak_height, peak_area)` containing the estimated height and area of the peak,
   in (counts/keV, counts)
 
+# Throws
+- An `ArgumentError` if `mu +- 3 * sigma` is not contained within the range of 
+  `data.bin_centers`
+
 # See also
 - [`SpectrumData`](@ref) for the data struct
 - [`build_prior`](@ref) which uses these estimates for prior construction
 """
 function get_peak_features(data::SpectrumData, mu::AbstractFloat, sigma::AbstractFloat)
 
-    peak_mask = (mu - 3 * sigma) .<= data.bin_centers .<= (mu + 3 * sigma)
+    lower = mu - 3 * sigma
+    upper = mu + 3 * sigma
+    data_min = minimum(data.bin_centers)
+    data_max = maximum(data.bin_centers)
+    if lower < data_min || upper > data_max
+        throw(
+            ArgumentError(
+                "Peak region [$lower, $upper] keV is not fully contained in the data range [$data_min, $data_max] keV.",
+            ),
+        )
+    end
+
+    peak_mask = lower .<= data.bin_centers .<= upper
     peak_height = maximum(data.weights[peak_mask])  # counts/bin
     peak_area = 6 * sigma * peak_height             # counts/bin * keV
 

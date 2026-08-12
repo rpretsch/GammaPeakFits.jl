@@ -34,10 +34,10 @@ end
 
 Estimate the peak height and area from observed count data.
 
-Bins within `+-3 * sigma` of the centroid are identified as the peak region. The peak 
-height is taken as the maximum observed count in that window. The peak area is estimated as
-`6 * sigma * peak_height`. Both values are converted from counts/bin to counts/keV by 
-dividing by`bin_size`.
+Bins within `+-3 * sigma` of the centroid are identified as the peak region. First, the 
+mean background is calculated from the bins outside peak region. Then the height is taken 
+as the maximum observed count in the peak area minus the mean background. 
+The peak area is estimated as `sqrt(2 * pi) * sigma * peak_height`.
 
 # Arguments
 - `data::SpectrumData`: binned spectrum data
@@ -45,11 +45,14 @@ dividing by`bin_size`.
 - `sigma::Float64`: estimated standard deviation in keV
 
 # Returns
-- A tuple `(peak_height, peak_area)` containing the estimated height and area of the peak,
-  in (counts/keV, counts)
+- A tuple `(peak_height, peak_area, mean_background)` containing the estimated height and 
+  area of the peak, as well as the estimated mean background in 
+  (counts/keV, counts, counts/keV)
 
 # Throws
 - An `ArgumentError` if `mu +- 3 * sigma` is not contained within the range of 
+  `data.bin_centers`
+- An `ArgumentError` if only the peak region is contained within the range of 
   `data.bin_centers`
 
 # See also
@@ -58,26 +61,39 @@ dividing by`bin_size`.
 """
 function get_peak_features(data::SpectrumData, mu::Float64, sigma::Float64)
 
-    lower = mu - 3 * sigma
-    upper = mu + 3 * sigma
+    lower_peak_limit = mu - 3 * sigma
+    upper_peak_limit = mu + 3 * sigma
     data_min = minimum(data.bin_centers)
     data_max = maximum(data.bin_centers)
-    if lower < data_min || upper > data_max
+    if lower_peak_limit < data_min || upper_peak_limit > data_max
         throw(
             ArgumentError(
-                "Peak region [$lower, $upper] keV is not fully contained in the data range [$data_min, $data_max] keV.",
+                "Peak region [$lower_peak_limit, $upper_peak_limit] keV is not fully contained in the data range [$data_min, $data_max] keV.",
             ),
         )
     end
 
-    peak_mask = lower .<= data.bin_centers .<= upper
-    peak_height = maximum(data.weights[peak_mask])  # counts/bin
-    peak_area = 6 * sigma * peak_height             # counts/bin * keV
+    peak_mask = lower_peak_limit .<= data.bin_centers .<= upper_peak_limit
+    peak_weights = data.weights[peak_mask]                  # counts/bin
 
-    peak_height_kev = peak_height / data.bin_size   # counts/keV
-    peak_area_keV = peak_area / data.bin_size       # counts
+    if length(peak_weights) >= length(data.weights)
+        throw(
+            ArgumentError(
+                "Data range [$data_min, $data_max] keV contains only the peak region [$lower_peak_limit, $upper_peak_limit] keV. Need more data for background estimation.",
+            ),
+        )
+    end
 
-    return peak_height_kev, peak_area_keV
+    background_weights = data.weights[.!peak_mask]          # counts/bin
+    mean_background = mean(background_weights)              # counts/bin
+    peak_height = maximum(peak_weights) - mean_background   # counts/bin
+    peak_area = sqrt(2 * pi) * sigma * peak_height          # counts/bin * keV
+
+    mean_background_keV = mean_background / data.bin_size   # counts/keV
+    peak_height_kev = peak_height / data.bin_size           # counts/keV
+    peak_area_keV = peak_area / data.bin_size               # counts
+
+    return peak_height_kev, peak_area_keV, mean_background_keV
 end
 
 """

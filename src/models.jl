@@ -358,7 +358,19 @@ function full_model(
     return _value(x, params.peak) .+ _value(x, params.background)
 end
 
-# --- Type-presence dispatch helpers ---
+"""
+    _value(
+        x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}},
+        params::AbstractComponent,
+    )
+
+Evaluate a model component (or container) at `x`, dispatching on the component type.
+
+Components marked `Disabled()` contribute zero.
+
+# See also
+- [`full_model`](@ref) for the combined model
+"""
 # Disabled components
 _value(x::AbstractFloat, ::Disabled) = zero(x)
 _value(x::AbstractVector{<:AbstractFloat}, ::Disabled) = zeros(eltype(x), length(x))

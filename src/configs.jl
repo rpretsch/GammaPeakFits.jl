@@ -33,8 +33,8 @@ end
 Abstract supertype for the integration methods used to compute the expected bin counts in 
 [`poisson_ll`](@ref).
 
-Concrete subtypes are dispatched on by [`_integrate`](@ref) to select how the model is 
-integrated over each energy bin.
+Concrete subtypes are dispatched on by [`_expected_counts`](@ref) to select how the model 
+is integrated over each energy bin.
 
 # See also
 - [`Analytical`](@ref), [`Numerical`](@ref), [`Midpoint`](@ref)

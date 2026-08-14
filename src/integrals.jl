@@ -82,6 +82,40 @@ function analytical_integral(data::SpectrumData, params::ModelParams)
 end
 
 """
+    _integral(data::SpectrumData, params::AbstractComponent)
+
+Integrate a model component (or container) analytically over each energy bin, dispatching 
+on the component type.
+
+Components marked `Disabled()` contribute zero.
+
+# See also
+- [`analytical_integral`](@ref) for the combined integral
+- [`_expected_counts`](@ref) for the integration-method dispatch
+"""
+# Disabled components
+_integral(data::SpectrumData, ::Disabled) =
+    zeros(eltype(data.bin_centers), length(data.bin_centers))
+
+# Peak components
+_integral(data::SpectrumData, params::GaussianParams) = gaussian_integral(data, params)
+_integral(data::SpectrumData, params::ComptonParams) = compton_integral(data, params)
+_integral(data::SpectrumData, params::ExGaussianParams) = exGaussian_integral(data, params)
+
+# Background components
+_integral(data::SpectrumData, params::QuadPolyParams) = quadPoly_integral(data, params)
+_integral(data::SpectrumData, params::LinPolyParams) = linPoly_integral(data, params)
+_integral(data::SpectrumData, params::ConstPolyParams) = constPoly_integral(data, params)
+
+# Model components
+_integral(data::SpectrumData, params::PeakParams) =
+    _integral(data, params.gaussian) .+ _integral(data, params.compton) .+
+    _integral(data, params.lowEnergyTail) .+ _integral(data, params.highEnergyTail)
+_integral(data::SpectrumData, params::BackgroundParams) =
+    _integral(data, params.quadPoly) .+ _integral(data, params.linPoly) .+
+    _integral(data, params.constPoly)
+
+"""
     gaussian_integral(data::SpectrumData, params::GaussianParams)
 
 Integrate the scaled Gaussian component analytically over each energy bin.
@@ -284,34 +318,3 @@ function constPoly_integral(data::SpectrumData, params::ConstPolyParams)
     antiderivative_values = _antiderivative.(data.bin_edges, Ref(params))
     return antiderivative_values[2:end] .- antiderivative_values[1:(end-1)]
 end
-
-# --- Type-presence dispatch helpers ---
-# Disabled components
-_integral(data::SpectrumData, ::Disabled) =
-    zeros(eltype(data.bin_centers), length(data.bin_centers))
-
-# Peak components
-_integral(data::SpectrumData, params::GaussianParams) = gaussian_integral(data, params)
-_integral(data::SpectrumData, params::ComptonParams) = compton_integral(data, params)
-_integral(data::SpectrumData, params::ExGaussianParams) = exGaussian_integral(data, params)
-
-# Background components
-_integral(data::SpectrumData, params::QuadPolyParams) = quadPoly_integral(data, params)
-_integral(data::SpectrumData, params::LinPolyParams) = linPoly_integral(data, params)
-_integral(data::SpectrumData, params::ConstPolyParams) = constPoly_integral(data, params)
-
-# Model components
-_integral(data::SpectrumData, params::PeakParams) =
-    _integral(data, params.gaussian) .+ _integral(data, params.compton) .+
-    _integral(data, params.lowEnergyTail) .+ _integral(data, params.highEnergyTail)
-_integral(data::SpectrumData, params::BackgroundParams) =
-    _integral(data, params.quadPoly) .+ _integral(data, params.linPoly) .+
-    _integral(data, params.constPoly)
-
-# Integration method dispatch
-_integrate(::Analytical, data::SpectrumData, params::ModelParams) =
-    analytical_integral(data, params)
-_integrate(::Numerical, data::SpectrumData, params::ModelParams) =
-    numerical_integral(data, params)
-_integrate(::Midpoint, data::SpectrumData, params::ModelParams) =
-    midpoint_integral(data, params)

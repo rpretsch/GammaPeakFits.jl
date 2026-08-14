@@ -23,11 +23,30 @@ Poisson distribution with that expected rate.
 - [`AbstractIntegrationMethod`](@ref) for the integration method selection
 """
 function poisson_ll(data::SpectrumData, params::ModelParams, configs::FitConfigs)
-    expected_counts = _integrate(configs.integration_method, data, params)
+    expected_counts = _expected_counts(configs.integration_method, data, params)
     any(x -> (x < 0 || !isfinite(x)), expected_counts) && return -Inf
     result_vector = logpdf.(Poisson.(expected_counts), data.weights)
     return sum(result_vector)
 end
+
+"""
+    _expected_counts(method::AbstractIntegrationMethod, data::SpectrumData, params::ModelParams)
+
+Compute the expected counts per bin by integrating the full model according to the 
+integration method, dispatching on `method`.
+
+# See also
+- [`AbstractIntegrationMethod`](@ref) for the available integration methods
+- [`poisson_ll`](@ref) for the likelihood that consumes the result
+- [`analytical_integral`](@ref), [`numerical_integral`](@ref), [`midpoint_integral`](@ref)
+  for the underlying integrals
+"""
+_expected_counts(::Analytical, data::SpectrumData, params::ModelParams) =
+    analytical_integral(data, params)
+_expected_counts(::Numerical, data::SpectrumData, params::ModelParams) =
+    numerical_integral(data, params)
+_expected_counts(::Midpoint, data::SpectrumData, params::ModelParams) =
+    midpoint_integral(data, params)
 
 """
     build_prior(

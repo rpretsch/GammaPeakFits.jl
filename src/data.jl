@@ -4,16 +4,16 @@
 Container for binned energy spectrum data.
 
 # Fields
-- `bin_centers::AbstractVector{T}`: bin center(s) in keV
-- `bin_edges::AbstractVector{T}`: bin edges in keV
-- `weights::AbstractVector{U}`: observed count(s) per bin
+- `bin_centers::Vector{T}`: bin centers in keV
+- `bin_edges::Vector{T}`: bin edges in keV
+- `weights::Vector{U}`: observed counts per bin
 - `bin_size::T`: width of each bin in keV
 
 # Constructors
 
     SpectrumData(
-        bin_markers::AbstractVector{T},
-        weights::AbstractVector{U};
+        bin_markers::Vector{T},
+        weights::Vector{U};
         bin_size::Union{T,Nothing} = nothing,
     ) where {T<:AbstractFloat, U<:Integer}
 
@@ -25,8 +25,8 @@ using `bin_size`. If `bin_size` is not supplied, it is estimated from the unifor
 markers.
 
 # Arguments
-- `bin_markers::AbstractVector{T}`: bin edges or bin centers in keV
-- `weights::AbstractVector{U}`: observed counts per bin
+- `bin_markers::Vector{T}`: bin edges or bin centers in keV
+- `weights::Vector{U}`: observed counts per bin
 - `bin_size::Union{T,Nothing}`: width of each bin in keV (optional). If `nothing`, the bin 
   size is estimated from `bin_markers`
 
@@ -66,15 +66,15 @@ bin.
 - [`full_model`](@ref) for the used model
 """
 Base.@kwdef struct SpectrumData{T<:AbstractFloat,U<:Integer}
-    bin_centers::AbstractVector{T}
-    bin_edges::AbstractVector{T}
-    weights::AbstractVector{U}
+    bin_centers::Vector{T}
+    bin_edges::Vector{T}
+    weights::Vector{U}
     bin_size::T
 end
 
 function SpectrumData(
-    bin_markers::AbstractVector{T},
-    weights::AbstractVector{U};
+    bin_markers::Vector{T},
+    weights::Vector{U};
     bin_size::Union{T,Nothing} = nothing,
 ) where {T<:AbstractFloat,U<:Integer}
     binMarker_length = length(bin_markers)

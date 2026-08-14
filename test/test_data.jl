@@ -14,11 +14,11 @@
                 weights = zeros(Int64, 4096),
                 bin_size = 1.0,
             )
-            @test data.bin_centers isa AbstractVector{Float64}
+            @test data.bin_centers isa Vector{Float64}
             @test data.bin_centers == collect(1.0:4096.0)
-            @test data.bin_edges isa AbstractVector{Float64}
+            @test data.bin_edges isa Vector{Float64}
             @test data.bin_edges == collect(0.5:4096.5)
-            @test data.weights isa AbstractVector{Int64}
+            @test data.weights isa Vector{Int64}
             @test data.weights == zeros(Int64, 4096)
             @test data.bin_size == 1.0
             @test length(data.bin_edges) == (length(data.bin_centers) + 1)
@@ -32,11 +32,11 @@
             model_params = ModelParams(peak = PeakParams(gaussian = gaussian_params))
 
             data = SpectrumData(1.0, 4096.0, 0.5, model_params)
-            @test data.bin_centers isa AbstractVector{Float64}
+            @test data.bin_centers isa Vector{Float64}
             @test length(data.bin_centers) == 8191
             @test length(data.bin_edges) == 8192
             @test length(data.weights) == 8191
-            @test data.weights isa AbstractVector{Int64}
+            @test data.weights isa Vector{Int64}
             @test data.bin_size == 0.5
             @test data isa SpectrumData{Float64,Int64}
 

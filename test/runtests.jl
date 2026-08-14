@@ -12,8 +12,16 @@ using ValueShapes: NamedTupleDist
         include("aqua.jl")
     end
 
-    if isempty(ARGS) || "types" in ARGS
-        include("test_types.jl")
+    if isempty(ARGS) || "params" in ARGS
+        include("test_params.jl")
+    end
+
+    if isempty(ARGS) || "data" in ARGS
+        include("test_data.jl")
+    end
+
+    if isempty(ARGS) || "configs" in ARGS
+        include("test_configs.jl")
     end
 
     if isempty(ARGS) || "models" in ARGS

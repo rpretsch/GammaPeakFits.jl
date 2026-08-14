@@ -104,13 +104,15 @@ using QuadGK: quadgk
 using SpecialFunctions: erf, erfc, logerfcx
 using ValueShapes: NamedTupleDist
 
-include("types.jl")
+include("params.jl")
+include("data.jl")
+include("configs.jl")
 include("models.jl")
 include("fitting.jl")
 include("integrals.jl")
 include("utils.jl")
 
-# Types - component parameters
+# Parameter structs - components
 export GaussianParams
 export ComptonParams
 export ExGaussianParams
@@ -118,15 +120,15 @@ export QuadPolyParams
 export LinPolyParams
 export ConstPolyParams
 
-# Types - containers
+# Parameter structs - containers
 export PeakParams
 export BackgroundParams
 export ModelParams
 
-# Types - data
+# Data structs
 export SpectrumData
 
-# Types - configurations
+# Configuration structs
 export PriorConfigs
 export FitConfigs
 

@@ -13,7 +13,7 @@
     )
     C_CONST = 100.0
     C_LIN = 10.0
-    CONFIGS = FitConfigs(mu = MU, sigma = SIGMA, integration_method = :midpoint)
+    CONFIGS = FitConfigs(mu = MU, sigma = SIGMA, integration_method = Midpoint())
 
     @testset "poisson_ll" begin
 
@@ -75,35 +75,22 @@
             ll_analytical = poisson_ll(
                 DATA,
                 model_params,
-                FitConfigs(mu = MU, sigma = SIGMA, integration_method = :analytical),
+                FitConfigs(mu = MU, sigma = SIGMA, integration_method = Analytical()),
             )
             ll_numerical = poisson_ll(
                 DATA,
                 model_params,
-                FitConfigs(mu = MU, sigma = SIGMA, integration_method = :numerical),
+                FitConfigs(mu = MU, sigma = SIGMA, integration_method = Numerical()),
             )
             ll_midpoint = poisson_ll(
                 DATA,
                 model_params,
-                FitConfigs(mu = MU, sigma = SIGMA, integration_method = :midpoint),
+                FitConfigs(mu = MU, sigma = SIGMA, integration_method = Midpoint()),
             )
 
             @test isfinite(ll_analytical)
             @test ll_analytical == ll_numerical
             @test ll_analytical == ll_midpoint
-
-        end
-
-        @testset "Unknown integration method throws" begin
-
-            model_params = ModelParams(
-                background = BackgroundParams(constPoly = ConstPolyParams(C = C_CONST)),
-            )
-            @test_throws ArgumentError poisson_ll(
-                DATA,
-                model_params,
-                FitConfigs(mu = MU, sigma = SIGMA, integration_method = :bogus),
-            )
 
         end
 

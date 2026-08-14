@@ -9,6 +9,8 @@ posteriors.
 
 ## Types
 - Presence markers: [`AbstractComponent`](@ref), [`Enabled`](@ref), [`Disabled`](@ref)
+- Integration methods: [`AbstractIntegrationMethod`](@ref), [`Analytical`](@ref),
+  [`Numerical`](@ref), [`Midpoint`](@ref)
 - Component parameters: [`GaussianParams`](@ref), [`ComptonParams`](@ref),
   [`ExGaussianParams`](@ref), [`QuadPolyParams`](@ref), [`LinPolyParams`](@ref),
   [`ConstPolyParams`](@ref)
@@ -117,6 +119,12 @@ include("utils.jl")
 export AbstractComponent
 export Enabled
 export Disabled
+
+# Types - Integration methods
+export AbstractIntegrationMethod
+export Analytical
+export Numerical
+export Midpoint
 
 # Parameter structs - components
 export GaussianParams

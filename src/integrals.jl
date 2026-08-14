@@ -307,3 +307,11 @@ _integral(data::SpectrumData, params::PeakParams) =
 _integral(data::SpectrumData, params::BackgroundParams) =
     _integral(data, params.quadPoly) .+ _integral(data, params.linPoly) .+
     _integral(data, params.constPoly)
+
+# Integration method dispatch
+_integrate(::Analytical, data::SpectrumData, params::ModelParams) =
+    analytical_integral(data, params)
+_integrate(::Numerical, data::SpectrumData, params::ModelParams) =
+    numerical_integral(data, params)
+_integrate(::Midpoint, data::SpectrumData, params::ModelParams) =
+    midpoint_integral(data, params)

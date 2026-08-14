@@ -28,6 +28,50 @@ Base.@kwdef struct PriorConfigs{T<:AbstractFloat}
 end
 
 """
+    AbstractIntegrationMethod
+
+Abstract supertype for the integration methods used to compute the expected bin counts in 
+[`poisson_ll`](@ref).
+
+Concrete subtypes are dispatched on by [`_integrate`](@ref) to select how the model is 
+integrated over each energy bin.
+
+# See also
+- [`Analytical`](@ref), [`Numerical`](@ref), [`Midpoint`](@ref)
+"""
+abstract type AbstractIntegrationMethod end
+
+"""
+    Analytical
+
+Integrate the model analytically over each energy bin.
+
+# See also
+- [`AbstractIntegrationMethod`](@ref), [`Numerical`](@ref), [`Midpoint`](@ref)
+"""
+struct Analytical <: AbstractIntegrationMethod end
+
+"""
+    Numerical
+
+Integrate the model numerically over each energy bin with `QuadGK.quadgk`.
+
+# See also
+- [`AbstractIntegrationMethod`](@ref), [`Analytical`](@ref), [`Midpoint`](@ref)
+"""
+struct Numerical <: AbstractIntegrationMethod end
+
+"""
+    Midpoint
+
+Integrate the model via the midpoint rule over each energy bin.
+
+# See also
+- [`AbstractIntegrationMethod`](@ref), [`Analytical`](@ref), [`Numerical`](@ref)
+"""
+struct Midpoint <: AbstractIntegrationMethod end
+
+"""
     FitConfigs{T<:AbstractFloat}
 
 Configuration options for the fitting process.
@@ -38,15 +82,17 @@ reasonable values.
 # Fields
 - `mu::T`: expected centroid position of the peak in keV
 - `sigma::T`: expected standard deviation of the Gaussian core in keV
-- `integration_method::Symbol`: the integration method used to compute expected bin counts.
-  Either `:analytical`, `:numerical`, or `:midpoint`. Default: `:analytical`
+- `integration_method::AbstractIntegrationMethod`: the integration method used to compute 
+  expected bin counts. Either `Analytical()`, `Numerical()`, or `Midpoint()`. 
+  Default: `Analytical()`
 
 # See also
 - [`PriorConfigs`](@ref) for the configuration options for the priors
+- [`AbstractIntegrationMethod`](@ref) for the available integration methods
 """
 Base.@kwdef struct FitConfigs{T<:AbstractFloat}
     mu::T
     sigma::T
-    integration_method::Symbol = :analytical
+    integration_method::AbstractIntegrationMethod = Analytical()
     prior::PriorConfigs = PriorConfigs()
 end

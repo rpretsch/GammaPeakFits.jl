@@ -13,28 +13,17 @@ Poisson distribution with that expected rate.
 - `params::ModelParams`: model parameters
 - `configs::FitConfigs`: Fitting configurations
 
-# Returns
+# Return
 - `-Inf` if any expected counts are negative or non-finite (unphysical model configuration)
 - sum of log-likelihoods across bins (total log-likelihood) otherwise
-
-# Throws
-- An `ArgumentError` if `configs.integration_method` is unknown
 
 # See also
 - [`full_model`](@ref) for the underlying model
 - [`ModelParams`](@ref) for the parameter structure
+- [`AbstractIntegrationMethod`](@ref) for the integration method selection
 """
 function poisson_ll(data::SpectrumData, params::ModelParams, configs::FitConfigs)
-    integration_method = configs.integration_method
-    if integration_method == :numerical
-        expected_counts = numerical_integral(data, params)
-    elseif integration_method == :analytical
-        expected_counts = analytical_integral(data, params)
-    elseif integration_method == :midpoint
-        expected_counts = midpoint_integral(data, params)
-    else
-        throw(ArgumentError("Unknown `integration_method`: $(integration_method)"))
-    end
+    expected_counts = _integrate(configs.integration_method, data, params)
     any(x -> (x < 0 || !isfinite(x)), expected_counts) && return -Inf
     result_vector = logpdf.(Poisson.(expected_counts), data.weights)
     return sum(result_vector)

@@ -14,6 +14,7 @@
         @test configs.sigma == 5.0
         @test configs.prior == PriorConfigs()
         @test configs isa FitConfigs{Float64}
+        @test configs.integration_method isa Analytical
 
     end
 

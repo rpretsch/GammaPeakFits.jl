@@ -40,7 +40,7 @@
                 background = BackgroundParams(constPoly = ConstPolyParams(C = C_CONST)),
             )
             ll = poisson_ll(DATA, model_params, CONFIGS)
-            @test ll isa AbstractFloat
+            @test ll isa Float64
             @test !isnan(ll)
             @test !isinf(ll)
 
@@ -52,7 +52,7 @@
                 peak = PeakParams(gaussian = GaussianParams(A = A, mu = MU, sigma = SIGMA)),
             )
             ll = poisson_ll(DATA, model_params, CONFIGS)
-            @test ll isa AbstractFloat
+            @test ll isa Float64
             @test !isnan(ll)
 
         end

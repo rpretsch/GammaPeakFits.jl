@@ -60,8 +60,8 @@ _expected_counts(::Midpoint, data::SpectrumData, params::ModelParams) =
     build_prior(
         params::ModelParams,
         configs::FitConfigs;
-        peak_height::Union{<:Real,Nothing},
-        peak_area::Union{<:Real,Nothing},
+        peak_height::Union{Float64,Nothing},
+        peak_area::Union{Float64,Nothing},
     )
 
 Construct a prior distribution over the model parameters for Bayesian fitting.
@@ -75,9 +75,9 @@ widths and bounds, are taken from [`FitConfigs`](@ref) and can be tuned there.
 # Arguments
 - `params::ModelParams`: model specification indicating which components are enabled
 - `configs::FitConfigs`: fitting configuration
-- `peak_height::Union{<:Real,Nothing}`: approximate peak height in counts/keV. Optional for 
-  some model configurations. Default: `nothing`
-- `peak_area::Union{<:Real,Nothing}`: approximate integrated peak area in counts. Optional 
+- `peak_height::Union{Float64,Nothing}`: approximate peak height in counts/keV. Optional 
+  for some model configurations. Default: `nothing`
+- `peak_area::Union{Float64,Nothing}`: approximate integrated peak area in counts. Optional 
   for some model configurations. Default: `nothing`
 
 # Returns
@@ -117,8 +117,8 @@ The following priors are defined per enabled component:
 function build_prior(
     params::ModelParams,
     configs::FitConfigs;
-    peak_height::Union{<:Real,Nothing} = nothing,
-    peak_area::Union{<:Real,Nothing} = nothing,
+    peak_height::Union{Float64,Nothing} = nothing,
+    peak_area::Union{Float64,Nothing} = nothing,
 )
     peak_params = params.peak
     background_params = params.background

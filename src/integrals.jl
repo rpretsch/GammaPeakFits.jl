@@ -150,7 +150,7 @@ The count in a bin is `F(e_{i+1}) - F(e_i)` at the stored bin edges ``e``.
 - [`GaussianParams`](@ref) for the parameters
 """
 function gaussian_integral(data::SpectrumData, params::GaussianParams)
-    function _antiderivative(x::AbstractFloat, params::GaussianParams)
+    function _antiderivative(x::Float64, params::GaussianParams)
         return params.A/2 * erf((x - params.mu)/(sqrt(2) * params.sigma))
     end
     antiderivative_values = _antiderivative.(data.bin_edges, Ref(params))
@@ -184,7 +184,7 @@ being the model component itself.
 - [`ComptonParams`](@ref) for the parameters
 """
 function compton_integral(data::SpectrumData, params::ComptonParams)
-    function _antiderivative(x::AbstractFloat, params::ComptonParams)
+    function _antiderivative(x::Float64, params::ComptonParams)
         return (x - params.mu) * compton(x, params) -
                params.h * params.sigma / sqrt(2 * pi) *
                exp(-(x - params.mu)^2 / (2 * params.sigma^2))
@@ -222,7 +222,7 @@ respectively.
 - [`ExGaussianParams`](@ref) for the parameters
 """
 function exGaussian_integral(data::SpectrumData, params::ExGaussianParams)
-    function _antiderivative(x::AbstractFloat, params::ExGaussianParams)
+    function _antiderivative(x::Float64, params::ExGaussianParams)
         return params.A/2 * erf((x - params.mu)/(sqrt(2) * params.sigma)) -
                (-1)^params.is_lowEnergyTail * params.tau * exGaussian(x, params)
     end
@@ -255,7 +255,7 @@ The count in a bin is `F(e_{i+1}) - F(e_i)` at the stored bin edges ``e``.
 - [`QuadPolyParams`](@ref) for the parameters
 """
 function quadPoly_integral(data::SpectrumData, params::QuadPolyParams)
-    function _antiderivative(x::AbstractFloat, params::QuadPolyParams)
+    function _antiderivative(x::Float64, params::QuadPolyParams)
         return params.C/3 * (x - params.mu)^3
     end
     antiderivative_values = _antiderivative.(data.bin_edges, Ref(params))
@@ -287,7 +287,7 @@ The count in a bin is `F(e_{i+1}) - F(e_i)` at the stored bin edges ``e``.
 - [`LinPolyParams`](@ref) for the parameters
 """
 function linPoly_integral(data::SpectrumData, params::LinPolyParams)
-    function _antiderivative(x::AbstractFloat, params::LinPolyParams)
+    function _antiderivative(x::Float64, params::LinPolyParams)
         return params.C/2 * x * (x - 2 * params.mu)
     end
     antiderivative_values = _antiderivative.(data.bin_edges, Ref(params))
@@ -319,7 +319,7 @@ The count in a bin is `F(e_{i+1}) - F(e_i)` at the stored bin edges ``e``.
 - [`ConstPolyParams`](@ref) for the parameters
 """
 function constPoly_integral(data::SpectrumData, params::ConstPolyParams)
-    function _antiderivative(x::AbstractFloat, params::ConstPolyParams)
+    function _antiderivative(x::Float64, params::ConstPolyParams)
         return params.C * x
     end
     antiderivative_values = _antiderivative.(data.bin_edges, Ref(params))

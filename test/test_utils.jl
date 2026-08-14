@@ -8,7 +8,7 @@
         @test cut.bin_centers == [4.0, 5.0, 6.0]
         @test cut.weights == [4, 5, 6]
         @test cut.bin_size == 1.0
-        @test cut isa SpectrumData{Float64,Int}
+        @test cut isa SpectrumData
 
     end
 

@@ -3,7 +3,7 @@
     @testset "PriorConfigs" begin
 
         configs = PriorConfigs()
-        @test configs isa PriorConfigs{Float64}
+        @test configs isa PriorConfigs
 
     end
 
@@ -13,7 +13,7 @@
         @test configs.mu == 2048.0
         @test configs.sigma == 5.0
         @test configs.prior == PriorConfigs()
-        @test configs isa FitConfigs{Float64}
+        @test configs isa FitConfigs
         @test configs.integration_method isa Analytical
 
     end

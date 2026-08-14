@@ -1,5 +1,5 @@
 """
-    plot_data(data::SpectrumData; mu::Union{<:AbstractFloat,Nothing} = nothing)
+    plot_data(data::SpectrumData; mu::Union{Float64,Nothing} = nothing)
 
 Plot a binned energy spectrum as a bar plot with optional marker for the peak centroid.
 
@@ -7,7 +7,7 @@ Plot a binned energy spectrum as a bar plot with optional marker for the peak ce
 - `data::SpectrumData`: binned spectrum data to plot
 
 # Keyword arguments
-- `mu::Union{AbstractFloat,Nothing}`: optional centroid position to highlight with a 
+- `mu::Union{Float64,Nothing}`: optional centroid position to highlight with a 
   vertical line. Default: `nothing`
 
 # Returns
@@ -17,7 +17,7 @@ Plot a binned energy spectrum as a bar plot with optional marker for the peak ce
 # See also
 - [`SpectrumData`](@ref) for the data struct
 """
-function plot_data(data::SpectrumData; mu::Union{<:AbstractFloat,Nothing} = nothing)
+function plot_data(data::SpectrumData; mu::Union{Float64,Nothing} = nothing)
 
     fig = Figure(size = (1800, 600))
     ax = Axis(fig[1, 1]; xlabel = "Energy [keV]", ylabel = "Counts", yscale = log10)
@@ -36,7 +36,7 @@ function plot_data(data::SpectrumData; mu::Union{<:AbstractFloat,Nothing} = noth
 end
 
 """
-    cut_data(data::SpectrumData, mu::AbstractFloat, window_size::AbstractFloat)
+    cut_data(data::SpectrumData, mu::Float64, window_size::Float64)
 
 Slice a spectrum to a region of interest centered on a peak.
 
@@ -44,8 +44,8 @@ Only bins that lie entirely within `[mu - window_size/2, mu + window_size/2]` ar
 
 # Arguments
 - `data::SpectrumData`: binned spectrum data
-- `mu::AbstractFloat`: centroid position of the region in keV
-- `window_size::AbstractFloat`: full width of the region in keV
+- `mu::Float64`: centroid position of the region in keV
+- `window_size::Float64`: full width of the region in keV
 
 # Returns
 - A new `SpectrumData` containing only the bins in the selected window
@@ -53,7 +53,7 @@ Only bins that lie entirely within `[mu - window_size/2, mu + window_size/2]` ar
 # See also
 - [`SpectrumData`](@ref) for the data struct
 """
-function cut_data(data::SpectrumData, mu::AbstractFloat, window_size::AbstractFloat)
+function cut_data(data::SpectrumData, mu::Float64, window_size::Float64)
 
     mask_edges = (mu - window_size/2) .<= data.bin_edges .<= (mu + window_size/2)
     mask_centers = mask_edges[1:(end-1)] .& mask_edges[2:end]
@@ -67,11 +67,7 @@ function cut_data(data::SpectrumData, mu::AbstractFloat, window_size::AbstractFl
 end
 
 """
-    get_peak_features(
-        data::SpectrumData,
-        mu::AbstractFloat,
-        sigma::AbstractFloat,
-    )
+    get_peak_features(data::SpectrumData, mu::Float64, sigma::Float64)
 
 Estimate the peak height and area from observed count data.
 
@@ -82,8 +78,8 @@ dividing by`bin_size`.
 
 # Arguments
 - `data::SpectrumData`: binned spectrum data
-- `mu::AbstractFloat`: estimated centroid position in keV
-- `sigma::AbstractFloat`: estimated standard deviation in keV
+- `mu::Float64`: estimated centroid position in keV
+- `sigma::Float64`: estimated standard deviation in keV
 
 # Returns
 - A tuple `(peak_height, peak_area)` containing the estimated height and area of the peak,
@@ -97,7 +93,7 @@ dividing by`bin_size`.
 - [`SpectrumData`](@ref) for the data struct
 - [`build_prior`](@ref) which uses these estimates for prior construction
 """
-function get_peak_features(data::SpectrumData, mu::AbstractFloat, sigma::AbstractFloat)
+function get_peak_features(data::SpectrumData, mu::Float64, sigma::Float64)
 
     lower = mu - 3 * sigma
     upper = mu + 3 * sigma

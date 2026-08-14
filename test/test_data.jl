@@ -22,7 +22,7 @@
             @test data.weights == zeros(Int64, 4096)
             @test data.bin_size == 1.0
             @test length(data.bin_edges) == (length(data.bin_centers) + 1)
-            @test data isa SpectrumData{Float64,Int64}
+            @test data isa SpectrumData
 
         end
 
@@ -38,7 +38,7 @@
             @test length(data.weights) == 8191
             @test data.weights isa Vector{Int64}
             @test data.bin_size == 0.5
-            @test data isa SpectrumData{Float64,Int64}
+            @test data isa SpectrumData
 
         end
 

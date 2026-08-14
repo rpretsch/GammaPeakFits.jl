@@ -17,7 +17,7 @@
             @test gaussian_params.A == A
             @test gaussian_params.mu == MU
             @test gaussian_params.sigma == SIGMA
-            @test gaussian_params isa GaussianParams{Float64}
+            @test gaussian_params isa GaussianParams
         end
 
         @testset "ComptonParams" begin
@@ -25,7 +25,7 @@
             @test compton_params.h == H
             @test compton_params.mu == MU
             @test compton_params.sigma == SIGMA
-            @test compton_params isa ComptonParams{Float64}
+            @test compton_params isa ComptonParams
         end
 
         @testset "ExGaussianParams" begin
@@ -41,27 +41,27 @@
             @test exGaussian_params.is_lowEnergyTail == IS_LOWENERGYTAIL
             @test exGaussian_params.mu == MU
             @test exGaussian_params.sigma == SIGMA
-            @test exGaussian_params isa ExGaussianParams{Float64}
+            @test exGaussian_params isa ExGaussianParams
         end
 
         @testset "QuadPolyParams" begin
             quadPoly_params = QuadPolyParams(C = C_QUAD, mu = MU)
             @test quadPoly_params.C == C_QUAD
             @test quadPoly_params.mu == MU
-            @test quadPoly_params isa QuadPolyParams{Float64}
+            @test quadPoly_params isa QuadPolyParams
         end
 
         @testset "LinPolyParams" begin
             linPoly_params = LinPolyParams(C = C_LIN, mu = MU)
             @test linPoly_params.C == C_LIN
             @test linPoly_params.mu == MU
-            @test linPoly_params isa LinPolyParams{Float64}
+            @test linPoly_params isa LinPolyParams
         end
 
         @testset "ConstPolyParams" begin
             constPoly_params = ConstPolyParams(C = C_CONST)
             @test constPoly_params.C == C_CONST
-            @test constPoly_params isa ConstPolyParams{Float64}
+            @test constPoly_params isa ConstPolyParams
         end
 
     end

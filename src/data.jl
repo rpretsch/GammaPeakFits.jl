@@ -1,21 +1,21 @@
 """
-    SpectrumData{T<:AbstractFloat, U<:Integer}
+    SpectrumData
 
 Container for binned energy spectrum data.
 
 # Fields
-- `bin_centers::Vector{T}`: bin centers in keV
-- `bin_edges::Vector{T}`: bin edges in keV
-- `weights::Vector{U}`: observed counts per bin
-- `bin_size::T`: width of each bin in keV
+- `bin_centers::Vector{Float64}`: bin centers in keV
+- `bin_edges::Vector{Float64}`: bin edges in keV
+- `weights::Vector{Int}`: observed counts per bin
+- `bin_size::Float64`: width of each bin in keV
 
 # Constructors
 
     SpectrumData(
-        bin_markers::Vector{T},
-        weights::Vector{U};
-        bin_size::Union{T,Nothing} = nothing,
-    ) where {T<:AbstractFloat, U<:Integer}
+        bin_markers::Vector{Float64},
+        weights::Vector{Int};
+        bin_size::Union{Float64,Nothing} = nothing,
+    )
 
 Construct a `SpectrumData` from bin markers and observed counts.
 
@@ -25,10 +25,10 @@ using `bin_size`. If `bin_size` is not supplied, it is estimated from the unifor
 markers.
 
 # Arguments
-- `bin_markers::Vector{T}`: bin edges or bin centers in keV
-- `weights::Vector{U}`: observed counts per bin
-- `bin_size::Union{T,Nothing}`: width of each bin in keV (optional). If `nothing`, the bin 
-  size is estimated from `bin_markers`
+- `bin_markers::Vector{Float64}`: bin edges or bin centers in keV
+- `weights::Vector{Int}`: observed counts per bin
+- `bin_size::Union{Float64,Nothing}`: width of each bin in keV (optional). If `nothing`, 
+  the bin size is estimated from `bin_markers`
 
 # Throws
 - An `ArgumentError` if `length(bin_markers)` is neither `length(weights)` nor
@@ -40,20 +40,20 @@ markers.
 ---
 
     SpectrumData(
-        lower_limit::T, 
-        upper_limit::T, 
-        bin_size::T, 
+        lower_limit::Float64, 
+        upper_limit::Float64, 
+        bin_size::Float64, 
         params::ModelParams,
-    ) where {T<:AbstractFloat}
+    )
 
 Generate synthetic spectrum data from a model over a uniform grid of 
 `(lower_limit):bin_size:(upper_limit)`, then sampling Poisson-distributed counts for each 
 bin.
 
 # Arguments
-- `lower_limit::T`: start of the energy range in keV
-- `upper_limit::T`: end of the energy range in keV
-- `bin_size::T`: width of each bin in keV
+- `lower_limit::Float64`: start of the energy range in keV
+- `upper_limit::Float64`: end of the energy range in keV
+- `bin_size::Float64`: width of each bin in keV
 - `params::ModelParams`: model parameters used to compute expected counts
 
 # Throws
@@ -65,18 +65,18 @@ bin.
 # See also
 - [`full_model`](@ref) for the used model
 """
-Base.@kwdef struct SpectrumData{T<:AbstractFloat,U<:Integer}
-    bin_centers::Vector{T}
-    bin_edges::Vector{T}
-    weights::Vector{U}
-    bin_size::T
+Base.@kwdef struct SpectrumData
+    bin_centers::Vector{Float64}
+    bin_edges::Vector{Float64}
+    weights::Vector{Int}
+    bin_size::Float64
 end
 
 function SpectrumData(
-    bin_markers::Vector{T},
-    weights::Vector{U};
-    bin_size::Union{T,Nothing} = nothing,
-) where {T<:AbstractFloat,U<:Integer}
+    bin_markers::Vector{Float64},
+    weights::Vector{Int};
+    bin_size::Union{Float64,Nothing} = nothing,
+)
     binMarker_length = length(bin_markers)
     weights_length = length(weights)
 
@@ -116,11 +116,11 @@ function SpectrumData(
 end
 
 function SpectrumData(
-    lower_limit::T,
-    upper_limit::T,
-    bin_size::T,
+    lower_limit::Float64,
+    upper_limit::Float64,
+    bin_size::Float64,
     params::ModelParams,
-) where {T<:AbstractFloat}
+)
     bin_centers = collect(range(lower_limit, upper_limit; step = bin_size))
     bin_edges =
         collect(range(lower_limit - bin_size/2, upper_limit + bin_size/2; step = bin_size))

@@ -36,6 +36,10 @@ using ValueShapes: NamedTupleDist
         include("test_fitting.jl")
     end
 
+    if isempty(ARGS) || "stability" in ARGS
+        include("test_stability.jl")
+    end
+
     if isempty(ARGS) || "utils" in ARGS
         include("test_utils.jl")
     end

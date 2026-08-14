@@ -89,6 +89,13 @@ on the component type.
 
 Components marked `Disabled()` contribute zero.
 
+# Arguments
+- `data::SpectrumData`: binned spectrum data
+- `params::AbstractComponent`: component parameters (or container)
+
+# Returns
+- An array of expected counts per bin for the given component
+
 # See also
 - [`analytical_integral`](@ref) for the combined integral
 - [`_expected_counts`](@ref) for the integration-method dispatch

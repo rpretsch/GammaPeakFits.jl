@@ -13,7 +13,7 @@ Poisson distribution with that expected rate.
 - `params::ModelParams`: model parameters
 - `configs::FitConfigs`: Fitting configurations
 
-# Return
+# Returns
 - `-Inf` if any expected counts are negative or non-finite (unphysical model configuration)
 - sum of log-likelihoods across bins (total log-likelihood) otherwise
 
@@ -34,6 +34,14 @@ end
 
 Compute the expected counts per bin by integrating the full model according to the 
 integration method, dispatching on `method`.
+
+# Arguments
+- `method::AbstractIntegrationMethod`: the integration method to use
+- `data::SpectrumData`: binned spectrum data
+- `params::ModelParams`: model parameters
+
+# Returns
+- An array of expected counts per bin
 
 # See also
 - [`AbstractIntegrationMethod`](@ref) for the available integration methods

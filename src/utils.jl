@@ -129,6 +129,13 @@ or a container) and `false` if it is `Disabled`.
 
 Used for spec-time decisions such as which priors to build in [`build_prior`](@ref).
 
+# Arguments
+- `component::AbstractComponent`: the component (or container) to test
+
+# Returns
+- `true` if `component` is present (`Enabled`, a concrete parameter struct, or a container)
+- `false` if `component` is `Disabled`
+
 # See also
 - [`AbstractComponent`](@ref), [`Enabled`](@ref), [`Disabled`](@ref) for the component  
   management

@@ -34,15 +34,20 @@
 
         end
 
-        @testset "Multi-bin likelihood sums correctly" begin
+        @testset "Sums per-bin likelihoods exactly" begin
 
+            data = SpectrumData(
+                bin_centers = [2047.0, 2048.0, 2049.0],
+                bin_edges = [2046.5, 2047.5, 2048.5, 2049.5],
+                weights = [10, 14, 12],
+                bin_size = 1.0,
+            )
             model_params = ModelParams(
                 background = BackgroundParams(constPoly = ConstPolyParams(C = C_CONST)),
             )
-            ll = poisson_ll(DATA, model_params, CONFIGS)
-            @test ll isa Float64
-            @test !isnan(ll)
-            @test !isinf(ll)
+            ll = poisson_ll(data, model_params, CONFIGS)
+            expected_ll = sum(logpdf.(Poisson(C_CONST), data.weights))
+            @test ll == expected_ll
 
         end
 
@@ -52,8 +57,7 @@
                 peak = PeakParams(gaussian = GaussianParams(A = A, mu = MU, sigma = SIGMA)),
             )
             ll = poisson_ll(DATA, model_params, CONFIGS)
-            @test ll isa Float64
-            @test !isnan(ll)
+            @test isfinite(ll)
 
         end
 
@@ -63,6 +67,22 @@
                 background = BackgroundParams(linPoly = LinPolyParams(C = C_LIN, mu = MU)),
             )
             @test isinf(poisson_ll(DATA, model_params, CONFIGS))
+
+        end
+
+        @testset "Non-finite expected counts give -Inf" begin
+
+            model_params = ModelParams(
+                peak = PeakParams(
+                    gaussian = GaussianParams(A = 1.0e308, mu = MU, sigma = 0.1),
+                ),
+            )
+            ll = poisson_ll(
+                DATA,
+                model_params,
+                FitConfigs(mu = MU, sigma = 0.1, integration_method = Midpoint()),
+            )
+            @test ll == -Inf
 
         end
 
@@ -101,6 +121,34 @@
         @testset "Throws on empty model" begin
 
             model_params = ModelParams()
+            @test_throws ArgumentError build_prior(
+                model_params,
+                CONFIGS;
+                peak_height = PEAK_HEIGHT,
+                peak_area = PEAK_AREA,
+            )
+
+        end
+
+        @testset "Throws on enabled-but-empty containers" begin
+
+            model_params = ModelParams(peak = PeakParams())
+            @test_throws ArgumentError build_prior(
+                model_params,
+                CONFIGS;
+                peak_height = PEAK_HEIGHT,
+                peak_area = PEAK_AREA,
+            )
+
+            model_params = ModelParams(background = BackgroundParams())
+            @test_throws ArgumentError build_prior(
+                model_params,
+                CONFIGS;
+                peak_height = PEAK_HEIGHT,
+                peak_area = PEAK_AREA,
+            )
+
+            model_params = ModelParams(peak = PeakParams(), background = BackgroundParams())
             @test_throws ArgumentError build_prior(
                 model_params,
                 CONFIGS;
@@ -386,7 +434,7 @@
             posterior = build_posterior(DATA, prior_background, CONFIGS)
             @test posterior isa PosteriorMeasure
 
-            v = (mu = MU, constPoly_C = C_CONST)
+            v = (constPoly_C = C_CONST,)
             expected = poisson_ll(
                 DATA,
                 ModelParams(

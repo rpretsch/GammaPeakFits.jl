@@ -21,6 +21,16 @@
             expected = @. A * pdf(Normal(MU, SIGMA), X_ARRAY)
             @test result == expected
 
+            @testset "throws on non-positive sigma" begin
+
+                invalid_params = GaussianParams(A = A, mu = MU, sigma = 0.0)
+                @test_throws ArgumentError gaussian(MU, invalid_params)
+
+                invalid_params = GaussianParams(A = A, mu = MU, sigma = -SIGMA)
+                @test_throws ArgumentError gaussian(MU, invalid_params)
+
+            end
+
         end
 
         @testset "compton" begin

@@ -74,6 +74,7 @@
         @test @inferred(peak_model(X_ARRAY, PeakParams())) isa Vector{Float64}
         @test @inferred(background_model(MU, BackgroundParams())) isa Float64
         @test @inferred(background_model(X_ARRAY, BackgroundParams())) isa Vector{Float64}
+        @test @inferred(full_model(MU, ModelParams())) isa Float64
         @test @inferred(full_model(X_ARRAY, ModelParams())) isa Vector{Float64}
     end
 
@@ -97,6 +98,7 @@
     @testset "disabled integrals" begin
         @test @inferred(analytical_integral(data, ModelParams())) isa Vector{Float64}
         @test @inferred(midpoint_integral(data, ModelParams())) isa Vector{Float64}
+        @test @inferred(numerical_integral(data, ModelParams())) isa Vector{Float64}
     end
 
     @testset "poisson_ll" begin

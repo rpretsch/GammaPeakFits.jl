@@ -8,6 +8,7 @@ posteriors.
 # Exports
 
 ## Types
+- Presence markers: [`AbstractComponent`](@ref), [`Enabled`](@ref), [`Disabled`](@ref)
 - Component parameters: [`GaussianParams`](@ref), [`ComptonParams`](@ref),
   [`ExGaussianParams`](@ref), [`QuadPolyParams`](@ref), [`LinPolyParams`](@ref),
   [`ConstPolyParams`](@ref)
@@ -30,7 +31,7 @@ posteriors.
 - Combined integrals: [`numerical_integral`](@ref), [`analytical_integral`](@ref)
 
 ## Utils
-- [`plot_data`](@ref), [`cut_data`](@ref), [`get_peak_features`](@ref)
+- [`plot_data`](@ref), [`cut_data`](@ref), [`get_peak_features`](@ref), [`is_present`](@ref)
 
 # Quick start
 
@@ -68,8 +69,8 @@ window_size = 100.0 # keV
 fit_data = cut_data(data, configs.mu, window_size)
 
 # Specify which components to include for fitting
-peak_params = PeakParams(gaussian = true)
-background_params = BackgroundParams(constPoly = true)
+peak_params = PeakParams(gaussian = Enabled())
+background_params = BackgroundParams(constPoly = Enabled())
 fit_modelParams = ModelParams(peak = peak_params, background = background_params)
 
 # Get needed peak features
@@ -111,6 +112,11 @@ include("models.jl")
 include("fitting.jl")
 include("integrals.jl")
 include("utils.jl")
+
+# Types - presence markers
+export AbstractComponent
+export Enabled
+export Disabled
 
 # Parameter structs - components
 export GaussianParams
@@ -167,5 +173,6 @@ export constPoly_integral
 export plot_data
 export cut_data
 export get_peak_features
+export is_present
 
 end

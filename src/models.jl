@@ -146,8 +146,8 @@ end
 
 Evaluate the combined peak shape (Gaussian + Compton edge + ex-Gaussian tails) at `x`.
 
-Each term is optional — set the corresponding field to `false` in [`PeakParams`](@ref) to 
-exclude it.
+Each term is optional — set the corresponding field to `Disabled()` in [`PeakParams`](@ref) 
+to exclude it.
 
 # Mathematical definition
 
@@ -171,25 +171,12 @@ where each term is optional.
 - [`PeakParams`](@ref) for the parameters
 - [`gaussian`](@ref), [`compton`](@ref), and [`exGaussian`](@ref) for the components
 """
-function peak_model(x::AbstractFloat, params::PeakParams)
-    result = zero(x)
-    isa(params.gaussian, GaussianParams) && (result += gaussian(x, params.gaussian))
-    isa(params.compton, ComptonParams) && (result += compton(x, params.compton))
-    isa(params.highEnergyTail, ExGaussianParams) &&
-        (result += exGaussian(x, params.highEnergyTail))
-    isa(params.lowEnergyTail, ExGaussianParams) &&
-        (result += exGaussian(x, params.lowEnergyTail))
-    return result
-end
-function peak_model(x::AbstractVector{<:AbstractFloat}, params::PeakParams)
-    result = zeros(eltype(x), length(x))
-    isa(params.gaussian, GaussianParams) && (result .+= gaussian(x, params.gaussian))
-    isa(params.compton, ComptonParams) && (result .+= compton(x, params.compton))
-    isa(params.highEnergyTail, ExGaussianParams) &&
-        (result .+= exGaussian(x, params.highEnergyTail))
-    isa(params.lowEnergyTail, ExGaussianParams) &&
-        (result .+= exGaussian(x, params.lowEnergyTail))
-    return result
+function peak_model(
+    x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}},
+    params::PeakParams,
+)
+    return _value(x, params.gaussian) .+ _value(x, params.compton) .+
+           _value(x, params.lowEnergyTail) .+ _value(x, params.highEnergyTail)
 end
 
 """
@@ -302,7 +289,7 @@ end
 
 Evaluate the combined background (polynomial of 2nd order) at `x`.
 
-Each term is optional — set the corresponding field to `false` in 
+Each term is optional — set the corresponding field to `Disabled()` in 
 [`BackgroundParams`](@ref) to exclude it.
 
 # Mathematical definition
@@ -326,19 +313,12 @@ where each term is optional.
 # See also
 - [`BackgroundParams`](@ref) for the parameters
 """
-function background_model(x::AbstractFloat, params::BackgroundParams)
-    result = zero(x)
-    !isa(params.quadPoly, Bool) && (result += quad_polynomial(x, params.quadPoly))
-    !isa(params.linPoly, Bool) && (result += lin_polynomial(x, params.linPoly))
-    !isa(params.constPoly, Bool) && (result += const_polynomial(x, params.constPoly))
-    return result
-end
-function background_model(x::AbstractVector{<:AbstractFloat}, params::BackgroundParams)
-    result = zeros(eltype(x), length(x))
-    !isa(params.quadPoly, Bool) && (result .+= quad_polynomial(x, params.quadPoly))
-    !isa(params.linPoly, Bool) && (result .+= lin_polynomial(x, params.linPoly))
-    !isa(params.constPoly, Bool) && (result .+= const_polynomial(x, params.constPoly))
-    return result
+function background_model(
+    x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}},
+    params::BackgroundParams,
+)
+    return _value(x, params.quadPoly) .+ _value(x, params.linPoly) .+
+           _value(x, params.constPoly)
 end
 
 """
@@ -349,8 +329,8 @@ end
 
 Evaluate the complete gamma-peak model (peak shape + background) at `x`.
 
-Combines [`peak_model`](@ref) and [`background_model`](@ref). Each term is optional — set
-the corresponding field to `nothing` in [`ModelParams`](@ref) to exclude it.
+Combines [`peak_model`](@ref) and [`background_model`](@ref). Each block is optional — set 
+the corresponding field to `Disabled()` in [`ModelParams`](@ref) to exclude it.
 
 # Mathematical definition
 
@@ -371,17 +351,40 @@ f(x) = f_{\\text{peak}}(x) + f_{\\text{bg}}(x)
 - [`ModelParams`](@ref) for the parameters
 - [`peak_model`](@ref), and [`background_model`](@ref) for the components
 """
-function full_model(x::AbstractFloat, params::ModelParams)
-    result = zero(x)
-    isa(params.peak, PeakParams) && (result += peak_model(x, params.peak))
-    isa(params.background, BackgroundParams) &&
-        (result += background_model(x, params.background))
-    return result
+function full_model(
+    x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}},
+    params::ModelParams,
+)
+    return _value(x, params.peak) .+ _value(x, params.background)
 end
-function full_model(x::AbstractVector{<:AbstractFloat}, params::ModelParams)
-    result = zeros(eltype(x), length(x))
-    isa(params.peak, PeakParams) && (result .+= peak_model(x, params.peak))
-    isa(params.background, BackgroundParams) &&
-        (result .+= background_model(x, params.background))
-    return result
-end
+
+# --- Type-presence dispatch helpers ---
+# Disabled components
+_value(x::AbstractFloat, ::Disabled) = zero(x)
+_value(x::AbstractVector{<:AbstractFloat}, ::Disabled) = zeros(eltype(x), length(x))
+
+# Peak components
+_value(x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}}, params::GaussianParams) =
+    gaussian(x, params)
+_value(x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}}, params::ComptonParams) =
+    compton(x, params)
+_value(
+    x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}},
+    params::ExGaussianParams,
+) = exGaussian(x, params)
+
+# Background components
+_value(x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}}, params::QuadPolyParams) =
+    quad_polynomial(x, params)
+_value(x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}}, params::LinPolyParams) =
+    lin_polynomial(x, params)
+_value(x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}}, params::ConstPolyParams) =
+    const_polynomial(x, params)
+
+# Model components
+_value(x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}}, params::PeakParams) =
+    peak_model(x, params)
+_value(
+    x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}},
+    params::BackgroundParams,
+) = background_model(x, params)

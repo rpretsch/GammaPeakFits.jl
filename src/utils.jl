@@ -120,3 +120,18 @@ function get_peak_features(data::SpectrumData, mu::AbstractFloat, sigma::Abstrac
 
     return peak_height_kev, peak_area_keV
 end
+
+"""
+    is_present(component::AbstractComponent)
+
+Return `true` if `component` is part of the model (a concrete parameter struct, `Enabled`,
+or a container) and `false` if it is `Disabled`.
+
+Used for spec-time decisions such as which priors to build in [`build_prior`](@ref).
+
+# See also
+- [`AbstractComponent`](@ref), [`Enabled`](@ref), [`Disabled`](@ref) for the component  
+  management
+"""
+is_present(::Disabled) = false
+is_present(::AbstractComponent) = true

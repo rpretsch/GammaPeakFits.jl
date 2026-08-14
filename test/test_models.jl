@@ -219,23 +219,23 @@
 
     end
 
-    @testset "Bool sentinel guards" begin
+    @testset "Disabled sentinel guards" begin
 
-        @testset "peak_model ignores false" begin
+        @testset "peak_model ignores Disabled" begin
 
             peak_params = PeakParams()
             @test peak_model(X_ARRAY, peak_params) == fill(0.0, length(X_ARRAY))
 
         end
 
-        @testset "background_model ignores false" begin
+        @testset "background_model ignores Disabled" begin
 
             background_params = BackgroundParams()
             @test background_model(X_ARRAY, background_params) == fill(0.0, length(X_ARRAY))
 
         end
 
-        @testset "full_model ignores nothing containers" begin
+        @testset "full_model ignores Disabled containers" begin
 
             model_params = ModelParams()
             @test full_model(X_ARRAY, model_params) == fill(0.0, length(X_ARRAY))

@@ -70,54 +70,54 @@
 
         @testset "PeakParams" begin
             peak_params = PeakParams()
-            @test peak_params.gaussian === false
-            @test peak_params.compton === false
-            @test peak_params.lowEnergyTail === false
-            @test peak_params.highEnergyTail === false
+            @test peak_params.gaussian isa Disabled
+            @test peak_params.compton isa Disabled
+            @test peak_params.lowEnergyTail isa Disabled
+            @test peak_params.highEnergyTail isa Disabled
 
-            peak_params = PeakParams(gaussian = true)
-            @test peak_params.gaussian === true
-            @test peak_params.compton === false
-            @test peak_params.lowEnergyTail === false
-            @test peak_params.highEnergyTail === false
+            peak_params = PeakParams(gaussian = Enabled())
+            @test peak_params.gaussian isa Enabled
+            @test peak_params.compton isa Disabled
+            @test peak_params.lowEnergyTail isa Disabled
+            @test peak_params.highEnergyTail isa Disabled
 
             peak_params = PeakParams(compton = ComptonParams(h = H, mu = MU, sigma = SIGMA))
-            @test peak_params.gaussian === false
+            @test peak_params.gaussian isa Disabled
             @test peak_params.compton isa ComptonParams
-            @test peak_params.lowEnergyTail === false
-            @test peak_params.highEnergyTail === false
+            @test peak_params.lowEnergyTail isa Disabled
+            @test peak_params.highEnergyTail isa Disabled
 
         end
 
         @testset "BackgroundParams" begin
 
             background_params = BackgroundParams()
-            @test background_params.quadPoly === false
-            @test background_params.linPoly === false
-            @test background_params.constPoly === false
+            @test background_params.quadPoly isa Disabled
+            @test background_params.linPoly isa Disabled
+            @test background_params.constPoly isa Disabled
 
-            background_params = BackgroundParams(quadPoly = true)
-            @test background_params.quadPoly === true
-            @test background_params.linPoly === false
-            @test background_params.constPoly === false
+            background_params = BackgroundParams(quadPoly = Enabled())
+            @test background_params.quadPoly isa Enabled
+            @test background_params.linPoly isa Disabled
+            @test background_params.constPoly isa Disabled
 
             background_params =
                 BackgroundParams(linPoly = LinPolyParams(C = C_LIN, mu = MU))
-            @test background_params.quadPoly === false
+            @test background_params.quadPoly isa Disabled
             @test background_params.linPoly isa LinPolyParams
-            @test background_params.constPoly === false
+            @test background_params.constPoly isa Disabled
 
         end
 
         @testset "ModelParams" begin
 
             model_params = ModelParams()
-            @test isnothing(model_params.peak)
-            @test isnothing(model_params.background)
+            @test model_params.peak isa Disabled
+            @test model_params.background isa Disabled
 
             model_params = ModelParams(peak = PeakParams())
             @test model_params.peak isa PeakParams
-            @test isnothing(model_params.background)
+            @test model_params.background isa Disabled
 
             @testset "NamedTuple constructor" begin
 
@@ -127,10 +127,10 @@
                 @test model.peak.gaussian.A == A
                 @test model.peak.gaussian.mu == MU
                 @test model.peak.gaussian.sigma == SIGMA
-                @test model.peak.compton === false
-                @test model.peak.lowEnergyTail === false
-                @test model.peak.highEnergyTail === false
-                @test isnothing(model.background)
+                @test model.peak.compton isa Disabled
+                @test model.peak.lowEnergyTail isa Disabled
+                @test model.peak.highEnergyTail isa Disabled
+                @test model.background isa Disabled
 
                 @testset "Throws on missing mu" begin
                     @test_throws ArgumentError ModelParams((gaussian_A = A, sigma = SIGMA))

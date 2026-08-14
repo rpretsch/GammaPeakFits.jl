@@ -75,13 +75,13 @@ julia -e 'using Pkg; Pkg.develop(path="/path/to/GammaPeakFits")'
 
 ## Model Components
 
-Each component can be enabled or disabled:
+Each component can be enabled or disabled by setting its field to a presence marker:
 
-- Set it to `false` (default): the component is excluded.
-- Set it to `true`: the component is included in the fit using its prior.
+- `Disabled()` (default): the component is excluded.
+- `Enabled()`: the component is included in the fit using its prior.
 
 The entire peak or background can be disabled by setting the corresponding
-field in `ModelParams` to `nothing`.
+field in `ModelParams` to `Disabled()`.
 
 ### Peak
 
@@ -219,8 +219,8 @@ window_size = 100.0 # keV
 fit_data = cut_data(data, configs.mu, window_size)
 
 # Specify which components to include for fitting
-peak_params = PeakParams(gaussian = true)
-background_params = BackgroundParams(constPoly = true)
+peak_params = PeakParams(gaussian = Enabled())
+background_params = BackgroundParams(constPoly = Enabled())
 fit_modelParams = ModelParams(
                       peak = peak_params,
                       background = background_params

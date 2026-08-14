@@ -12,6 +12,31 @@
 
     end
 
+    @testset "is_present" begin
+
+        @test !is_present(Disabled())
+        @test is_present(Enabled())
+
+        @test is_present(GaussianParams(A = 1.0, mu = 1.0, sigma = 1.0))
+        @test is_present(ComptonParams(h = 1.0, mu = 1.0, sigma = 1.0))
+        @test is_present(
+            ExGaussianParams(
+                A = 1.0,
+                mu = 1.0,
+                sigma = 1.0,
+                tau = 1.0,
+                is_lowEnergyTail = false,
+            ),
+        )
+        @test is_present(QuadPolyParams(C = 1.0, mu = 1.0))
+        @test is_present(LinPolyParams(C = 1.0, mu = 1.0))
+        @test is_present(ConstPolyParams(C = 1.0))
+
+        @test is_present(PeakParams())
+        @test is_present(BackgroundParams())
+
+    end
+
     @testset "get_peak_features" begin
 
         @testset "Peak height and Peak area" begin

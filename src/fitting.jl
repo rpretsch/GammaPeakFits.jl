@@ -50,8 +50,8 @@ end
 
 Construct a prior distribution over the model parameters for Bayesian fitting.
 
-Components that are `false` (or `nothing` for container fields) are skipped. Components set 
-to `true` or to a concrete parameter struct receive a weakly informative prior.
+Components that are `Disabled()` are skipped. Components set to `Enabled()` or to a 
+concrete parameter struct receive a weakly informative prior.
 
 The expected peak centroid `configs.mu` and core width `configs.sigma`, as well as all prior
 widths and bounds, are taken from [`FitConfigs`](@ref) and can be tuned there.
@@ -68,7 +68,7 @@ widths and bounds, are taken from [`FitConfigs`](@ref) and can be tuned there.
 - A `NamedTupleDist` (via `distprod`) over the enabled component parameters
 
 # Throws
-- An `ArgumentError` if both `params.peak` and `params.background` are `nothing`
+- An `ArgumentError` if both `params.peak` and `params.background` are `Disabled()`
 - An `ArgumentError` if either `peak_height` or `peak_area` were not supplied when they 
   were needed
 
@@ -91,6 +91,8 @@ The following priors are defined per enabled component:
 | `:constPoly_C` | `Uniform(0, peak_height)` | `background.constPoly` |
 
 # See also
+- [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractParams`](@ref) for the component 
+  management
 - [`FitConfigs`](@ref) for tuning the prior centers, widths, and bounds
 - [`ModelParams`](@ref), [`PeakParams`](@ref), [`BackgroundParams`](@ref) for the model
   specification
@@ -106,48 +108,48 @@ function build_prior(
     background_params = params.background
     prior_configs = configs.prior
 
-    if (isnothing(peak_params) && isnothing(background_params))
+    if (!is_present(peak_params) && !is_present(background_params))
         throw(ArgumentError("No model specified"))
     end
 
     priors = []
     needs_mu =
-        !isnothing(peak_params) && (
-            peak_params.gaussian !== false ||
-            peak_params.lowEnergyTail !== false ||
-            peak_params.highEnergyTail !== false ||
-            peak_params.compton !== false
+        is_present(peak_params) && (
+            is_present(peak_params.gaussian) ||
+            is_present(peak_params.lowEnergyTail) ||
+            is_present(peak_params.highEnergyTail) ||
+            is_present(peak_params.compton)
         ) ||
-        !isnothing(background_params) &&
-        (background_params.quadPoly !== false || background_params.linPoly !== false)
+        is_present(background_params) &&
+        (is_present(background_params.quadPoly) || is_present(background_params.linPoly))
     needs_mu && push!(priors, :mu => Normal(configs.mu, prior_configs.mu_std))
 
     needs_sigma =
-        !isnothing(peak_params) && (
-            peak_params.gaussian !== false ||
-            peak_params.lowEnergyTail !== false ||
-            peak_params.highEnergyTail !== false ||
-            peak_params.compton !== false
+        is_present(peak_params) && (
+            is_present(peak_params.gaussian) ||
+            is_present(peak_params.lowEnergyTail) ||
+            is_present(peak_params.highEnergyTail) ||
+            is_present(peak_params.compton)
         )
     needs_sigma && push!(
         priors,
         :sigma => truncated(Normal(configs.sigma, prior_configs.sigma_std), eps(), Inf),
     )
 
-    if !isnothing(peak_params)
-        if peak_params.gaussian !== false
+    if is_present(peak_params)
+        if is_present(peak_params.gaussian)
             isnothing(peak_area) &&
                 throw(ArgumentError("`peak_area` required for `gaussian` component"))
             push!(priors, :gaussian_A => Uniform(0, peak_area))
         end
 
-        if peak_params.compton !== false
+        if is_present(peak_params.compton)
             isnothing(peak_height) &&
                 throw(ArgumentError("`peak_height` required for `compton` component"))
             push!(priors, :compton_h => Uniform(0, peak_height))
         end
 
-        if peak_params.lowEnergyTail !== false
+        if is_present(peak_params.lowEnergyTail)
             isnothing(peak_area) &&
                 throw(ArgumentError("`peak_area` required for `lowEnergyTail` component"))
             push!(priors, :lowEnergyTail_A => Uniform(0, peak_area))
@@ -157,7 +159,7 @@ function build_prior(
             )
         end
 
-        if peak_params.highEnergyTail !== false
+        if is_present(peak_params.highEnergyTail)
             isnothing(peak_area) &&
                 throw(ArgumentError("`peak_area` required for `highEnergyTail` component"))
             push!(priors, :highEnergyTail_A => Uniform(0, peak_area))
@@ -169,13 +171,13 @@ function build_prior(
         end
     end
 
-    if !isnothing(background_params)
-        background_params.quadPoly !== false &&
+    if is_present(background_params)
+        is_present(background_params.quadPoly) &&
             push!(priors, :quadPoly_C => Uniform(prior_configs.quadPoly_C_limits...))
-        background_params.linPoly !== false &&
+        is_present(background_params.linPoly) &&
             push!(priors, :linPoly_C => Uniform(prior_configs.linPoly_C_limits...))
 
-        if background_params.constPoly !== false
+        if is_present(background_params.constPoly)
             isnothing(peak_height) &&
                 throw(ArgumentError("`peak_height` required for `constPoly` component"))
             push!(priors, :constPoly_C => Uniform(0, peak_height))

@@ -1,5 +1,41 @@
 """
-    GaussianParams{T<:AbstractFloat}
+    AbstractComponent
+
+Abstract supertype for everything that can occupy a model-component slot: the presence 
+markers [`Enabled`](@ref)/[`Disabled`](@ref), the concrete parameter structs
+([`GaussianParams`](@ref), ...), and the container types [`PeakParams`](@ref)/
+[`BackgroundParams`](@ref).
+
+# See also
+- [`is_present`](@ref), [`Enabled`](@ref), [`Disabled`](@ref)
+"""
+abstract type AbstractComponent end
+
+"""
+    Enabled
+
+Marker to include a model component in the fit without setting its parameters.
+
+# See also
+- [`Disabled`](@ref), [`AbstractComponent`](@ref)
+"""
+struct Enabled <: AbstractComponent end
+
+"""
+    Disabled
+
+Marker that a model component (or an entire peak/background block) is excluded from the 
+model.
+
+When present in a slot, the component contributes zero to the model and its integrals.
+
+# See also
+- [`Enabled`](@ref), [`AbstractComponent`](@ref)
+"""
+struct Disabled <: AbstractComponent end
+
+"""
+    GaussianParams{T<:AbstractFloat} <: AbstractComponent
 
 Additional parameters for a scaled Gaussian (normal) peak component.
 
@@ -20,14 +56,14 @@ f(x) = \\frac{A}{\\sqrt{2\\pi}\\sigma} \\,
 # See also
 - [`gaussian`](@ref) for evaluating the gaussian
 """
-Base.@kwdef struct GaussianParams{T<:AbstractFloat}
+Base.@kwdef struct GaussianParams{T<:AbstractFloat} <: AbstractComponent
     A::T
     mu::T
     sigma::T
 end
 
 """
-    ComptonParams{T<:AbstractFloat}
+    ComptonParams{T<:AbstractFloat} <: AbstractComponent
 
 Parameters for a Compton-edge step function component, modelled as a scaled complementary 
 error function.
@@ -49,14 +85,14 @@ f(x) = \\frac{h}{2} \\,
 # See also
 - [`compton`](@ref) for evaluating the Compton-edge
 """
-Base.@kwdef struct ComptonParams{T<:AbstractFloat}
+Base.@kwdef struct ComptonParams{T<:AbstractFloat} <: AbstractComponent
     h::T
     mu::T
     sigma::T
 end
 
 """
-    ExGaussianParams{T<:AbstractFloat}
+    ExGaussianParams{T<:AbstractFloat} <: AbstractComponent
 
 Parameters for an exponentially modified Gaussian (ex-Gaussian) tail component, used to 
 model low- or high-energy tailing in gamma peaks.
@@ -98,7 +134,7 @@ using `SpecialFunctions.logerfcx`.
 # See also
 - [`exGaussian`](@ref) for evaluating the tail component
 """
-Base.@kwdef struct ExGaussianParams{T<:AbstractFloat}
+Base.@kwdef struct ExGaussianParams{T<:AbstractFloat} <: AbstractComponent
     A::T
     tau::T
     is_lowEnergyTail::Bool
@@ -107,37 +143,48 @@ Base.@kwdef struct ExGaussianParams{T<:AbstractFloat}
 end
 
 """
-    PeakParams
+    PeakParams{
+        G<:AbstractComponent, 
+        C<:AbstractComponent,
+        L<:AbstractComponent, 
+        H<:AbstractComponent
+    } <: AbstractComponent
 
 Aggregate container for all components that form a gamma-ray peak.
 
-Each component is optional — set the corresponding field to `false` to exclude it. 
-Setting it to `true` instead of specifying a `Params` object allows for controlling which 
-component is used in the fitting process (See [build_prior](@ref)).
+Each component is optional — set the corresponding field to `Disabled()` to exclude it. 
+Setting it to `Enabled()` instead of specifying a `XParams` object allows for controlling 
+which component is used in the fitting process (See [build_prior](@ref)).
+
 `mu` and `sigma` are usually the same between all model components.
 
 # Fields
-- `gaussian::Union{GaussianParams,Bool}`: main Gaussian peak shape. Default: `false`
-- `compton::Union{ComptonParams,Bool}`: Compton-edge step function. Default: `false`
-- `lowEnergyTail::Union{ExGaussianParams,Bool}`: ex-Gaussian low-energy tail. 
-  Default: `false`
-- `highEnergyTail::Union{ExGaussianParams,Bool}`: ex-Gaussian high-energy tail.
-  Default: `false`
+- `gaussian::G`: main Gaussian peak shape. Default: `Disabled()`
+- `compton::C`: Compton-edge step function. Default: `Disabled()`
+- `lowEnergyTail::L`: ex-Gaussian low-energy tail. Default: `Disabled()`
+- `highEnergyTail::H`: ex-Gaussian high-energy tail. Default: `Disabled()`
 
 # See also
+- [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractParams`](@ref) for the component 
+  management
 - [`peak_model`](@ref) for evaluating the combined peak shape
-- [`GaussianParams`](@ref), [`ComptonParams`](@ref), and [`ExGaussianParams`] for the
+- [`GaussianParams`](@ref), [`ComptonParams`](@ref), and [`ExGaussianParams`](@ref) for the
   component parameters.
 """
-Base.@kwdef struct PeakParams
-    gaussian::Union{GaussianParams,Bool} = false
-    compton::Union{ComptonParams,Bool} = false
-    lowEnergyTail::Union{ExGaussianParams,Bool} = false
-    highEnergyTail::Union{ExGaussianParams,Bool} = false
+Base.@kwdef struct PeakParams{
+    G<:AbstractComponent,
+    C<:AbstractComponent,
+    L<:AbstractComponent,
+    H<:AbstractComponent,
+} <: AbstractComponent
+    gaussian::G = Disabled()
+    compton::C = Disabled()
+    lowEnergyTail::L = Disabled()
+    highEnergyTail::H = Disabled()
 end
 
 """
-    QuadPolyParams{T<:AbstractFloat}
+    QuadPolyParams{T<:AbstractFloat} <: AbstractComponent
 
 Parameters for the quadratic polynomial term in the background model.
 
@@ -155,13 +202,13 @@ f(x) = C \\cdot (x - \\mu)^2
 # See also
 - [`quad_polynomial`](@ref) for evaluating the term
 """
-Base.@kwdef struct QuadPolyParams{T<:AbstractFloat}
+Base.@kwdef struct QuadPolyParams{T<:AbstractFloat} <: AbstractComponent
     C::T
     mu::T
 end
 
 """
-    LinPolyParams{T<:AbstractFloat}
+    LinPolyParams{T<:AbstractFloat} <: AbstractComponent
 
 Parameters for the linear polynomial term in the background model.
 
@@ -179,13 +226,13 @@ f(x) = C \\cdot (x - \\mu)
 # See also
 - [`lin_polynomial`](@ref) for evaluating the term
 """
-Base.@kwdef struct LinPolyParams{T<:AbstractFloat}
+Base.@kwdef struct LinPolyParams{T<:AbstractFloat} <: AbstractComponent
     C::T
     mu::T
 end
 
 """
-    ConstPolyParams{T<:AbstractFloat}
+    ConstPolyParams{T<:AbstractFloat} <: AbstractComponent
 
 Parameters for the constant polynomial term in the background model.
 
@@ -195,47 +242,60 @@ Parameters for the constant polynomial term in the background model.
 # See also
 - [`const_polynomial`](@ref) for evaluating the term
 """
-Base.@kwdef struct ConstPolyParams{T<:AbstractFloat}
+Base.@kwdef struct ConstPolyParams{T<:AbstractFloat} <: AbstractComponent
     C::T
 end
 
 """
-    BackgroundParams
+    BackgroundParams{
+        Q<:AbstractComponent, 
+        L<:AbstractComponent, 
+        C<:AbstractComponent
+    } <: AbstractComponent
 
 Aggregate container for all components that form the background model.
 
-Each component is optional — set the corresponding field to `false` to exclude it. 
-Setting it to `true` instead of specifying a `Params` object allows for controlling which 
-component is used in the fitting process (See [build_prior](@ref)).
-`mu` is usually the same between all model components.
+Each component is optional — set the corresponding field to `Disabled()` to exclude it. 
+Setting it to `Enabled()` instead of specifying a `XParams` object allows for controlling 
+which component is used in the fitting process (See [build_prior](@ref)).
 
-# Fields
-- `quadPoly::Union{QuadPolyParams,Bool}`: quadratic polynomial term. Default: `false`
-- `linPoly::Union{LinPolyParams,Bool}`: linear polynomial term. Default: `false`
-- `constPoly::Union{ConstPolyParams,Bool}`: constant polynomial term. Default: `false`
-
-# See also
-- [background_model](@ref) for evaluating the background model
-"""
-Base.@kwdef struct BackgroundParams
-    quadPoly::Union{QuadPolyParams,Bool} = false
-    linPoly::Union{LinPolyParams,Bool} = false
-    constPoly::Union{ConstPolyParams,Bool} = false
-end
-
-"""
-    ModelParams
-
-Complete model combining a gamma peak and a polynomial background.
-
-Each component is optional — unset fields are `nothing` and are skipped during evaluation.
 `mu` and `sigma` are usually the same between all model components.
 
 # Fields
-- `peak::Union{PeakParams,Nothing}`: peak shape parameters (Gaussian, Compton edge, 
-  tails). Default: `nothing`
-- `background::Union{BackgroundParams,Nothing}`: quadratic background parameters. 
-  Default: `nothing`
+- `quadPoly::Q`: quadratic polynomial term. Default: `Disabled()`
+- `linPoly::C`: linear polynomial term. Default: `Disabled()`
+- `constPoly::L`: constant polynomial term. Default: `Disabled()`
+
+# See also
+- [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractParams`](@ref) for the component 
+  management
+- [background_model](@ref) for evaluating the background model
+- [`QuadPolyParams`](@ref), [`ComptonParams`](@ref), and [`ConstPolyParams`](@ref) for the
+  component parameters.
+"""
+Base.@kwdef struct BackgroundParams{
+    Q<:AbstractComponent,
+    L<:AbstractComponent,
+    C<:AbstractComponent,
+} <: AbstractComponent
+    quadPoly::Q = Disabled()
+    linPoly::L = Disabled()
+    constPoly::C = Disabled()
+end
+
+"""
+    ModelParams{P<:AbstractComponent, B<:AbstractComponent}
+
+Complete model combining a gamma peak and a polynomial background.
+
+Each component is optional — unset fields are `Disabled()` and are skipped during 
+evaluation.
+
+`mu` and `sigma` are usually the same between all model components.
+
+# Fields
+- `peak::P`: peak term. Default: `Disabled()`
+- `background::B`: background term. Default: `Disabled()`
 
 # Constructors
 
@@ -268,14 +328,16 @@ components and is required whenever any peak component is present.
 - An `ArgumentError` if `:sigma` is missing while a peak component is present
 
 # See also
+- [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractParams`](@ref) for the component 
+  management
 - [`full_model`](@ref) for evaluating the combined model
 - [`PeakParams`](@ref), and [`BackgroundParams`](@ref) for the component parameters
 - [`build_prior`](@ref) for constructing the `NamedTuple` distribution this constructor
   consumes
 """
-Base.@kwdef struct ModelParams
-    peak::Union{PeakParams,Nothing} = nothing
-    background::Union{BackgroundParams,Nothing} = nothing
+Base.@kwdef struct ModelParams{P<:AbstractComponent,B<:AbstractComponent}
+    peak::P = Disabled()
+    background::B = Disabled()
 end
 
 function ModelParams(params::NamedTuple)
@@ -317,12 +379,12 @@ function ModelParams(params::NamedTuple)
         gaussian_params =
             has_gaussian ?
             GaussianParams(A = params.gaussian_A, mu = params.mu, sigma = params.sigma) :
-            false
+            Disabled()
 
         compton_params =
             has_compton ?
             ComptonParams(h = params.compton_h, mu = params.mu, sigma = params.sigma) :
-            false
+            Disabled()
 
         lowEnergyTail_params =
             has_lowEnergyTail ?
@@ -332,7 +394,7 @@ function ModelParams(params::NamedTuple)
                 is_lowEnergyTail = true,
                 mu = params.mu,
                 sigma = params.sigma,
-            ) : false
+            ) : Disabled()
         highEnergyTail_params =
             has_highEnergyTail ?
             ExGaussianParams(
@@ -341,7 +403,7 @@ function ModelParams(params::NamedTuple)
                 is_lowEnergyTail = false,
                 mu = params.mu,
                 sigma = params.sigma,
-            ) : false
+            ) : Disabled()
 
         peak = PeakParams(
             gaussian = gaussian_params,
@@ -350,17 +412,19 @@ function ModelParams(params::NamedTuple)
             highEnergyTail = highEnergyTail_params,
         )
     else
-        peak = nothing
+        peak = Disabled()
     end
 
     if has_background
         quadPoly_params =
-            has_quadPoly ? QuadPolyParams(C = params.quadPoly_C, mu = params.mu) : false
+            has_quadPoly ? QuadPolyParams(C = params.quadPoly_C, mu = params.mu) :
+            Disabled()
 
         linPoly_params =
-            has_linPoly ? LinPolyParams(C = params.linPoly_C, mu = params.mu) : false
+            has_linPoly ? LinPolyParams(C = params.linPoly_C, mu = params.mu) : Disabled()
 
-        constPoly_params = has_constPoly ? ConstPolyParams(C = params.constPoly_C) : false
+        constPoly_params =
+            has_constPoly ? ConstPolyParams(C = params.constPoly_C) : Disabled()
 
         background = BackgroundParams(
             quadPoly = quadPoly_params,
@@ -368,7 +432,7 @@ function ModelParams(params::NamedTuple)
             constPoly = constPoly_params,
         )
     else
-        background = nothing
+        background = Disabled()
     end
 
     return ModelParams(peak = peak, background = background)

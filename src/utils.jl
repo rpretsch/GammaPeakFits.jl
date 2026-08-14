@@ -1,10 +1,12 @@
 """
-    plot_data(data::SpectrumData, mu::Union{<:AbstractFloat,Nothing} = nothing)
+    plot_data(data::SpectrumData; mu::Union{<:AbstractFloat,Nothing} = nothing)
 
 Plot a binned energy spectrum as a bar plot with optional marker for the peak centroid.
 
 # Arguments
 - `data::SpectrumData`: binned spectrum data to plot
+
+# Keyword arguments
 - `mu::Union{AbstractFloat,Nothing}`: optional centroid position to highlight with a 
   vertical line. Default: `nothing`
 
@@ -15,7 +17,7 @@ Plot a binned energy spectrum as a bar plot with optional marker for the peak ce
 # See also
 - [`SpectrumData`](@ref) for the data struct
 """
-function plot_data(data::SpectrumData, mu::Union{<:AbstractFloat,Nothing} = nothing)
+function plot_data(data::SpectrumData; mu::Union{<:AbstractFloat,Nothing} = nothing)
 
     fig = Figure(size = (1800, 600))
     ax = Axis(fig[1, 1]; xlabel = "Energy [keV]", ylabel = "Counts", yscale = log10)

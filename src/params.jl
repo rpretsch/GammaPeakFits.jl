@@ -165,7 +165,7 @@ which component is used in the fitting process (See [build_prior](@ref)).
 - `highEnergyTail::H`: ex-Gaussian high-energy tail. Default: `Disabled()`
 
 # See also
-- [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractParams`](@ref) for the component 
+- [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractComponent`](@ref) for the component 
   management
 - [`peak_model`](@ref) for evaluating the combined peak shape
 - [`GaussianParams`](@ref), [`ComptonParams`](@ref), and [`ExGaussianParams`](@ref) for the
@@ -267,7 +267,7 @@ which component is used in the fitting process (See [build_prior](@ref)).
 - `constPoly::L`: constant polynomial term. Default: `Disabled()`
 
 # See also
-- [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractParams`](@ref) for the component 
+- [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractComponent`](@ref) for the component 
   management
 - [background_model](@ref) for evaluating the background model
 - [`QuadPolyParams`](@ref), [`ComptonParams`](@ref), and [`ConstPolyParams`](@ref) for the
@@ -328,7 +328,7 @@ components and is required whenever any peak component is present.
 - An `ArgumentError` if `:sigma` is missing while a peak component is present
 
 # See also
-- [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractParams`](@ref) for the component 
+- [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractComponent`](@ref) for the component 
   management
 - [`full_model`](@ref) for evaluating the combined model
 - [`PeakParams`](@ref), and [`BackgroundParams`](@ref) for the component parameters

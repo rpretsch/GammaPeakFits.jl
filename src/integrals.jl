@@ -16,7 +16,7 @@ Components marked `Disabled()` contribute zero.
 # See also
 - [`full_model`](@ref) for the integrated model
 - [`ModelParams`](@ref) for the model params
-- [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractParams`](@ref) for the component 
+- [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractComponent`](@ref) for the component 
   management
 """
 function numerical_integral(data::SpectrumData, params::ModelParams)
@@ -47,7 +47,7 @@ Components marked `Disabled()` contribute zero.
 # See also
 - [`full_model`](@ref) for the integrated model
 - [`ModelParams`](@ref) for the model params
-- [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractParams`](@ref) for the component 
+- [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractComponent`](@ref) for the component 
   management
 """
 function midpoint_integral(data::SpectrumData, params::ModelParams)
@@ -74,7 +74,7 @@ Components set to `Disabled()` contribute zero.
   for the individual components
 - [`full_model`](@ref) for the integrated model
 - [`ModelParams`](@ref) for the model params
-- [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractParams`](@ref) for the component 
+- [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractComponent`](@ref) for the component 
   management
 """
 function analytical_integral(data::SpectrumData, params::ModelParams)

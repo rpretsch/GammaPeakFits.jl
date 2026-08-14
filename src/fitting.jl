@@ -91,7 +91,7 @@ The following priors are defined per enabled component:
 | `:constPoly_C` | `Uniform(0, peak_height)` | `background.constPoly` |
 
 # See also
-- [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractParams`](@ref) for the component 
+- [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractComponent`](@ref) for the component 
   management
 - [`FitConfigs`](@ref) for tuning the prior centers, widths, and bounds
 - [`ModelParams`](@ref), [`PeakParams`](@ref), [`BackgroundParams`](@ref) for the model

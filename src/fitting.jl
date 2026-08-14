@@ -85,6 +85,8 @@ widths and bounds, are taken from [`FitConfigs`](@ref) and can be tuned there.
 
 # Throws
 - An `ArgumentError` if both `params.peak` and `params.background` are `Disabled()`
+- An `ArgumentError` if a present container holds no enabled components 
+  (e.g. `PeakParams()`)
 - An `ArgumentError` if either `peak_height` or `peak_area` were not supplied when they 
   were needed
 
@@ -199,6 +201,8 @@ function build_prior(
             push!(priors, :constPoly_C => Uniform(0, peak_height))
         end
     end
+
+    isempty(priors) && throw(ArgumentError("No model specified"))
 
     return distprod(; priors...)
 end

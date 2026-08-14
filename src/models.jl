@@ -1,5 +1,5 @@
 """
-    gaussian(x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}, params::GaussianParams)
+    gaussian(x::Union{AbstractFloat,Vector{<:AbstractFloat}}, params::GaussianParams)
 
 Evaluate a scaled Gaussian (normal) distribution at `x`.
 
@@ -13,8 +13,7 @@ f(x) = \\frac{A}{\\sqrt{2\\pi}\\sigma} \\,
 ```
 
 # Arguments
-- `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to 
-  evaluate in keV
+- `x::Union{AbstractFloat,Vector{<:AbstractFloat}}`: position(s) at which to evaluate in keV
 - `params::GaussianParams`: component parameters
 
 # Throws
@@ -32,12 +31,12 @@ function gaussian(x::AbstractFloat, params::GaussianParams)
     sigma <= 0 && throw(ArgumentError("`sigma` can't be negative"))
     return params.A * pdf(Normal(params.mu, sigma), x)
 end
-function gaussian(x::AbstractVector{<:AbstractFloat}, params::GaussianParams)
+function gaussian(x::Vector{<:AbstractFloat}, params::GaussianParams)
     return gaussian.(x, Ref(params))
 end
 
 """
-    compton(x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}, params::ComptonParams)
+    compton(x::Union{AbstractFloat,Vector{<:AbstractFloat}}, params::ComptonParams)
 
 Evaluate a Compton-edge step function component at `x`.
 
@@ -52,8 +51,7 @@ f(x) = \\frac{h}{2}\\,
 ```
 
 # Arguments
-- `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to 
-  evaluate in keV
+- `x::Union{AbstractFloat,Vector{<:AbstractFloat}}`: position(s) at which to evaluate in keV
 - `params::ComptonParams`: component parameters
 
 # Returns
@@ -71,16 +69,12 @@ function compton(x::AbstractFloat, params::ComptonParams)
     sigma <= 0 && throw(ArgumentError("`sigma` can't be zero or negative"))
     return params.h/2 * erfc((x - params.mu)/(sqrt(2) * params.sigma))
 end
-function compton(x::AbstractVector{<:AbstractFloat}, params::ComptonParams)
+function compton(x::Vector{<:AbstractFloat}, params::ComptonParams)
     return compton.(x, Ref(params))
 end
 
 """
-    exGaussian(
-        x::Union{AbstractFloat, 
-        AbstractVector{<:AbstractFloat}}, 
-        params::ExGaussianParams,
-    )
+    exGaussian(x::Union{AbstractFloat,Vector{<:AbstractFloat}}, params::ExGaussianParams)
 
 Evaluate an exponentially modified Gaussian (ex-Gaussian) tail component at `x`.
 
@@ -111,8 +105,7 @@ For numerical stability this is evaluated in log-space as
 ```
 
 # Arguments
-- `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to 
-  evaluate in keV
+- `x::Union{AbstractFloat,Vector{<:AbstractFloat}}`: position(s) at which to evaluate in keV
 - `params::ExGaussianParams`: component parameters
 
 # Returns
@@ -137,12 +130,12 @@ function exGaussian(x::AbstractFloat, params::ExGaussianParams)
         logerfcx(1/sqrt(2) * (sigma/tau - (-1)^params.is_lowEnergyTail * (x - mu)/sigma))
     return exp(logf)
 end
-function exGaussian(x::AbstractVector{<:AbstractFloat}, params::ExGaussianParams)
+function exGaussian(x::Vector{<:AbstractFloat}, params::ExGaussianParams)
     return exGaussian.(x, Ref(params))
 end
 
 """
-    peak_model(x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}, params::PeakParams)
+    peak_model(x::Union{AbstractFloat,Vector{<:AbstractFloat}}, params::PeakParams)
 
 Evaluate the combined peak shape (Gaussian + Compton edge + ex-Gaussian tails) at `x`.
 
@@ -159,8 +152,7 @@ f_{\\text{peak}}(x) =
 where each term is optional.
 
 # Arguments
-- `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to 
-  evaluate in keV
+- `x::Union{AbstractFloat,Vector{<:AbstractFloat}}`: position(s) at which to evaluate in keV
 - `params::PeakParams`: peak component parameters
 
 # Returns
@@ -171,19 +163,13 @@ where each term is optional.
 - [`PeakParams`](@ref) for the parameters
 - [`gaussian`](@ref), [`compton`](@ref), and [`exGaussian`](@ref) for the components
 """
-function peak_model(
-    x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}},
-    params::PeakParams,
-)
+function peak_model(x::Union{<:AbstractFloat,Vector{<:AbstractFloat}}, params::PeakParams)
     return _value(x, params.gaussian) .+ _value(x, params.compton) .+
            _value(x, params.lowEnergyTail) .+ _value(x, params.highEnergyTail)
 end
 
 """
-    quad_polynomial(
-        x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}},
-        params::QuadPolyParams,
-    )
+    quad_polynomial(x::Union{AbstractFloat,Vector{<:AbstractFloat}}, params::QuadPolyParams)
 
 Evaluate a scaled quadratic polynomial term at `x`.
 
@@ -194,8 +180,7 @@ f(x) = C \\cdot (x - \\mu)^2
 ```
 
 # Arguments
-- `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to
-  evaluate in keV
+- `x::Union{AbstractFloat,Vector{<:AbstractFloat}}`: position(s) at which to evaluate in keV
 - `params::QuadPolyParams`: component parameters
 
 # Returns
@@ -209,15 +194,12 @@ f(x) = C \\cdot (x - \\mu)^2
 function quad_polynomial(x::AbstractFloat, params::QuadPolyParams)
     return params.C * (x - params.mu)^2
 end
-function quad_polynomial(x::AbstractVector{<:AbstractFloat}, params::QuadPolyParams)
+function quad_polynomial(x::Vector{<:AbstractFloat}, params::QuadPolyParams)
     return quad_polynomial.(x, Ref(params))
 end
 
 """
-    lin_polynomial(
-        x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}},
-        params::LinPolyParams,
-    )
+    lin_polynomial(x::Union{AbstractFloat,Vector{<:AbstractFloat}}, params::LinPolyParams)
 
 Evaluate a scaled linear polynomial term at `x`.
 
@@ -228,8 +210,7 @@ f(x) = C \\cdot (x - \\mu)
 ```
 
 # Arguments
-- `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to
-  evaluate in keV
+- `x::Union{AbstractFloat,Vector{<:AbstractFloat}}`: position(s) at which to evaluate in keV
 - `params::LinPolyParams`: component parameters
 
 # Returns
@@ -243,14 +224,14 @@ f(x) = C \\cdot (x - \\mu)
 function lin_polynomial(x::AbstractFloat, params::LinPolyParams)
     return params.C * (x - params.mu)
 end
-function lin_polynomial(x::AbstractVector{<:AbstractFloat}, params::LinPolyParams)
+function lin_polynomial(x::Vector{<:AbstractFloat}, params::LinPolyParams)
     return lin_polynomial.(x, Ref(params))
 end
 
 """
     const_polynomial(
-        x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}},
-        params::ConstPolyParams
+        x::Union{AbstractFloat,Vector{<:AbstractFloat}}, 
+        params::ConstPolyParams,
     )
 
 Evaluate a constant polynomial term.
@@ -264,7 +245,7 @@ f(x) = C
 ```
 
 # Arguments
-- `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: sets the return type
+- `x::Union{AbstractFloat,Vector{<:AbstractFloat}}`: sets the return type (scalar vs vector)
 - `params::ConstPolyParams`: polynomial parameters
 
 # Returns
@@ -277,13 +258,13 @@ f(x) = C
 function const_polynomial(x::AbstractFloat, params::ConstPolyParams)
     return params.C
 end
-function const_polynomial(x::AbstractVector{<:AbstractFloat}, params::ConstPolyParams)
+function const_polynomial(x::Vector{<:AbstractFloat}, params::ConstPolyParams)
     return const_polynomial.(x, Ref(params))
 end
 
 """
     background_model(
-        x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}, 
+        x::Union{AbstractFloat,Vector{<:AbstractFloat}}, 
         params::BackgroundParams,
     )
 
@@ -302,8 +283,7 @@ f_{\\text{bg}}(x) =
 where each term is optional.
 
 # Arguments
-- `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to
-  evaluate in keV
+- `x::Union{AbstractFloat,Vector{<:AbstractFloat}}`: position(s) at which to evaluate in keV
 - `params::BackgroundParams`: background parameters
 
 # Returns
@@ -314,7 +294,7 @@ where each term is optional.
 - [`BackgroundParams`](@ref) for the parameters
 """
 function background_model(
-    x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}},
+    x::Union{<:AbstractFloat,Vector{<:AbstractFloat}},
     params::BackgroundParams,
 )
     return _value(x, params.quadPoly) .+ _value(x, params.linPoly) .+
@@ -322,10 +302,7 @@ function background_model(
 end
 
 """
-    full_model(
-        x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}, 
-        params::ModelParams,
-    )
+    full_model(x::Union{AbstractFloat,Vector{<:AbstractFloat}}, params::ModelParams)
 
 Evaluate the complete gamma-peak model (peak shape + background) at `x`.
 
@@ -339,8 +316,7 @@ f(x) = f_{\\text{peak}}(x) + f_{\\text{bg}}(x)
 ```
 
 # Arguments
-- `x::Union{AbstractFloat, AbstractVector{<:AbstractFloat}}`: position(s) at which to 
-  evaluate in keV
+- `x::Union{AbstractFloat,Vector{<:AbstractFloat}}`: position(s) at which to evaluate in keV
 - `params::ModelParams`: full model parameters
 
 # Returns
@@ -351,52 +327,51 @@ f(x) = f_{\\text{peak}}(x) + f_{\\text{bg}}(x)
 - [`ModelParams`](@ref) for the parameters
 - [`peak_model`](@ref), and [`background_model`](@ref) for the components
 """
-function full_model(
-    x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}},
-    params::ModelParams,
-)
+function full_model(x::Union{<:AbstractFloat,Vector{<:AbstractFloat}}, params::ModelParams)
     return _value(x, params.peak) .+ _value(x, params.background)
 end
 
 """
-    _value(
-        x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}},
-        params::AbstractComponent,
-    )
+    _value(x::Union{<:AbstractFloat,Vector{<:AbstractFloat}}, params::AbstractComponent)
 
 Evaluate a model component (or container) at `x`, dispatching on the component type.
 
 Components marked `Disabled()` contribute zero.
+
+# Arguments
+- `x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}}`: position(s) at which to 
+  evaluate in keV
+- `params::AbstractComponent`: component parameters (or container)
+
+# Returns
+- Scalar: the evaluated component value at `x` in counts/keV
+- Vector: an array of evaluated component values at each element of `x` in counts/keV
 
 # See also
 - [`full_model`](@ref) for the combined model
 """
 # Disabled components
 _value(x::AbstractFloat, ::Disabled) = zero(x)
-_value(x::AbstractVector{<:AbstractFloat}, ::Disabled) = zeros(eltype(x), length(x))
+_value(x::Vector{<:AbstractFloat}, ::Disabled) = zeros(eltype(x), length(x))
 
 # Peak components
-_value(x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}}, params::GaussianParams) =
+_value(x::Union{<:AbstractFloat,Vector{<:AbstractFloat}}, params::GaussianParams) =
     gaussian(x, params)
-_value(x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}}, params::ComptonParams) =
+_value(x::Union{<:AbstractFloat,Vector{<:AbstractFloat}}, params::ComptonParams) =
     compton(x, params)
-_value(
-    x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}},
-    params::ExGaussianParams,
-) = exGaussian(x, params)
+_value(x::Union{<:AbstractFloat,Vector{<:AbstractFloat}}, params::ExGaussianParams) =
+    exGaussian(x, params)
 
 # Background components
-_value(x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}}, params::QuadPolyParams) =
+_value(x::Union{<:AbstractFloat,Vector{<:AbstractFloat}}, params::QuadPolyParams) =
     quad_polynomial(x, params)
-_value(x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}}, params::LinPolyParams) =
+_value(x::Union{<:AbstractFloat,Vector{<:AbstractFloat}}, params::LinPolyParams) =
     lin_polynomial(x, params)
-_value(x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}}, params::ConstPolyParams) =
+_value(x::Union{<:AbstractFloat,Vector{<:AbstractFloat}}, params::ConstPolyParams) =
     const_polynomial(x, params)
 
 # Model components
-_value(x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}}, params::PeakParams) =
+_value(x::Union{<:AbstractFloat,Vector{<:AbstractFloat}}, params::PeakParams) =
     peak_model(x, params)
-_value(
-    x::Union{<:AbstractFloat,AbstractVector{<:AbstractFloat}},
-    params::BackgroundParams,
-) = background_model(x, params)
+_value(x::Union{<:AbstractFloat,Vector{<:AbstractFloat}}, params::BackgroundParams) =
+    background_model(x, params)

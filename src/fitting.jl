@@ -100,9 +100,9 @@ The following priors are defined per enabled component:
 | `:sigma` | `truncated(Normal(configs.sigma, prior_configs.sigma_std), eps(), Inf)` | all `peak` components |
 | `:gaussian_A` | `Uniform(0, peak_area)` | `peak.gaussian` |
 | `:compton_h` | `Uniform(0, peak_height)` | `peak.compton` |
-| `:lowEnergyTail_A` | `Uniform(0, peak_area)` | `peak.lowEnergyTail` |
+| `:lowEnergyTail_A` | `Uniform(eps(), peak_area)` | `peak.lowEnergyTail` |
 | `:lowEnergyTail_tau` | `Uniform(eps(), prior_configs.lowEnergyTail_tau_upper)` | `peak.lowEnergyTail` |
-| `:highEnergyTail_A` | `Uniform(0, peak_area)` | `peak.highEnergyTail` |
+| `:highEnergyTail_A` | `Uniform(eps(), peak_area)` | `peak.highEnergyTail` |
 | `:highEnergyTail_tau` | `Uniform(eps(), prior_configs.highEnergyTail_tau_upper)` | `peak.highEnergyTail` |
 | `:quadPoly_C` | `Uniform(prior_configs.quadPoly_C_limits)` | `background.quadPoly` |
 | `:linPoly_C` | `Uniform(prior_configs.linPoly_C_limits)` | `background.linPoly` |
@@ -170,7 +170,7 @@ function build_prior(
         if is_present(peak_params.lowEnergyTail)
             isnothing(peak_area) &&
                 throw(ArgumentError("`peak_area` required for `lowEnergyTail` component"))
-            push!(priors, :lowEnergyTail_A => Uniform(0, peak_area))
+            push!(priors, :lowEnergyTail_A => Uniform(eps(), peak_area))
             push!(
                 priors,
                 :lowEnergyTail_tau => Uniform(eps(), prior_configs.lowEnergyTail_tau_upper),
@@ -180,7 +180,7 @@ function build_prior(
         if is_present(peak_params.highEnergyTail)
             isnothing(peak_area) &&
                 throw(ArgumentError("`peak_area` required for `highEnergyTail` component"))
-            push!(priors, :highEnergyTail_A => Uniform(0, peak_area))
+            push!(priors, :highEnergyTail_A => Uniform(eps(), peak_area))
             push!(
                 priors,
                 :highEnergyTail_tau =>

@@ -33,7 +33,10 @@ posteriors.
 - Combined integrals: [`numerical_integral`](@ref), [`analytical_integral`](@ref)
 
 ## Utils
-- [`plot_data`](@ref), [`cut_data`](@ref), [`get_peak_features`](@ref), [`is_present`](@ref)
+- [`cut_data`](@ref), [`get_peak_features`](@ref), [`is_present`](@ref)
+
+## Plotting
+- [`plot_data`](@ref)
 
 # Quick start
 
@@ -119,8 +122,10 @@ include("models.jl")
 include("fitting.jl")
 # Analytical, numerical (quadgk) and midpoint bin integrals
 include("integrals.jl")
-# Data slicing (cut_data), plotting, peak-feature estimation, is_present
+# Data slicing (cut_data), peak-feature estimation, is_present
 include("utils.jl")
+# Plotting
+include("plotting.jl")
 
 # Types - presence markers
 export AbstractComponent
@@ -184,8 +189,10 @@ export quadPoly_integral
 export linPoly_integral
 export constPoly_integral
 
-# Utils
+# Plotting
 export plot_data
+
+# Utils
 export cut_data
 export get_peak_features
 export is_present

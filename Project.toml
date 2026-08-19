@@ -1,17 +1,23 @@
 name = "GammaPeakFits"
 uuid = "8b86ffcc-b0d2-4a89-8286-ff3cc002705d"
-authors = ["Rene Pretsch"]
 version = "1.0.0-DEV"
+authors = ["Rene Pretsch"]
 
 [deps]
-JuliaFormatter = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
+BAT = "c0cd4b16-88b7-57fa-983b-ab80aecada7e"
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+DensityInterface = "b429d917-457f-4dbc-8f4c-0cc954292b1d"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+QuadGK = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
+SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
+ValueShapes = "136a8f8c-c49b-4edb-8b98-f3d64d48be8f"
 
 [compat]
-JuliaFormatter = "2.12.3"
-julia = "1.10.10"
-
-[extras]
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-
-[targets]
-test = ["Test"]
+BAT = "4.0.10"
+CairoMakie = "0.15.13"
+DensityInterface = "0.4"
+Distributions = "0.25.129"
+QuadGK = "2.11.3"
+SpecialFunctions = "2.8.0"
+ValueShapes = "0.11.6"
+julia = "1.10"

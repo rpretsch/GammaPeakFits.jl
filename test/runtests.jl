@@ -1,3 +1,9 @@
+# runtests.jl — GammaPeakFits test suite.
+#
+# Recommended (activates test/Project.toml, matching CI):
+#     julia --project=. -e 'using Pkg; Pkg.test()'                        # full suite
+#     julia --project=. -e 'using Pkg; Pkg.test(; test_args=["models"])'  # selected suites
+
 using GammaPeakFits
 using Test
 

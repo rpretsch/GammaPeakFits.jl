@@ -32,21 +32,10 @@ shape model and Poisson likelihood, built on
 
 ```text
 GammaPeakFits/
-├── Project.toml            Package metadata and dependencies
-├── src/
-│   ├── GammaPeakFits.jl    Main module: imports, exports, and includes
-│   ├── types.jl            Parameter structs for model components and containers
-│   ├── models.jl           Model evaluation functions
-│   ├── integrals.jl        Model integration functions
-│   ├── fitting.jl          Poisson likelihood, prior and posterior construction
-│   └── utils.jl            Data slicing, plotting and peak-feature extraction
-├── test/
-│   ├── runtests.jl         Top-level test runner
-│   ├── test_types.jl       Struct construction and field default tests
-│   ├── test_models.jl      Model evaluation tests
-│   ├── test_integrals.jl   Model integration tests
-│   ├── test_fitting.jl     Prior, posterior, and likelihood tests
-│   └── test_utils.jl       Data slicing and peak-feature tests
+├── Project.toml   Package metadata and dependencies
+├── docs/          Documenter.jl docs site
+├── src/           Module sources (entry point: src/GammaPeakFits.jl)
+├── test/          Test suite (entry point: test/runtests.jl)
 └── README.md
 ```
 

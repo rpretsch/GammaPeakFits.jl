@@ -107,12 +107,19 @@ using QuadGK: quadgk
 using SpecialFunctions: erf, erfc, logerfcx
 using ValueShapes: NamedTupleDist
 
+# Component/container parameter structs and Enabled/Disabled presence markers
 include("params.jl")
+# SpectrumData container, marker-based and synthetic-data constructors
 include("data.jl")
+# FitConfigs, PriorConfigs, and AbstractIntegrationMethod subtypes
 include("configs.jl")
+# Component model evaluation (gaussian, compton, ...) and combined models
 include("models.jl")
+# Poisson log-likelihood, prior and posterior construction
 include("fitting.jl")
+# Analytical, numerical (quadgk) and midpoint bin integrals
 include("integrals.jl")
+# Data slicing (cut_data), plotting, peak-feature estimation, is_present
 include("utils.jl")
 
 # Types - presence markers

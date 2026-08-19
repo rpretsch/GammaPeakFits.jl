@@ -18,8 +18,8 @@
 [CI-img]: https://github.com/rpretsch/GammaPeakFits.jl/actions/workflows/CI.yml/badge.svg?branch=main
 [CI-url]: https://github.com/rpretsch/GammaPeakFits.jl/actions/workflows/CI.yml?query=branch%3Amain
 
-[Cov-img]: https://codecov.io/gh/rpretsch/GammaPeakFits/branch/main/graph/badge.svg
-[Cov-url]: https://codecov.io/gh/rpretsch/GammaPeakFits
+[Cov-img]: https://codecov.io/gh/rpretsch/GammaPeakFits.jl/branch/main/graph/badge.svg
+[Cov-url]: https://codecov.io/gh/rpretsch/GammaPeakFits.jl
 
 [aqua-img]: https://juliatesting.github.io/Aqua.jl/dev/assets/badge.svg
 [aqua-url]: https://github.com/JuliaTesting/Aqua.jl

@@ -263,14 +263,14 @@ which component is used in the fitting process (See [build_prior](@ref)).
 
 # Fields
 - `quadPoly::Q`: quadratic polynomial term. Default: `Disabled()`
-- `linPoly::C`: linear polynomial term. Default: `Disabled()`
-- `constPoly::L`: constant polynomial term. Default: `Disabled()`
+- `linPoly::L`: linear polynomial term. Default: `Disabled()`
+- `constPoly::C`: constant polynomial term. Default: `Disabled()`
 
 # See also
 - [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractComponent`](@ref) for the component 
   management
 - [background_model](@ref) for evaluating the background model
-- [`QuadPolyParams`](@ref), [`ComptonParams`](@ref), and [`ConstPolyParams`](@ref) for the
+- [`QuadPolyParams`](@ref), [`LinPolyParams`](@ref), and [`ConstPolyParams`](@ref) for the
   component parameters.
 """
 Base.@kwdef struct BackgroundParams{

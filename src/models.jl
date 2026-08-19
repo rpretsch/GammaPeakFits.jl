@@ -17,7 +17,7 @@ f(x) = \\frac{A}{\\sqrt{2\\pi}\\sigma} \\,
 - `params::GaussianParams`: component parameters
 
 # Throws
-- An `ArgumentError` if `params.sigma` is negative
+- An `ArgumentError` if `params.sigma` is negative or zero
 
 # Returns
 - Scalar: the evaluated Gaussian amplitude at `x` in counts/keV
@@ -28,7 +28,7 @@ f(x) = \\frac{A}{\\sqrt{2\\pi}\\sigma} \\,
 """
 function gaussian(x::Float64, params::GaussianParams)
     sigma = params.sigma
-    sigma <= 0 && throw(ArgumentError("`sigma` can't be negative"))
+    sigma <= 0 && throw(ArgumentError("`sigma` can't be negative or zero"))
     return params.A * pdf(Normal(params.mu, sigma), x)
 end
 function gaussian(x::Vector{Float64}, params::GaussianParams)

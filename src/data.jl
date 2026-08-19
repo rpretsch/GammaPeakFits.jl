@@ -57,7 +57,7 @@ bin.
 - `params::ModelParams`: model parameters used to compute expected counts
 
 # Throws
-- An `ArgumentError` if the model produces negative expected counts
+- An `ArgumentError` if the model produces negative or non-finite expected counts
 
 # Returns
 - A `SpectrumData` object
@@ -125,8 +125,11 @@ function SpectrumData(
     bin_edges =
         collect(range(lower_limit - bin_size/2, upper_limit + bin_size/2; step = bin_size))
     expected_counts = full_model(bin_centers, params) .* bin_size
-    any(expected_counts .< 0) &&
-        throw(ArgumentError("Model produced negative expected counts; check parameters."))
+    any(x -> !isfinite(x) || x<0, expected_counts) && throw(
+        ArgumentError(
+            "Model produced negative or non-finite expected counts; check parameters.",
+        ),
+    )
     weights = rand.(Poisson.(expected_counts))
     return SpectrumData(
         bin_centers = bin_centers,

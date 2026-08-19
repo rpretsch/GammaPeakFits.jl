@@ -51,6 +51,17 @@
 
         end
 
+        @testset "outer constructor throws on non-finite expected counts" begin
+
+            model_params = ModelParams(
+                peak = PeakParams(
+                    gaussian = GaussianParams(A = 1.0e308, mu = MU, sigma = 0.1),
+                ),
+            )
+            @test_throws ArgumentError SpectrumData(2040.0, 2050.0, 1.0, model_params)
+
+        end
+
         @testset "markers constructor" begin
 
             @testset "bin centers markers" begin

@@ -18,6 +18,7 @@ f(x) = \\frac{A}{\\sqrt{2\\pi}\\sigma} \\,
 
 # Throws
 - An `ArgumentError` if `params.sigma` is negative or zero
+- An `ArgumentError` if `params.A` is negative
 
 # Returns
 - Scalar: the evaluated Gaussian amplitude at `x` in counts/keV
@@ -29,6 +30,8 @@ f(x) = \\frac{A}{\\sqrt{2\\pi}\\sigma} \\,
 function gaussian(x::Float64, params::GaussianParams)
     sigma = params.sigma
     sigma <= 0 && throw(ArgumentError("`sigma` can't be negative or zero"))
+    A = params.A
+    A < 0 && throw(ArgumentError("`A` can't be negative"))
     return params.A * pdf(Normal(params.mu, sigma), x)
 end
 function gaussian(x::Vector{Float64}, params::GaussianParams)
@@ -60,6 +63,7 @@ f(x) = \\frac{h}{2}\\,
 
 # Throws
 - An `ArgumentError` if `params.sigma` is negative or zero
+- An `ArgumentError` if `params.h` is negative
 
 # See also
 - [`ComptonParams`](@ref) for the parameters
@@ -67,7 +71,9 @@ f(x) = \\frac{h}{2}\\,
 function compton(x::Float64, params::ComptonParams)
     sigma = params.sigma
     sigma <= 0 && throw(ArgumentError("`sigma` can't be zero or negative"))
-    return params.h/2 * erfc((x - params.mu)/(sqrt(2) * params.sigma))
+    h = params.h
+    h < 0 && throw(ArgumentError("`h` can't be negative"))
+    return h/2 * erfc((x - params.mu)/(sqrt(2) * sigma))
 end
 function compton(x::Vector{Float64}, params::ComptonParams)
     return compton.(x, Ref(params))
@@ -113,7 +119,8 @@ For numerical stability this is evaluated in log-space as
 - Vector: an array of evaluated tail amplitudes at each element of `x` in counts/keV
 
 # Throws
-- An `ArgumentError` if either `params.sigma` and `params.tau` are negative or zero
+- An `ArgumentError` if either `params.sigma`, `params.tau`, and `params.A` are negative or 
+  zero
 
 # See also
 - [`ExGaussianParams`](@ref) for the parameters
@@ -123,10 +130,12 @@ function exGaussian(x::Float64, params::ExGaussianParams)
     tau <= 0 && throw(ArgumentError("`tau` can't be zero or negative"))
     sigma = params.sigma
     sigma <= 0 && throw(ArgumentError("`sigma` can't be zero or negative"))
+    A = params.A
+    A <= 0 && throw(ArgumentError("`A` can't be zero or negative"))
     mu = params.mu
 
     logf =
-        log(params.A) - log(2 * tau) - 1/2 * ((x - mu)/sigma)^2 +
+        log(A) - log(2 * tau) - 1/2 * ((x - mu)/sigma)^2 +
         logerfcx(1/sqrt(2) * (sigma/tau - (-1)^params.is_lowEnergyTail * (x - mu)/sigma))
     return exp(logf)
 end
@@ -252,11 +261,16 @@ f(x) = C
 - Scalar: the constant coefficient in counts/keV
 - Vector: an array of constant coefficient in counts/keV
 
+# Throws
+- An `ArgumentError` if `params.C` is negative
+
 # See also
 - [`ConstPolyParams`](@ref) for the parameter structure
 """
 function const_polynomial(x::Float64, params::ConstPolyParams)
-    return params.C
+    C = params.C
+    C < 0 && throw(ArgumentError("`C` can't be negative"))
+    return C
 end
 function const_polynomial(x::Vector{Float64}, params::ConstPolyParams)
     return const_polynomial.(x, Ref(params))

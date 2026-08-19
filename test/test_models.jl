@@ -31,6 +31,15 @@
 
             end
 
+            @testset "throws on negative A" begin
+
+                invalid_params = GaussianParams(A = -A, mu = MU, sigma = SIGMA)
+                @test_throws ArgumentError gaussian(MU, invalid_params)
+
+                @test_throws ArgumentError gaussian(X_ARRAY, invalid_params)
+
+            end
+
         end
 
         @testset "compton" begin
@@ -48,6 +57,13 @@
                 @test_throws ArgumentError compton(MU, invalid_params)
 
                 invalid_params = ComptonParams(h = H, mu = MU, sigma = -SIGMA)
+                @test_throws ArgumentError compton(MU, invalid_params)
+
+            end
+
+            @testset "throws on negative h" begin
+
+                invalid_params = ComptonParams(h = -H, mu = MU, sigma = SIGMA)
                 @test_throws ArgumentError compton(MU, invalid_params)
 
             end
@@ -139,6 +155,28 @@
 
             end
 
+            @testset "throws on non-positive A" begin
+
+                invalid_params = ExGaussianParams(
+                    A = 0.0,
+                    tau = TAU,
+                    is_lowEnergyTail = true,
+                    mu = MU,
+                    sigma = SIGMA,
+                )
+                @test_throws ArgumentError exGaussian(MU, invalid_params)
+
+                invalid_params = ExGaussianParams(
+                    A = -A,
+                    tau = TAU,
+                    is_lowEnergyTail = true,
+                    mu = MU,
+                    sigma = SIGMA,
+                )
+                @test_throws ArgumentError exGaussian(MU, invalid_params)
+
+            end
+
         end
 
         @testset "quad_polynomial" begin
@@ -149,6 +187,13 @@
 
             expected = @. C_QUAD * (X_ARRAY - MU)^2
             @test result == expected
+
+            @testset "negative C is allowed" begin
+
+                quad_params = QuadPolyParams(C = -C_QUAD, mu = MU)
+                @test quad_polynomial(X_ARRAY, quad_params) == @. -C_QUAD * (X_ARRAY - MU)^2
+
+            end
 
         end
 
@@ -161,6 +206,13 @@
             expected = @. C_LIN * (X_ARRAY - MU)
             @test result == expected
 
+            @testset "negative C is allowed" begin
+
+                lin_params = LinPolyParams(C = -C_LIN, mu = MU)
+                @test lin_polynomial(X_ARRAY, lin_params) == @. -C_LIN * (X_ARRAY - MU)
+
+            end
+
         end
 
         @testset "const_polynomial" begin
@@ -168,6 +220,13 @@
             constPoly_params = ConstPolyParams(C = C_CONST)
             result = const_polynomial(X_ARRAY, constPoly_params)
             @test result == fill(C_CONST, length(X_ARRAY))
+
+            @testset "throws on negative C" begin
+
+                invalid_params = ConstPolyParams(C = -C_CONST)
+                @test_throws ArgumentError const_polynomial(MU, invalid_params)
+
+            end
 
         end
 

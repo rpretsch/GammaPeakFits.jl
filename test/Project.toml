@@ -5,3 +5,10 @@ Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 ValueShapes = "136a8f8c-c49b-4edb-8b98-f3d64d48be8f"
+
+[compat]
+Aqua = "0.8.16"
+BAT = "4.3.1"
+Distributions = "0.25.130"
+SpecialFunctions = "2.9.0"
+ValueShapes = "0.11.6"

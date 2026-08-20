@@ -215,18 +215,8 @@ fit_modelParams = ModelParams(
                       background = background_params
                   )
 
-# Get needed peak features
-peak_height, peak_area, _ =
-    get_peak_features(fit_data, configs.mu, configs.sigma) 
-# (counts/keV, counts, counts/keV)
-
 # Build the prior
-prior = build_prior(
-            fit_modelParams,
-            configs; 
-            peak_height = peak_height, 
-            peak_area = peak_area,
-        )
+prior = build_prior(fit_data, fit_modelParams, configs)
 
 # Build the posterior
 posterior = build_posterior(fit_data, prior, configs)

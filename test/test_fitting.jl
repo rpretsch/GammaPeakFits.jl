@@ -3,14 +3,11 @@
     A = 1000.0
     MU = 2048.0
     SIGMA = 10.0
-    PEAK_HEIGHT = 100.0
-    PEAK_AREA = 1000.0
-    DATA = SpectrumData(
-        bin_centers = collect(2040.0:1.0:2050.0),
-        bin_edges = collect(2039.5:1.0:2050.5),
-        weights = ones(Int, 11),
-        bin_size = 1.0,
+    WINDOW = 100.0
+    model = ModelParams(
+        peak = PeakParams(gaussian = GaussianParams(A = A, mu = MU, sigma = SIGMA)),
     )
+    DATA = SpectrumData((MU-WINDOW/2), (MU+WINDOW/2), 1.0, model)
     C_CONST = 100.0
     C_LIN = 10.0
     CONFIGS = FitConfigs(mu = MU, sigma = SIGMA, integration_method = Midpoint())
@@ -121,60 +118,30 @@
         @testset "Throws on empty model" begin
 
             model_params = ModelParams()
-            @test_throws ArgumentError build_prior(
-                model_params,
-                CONFIGS;
-                peak_height = PEAK_HEIGHT,
-                peak_area = PEAK_AREA,
-            )
+            @test_throws ArgumentError build_prior(DATA, model_params, CONFIGS)
 
         end
 
         @testset "Throws on enabled-but-empty containers" begin
 
             model_params = ModelParams(peak = PeakParams())
-            @test_throws ArgumentError build_prior(
-                model_params,
-                CONFIGS;
-                peak_height = PEAK_HEIGHT,
-                peak_area = PEAK_AREA,
-            )
+            @test_throws ArgumentError build_prior(DATA, model_params, CONFIGS)
 
             model_params = ModelParams(background = BackgroundParams())
-            @test_throws ArgumentError build_prior(
-                model_params,
-                CONFIGS;
-                peak_height = PEAK_HEIGHT,
-                peak_area = PEAK_AREA,
-            )
+            @test_throws ArgumentError build_prior(DATA, model_params, CONFIGS)
 
             model_params = ModelParams(peak = PeakParams(), background = BackgroundParams())
-            @test_throws ArgumentError build_prior(
-                model_params,
-                CONFIGS;
-                peak_height = PEAK_HEIGHT,
-                peak_area = PEAK_AREA,
-            )
+            @test_throws ArgumentError build_prior(DATA, model_params, CONFIGS)
 
         end
 
         @testset "mu prior always except in constPoly background" begin
 
             model_params = ModelParams(background = BackgroundParams(constPoly = Enabled()))
-            prior = build_prior(
-                model_params,
-                CONFIGS;
-                peak_height = PEAK_HEIGHT,
-                peak_area = PEAK_AREA,
-            )
+            prior = build_prior(DATA, model_params, CONFIGS)
             @test !hasproperty(prior, :mu)
             model_params = ModelParams(peak = PeakParams(gaussian = Enabled()))
-            prior = build_prior(
-                model_params,
-                CONFIGS;
-                peak_height = PEAK_HEIGHT,
-                peak_area = PEAK_AREA,
-            )
+            prior = build_prior(DATA, model_params, CONFIGS)
             @test hasproperty(prior, :mu)
             @test prior.mu isa Normal
             @test prior.mu.μ == MU
@@ -185,127 +152,30 @@
 
             model_params_noSigma =
                 ModelParams(background = BackgroundParams(quadPoly = Enabled()))
-            prior_noSigma = build_prior(
-                model_params_noSigma,
-                CONFIGS;
-                peak_height = PEAK_HEIGHT,
-                peak_area = PEAK_AREA,
-            )
+            prior_noSigma = build_prior(DATA, model_params_noSigma, CONFIGS)
             @test !hasproperty(prior_noSigma, :sigma)
 
             model_params_sigma = ModelParams(peak = PeakParams(gaussian = Enabled()))
 
-            prior_sigma = build_prior(
-                model_params_sigma,
-                CONFIGS;
-                peak_height = PEAK_HEIGHT,
-                peak_area = PEAK_AREA,
-            )
+            prior_sigma = build_prior(DATA, model_params_sigma, CONFIGS)
             @test hasproperty(prior_sigma, :sigma)
             @test prior_sigma.sigma.untruncated isa Normal
             @test prior_sigma.sigma.untruncated.μ == SIGMA
 
         end
 
-        @testset "Prior bounds use the passed parameters" begin
-
-            model_params =
-                ModelParams(peak = PeakParams(gaussian = Enabled(), compton = Enabled()))
-            prior = build_prior(
-                model_params,
-                CONFIGS;
-                peak_height = PEAK_HEIGHT,
-                peak_area = PEAK_AREA,
-            )
-            @test prior.gaussian_A isa Uniform
-            @test prior.gaussian_A.b == PEAK_AREA
-            @test prior.compton_h isa Uniform
-            @test prior.compton_h.b == PEAK_HEIGHT
-
-            model_params = ModelParams(background = BackgroundParams(constPoly = Enabled()))
-            prior = build_prior(
-                model_params,
-                CONFIGS;
-                peak_height = PEAK_HEIGHT,
-                peak_area = PEAK_AREA,
-            )
-            @test prior.constPoly_C isa Uniform
-            @test prior.constPoly_C.b == PEAK_HEIGHT
-
-        end
-
         @testset "Return type" begin
 
             model_params = ModelParams(peak = PeakParams(gaussian = Enabled()))
-            prior = build_prior(
-                model_params,
-                CONFIGS;
-                peak_height = PEAK_HEIGHT,
-                peak_area = PEAK_AREA,
-            )
+            prior = build_prior(DATA, model_params, CONFIGS)
             @test prior isa NamedTupleDist
-
-        end
-
-        @testset "Throws on missing parameters" begin
-
-            @testset "gaussian requires peak_area" begin
-                model_params = ModelParams(peak = PeakParams(gaussian = Enabled()))
-                @test_throws ArgumentError build_prior(
-                    model_params,
-                    CONFIGS;
-                    peak_height = PEAK_HEIGHT,
-                )
-            end
-
-            @testset "compton requires peak_height" begin
-                model_params = ModelParams(peak = PeakParams(compton = Enabled()))
-                @test_throws ArgumentError build_prior(
-                    model_params,
-                    CONFIGS;
-                    peak_area = PEAK_AREA,
-                )
-            end
-
-            @testset "constPoly requires peak_height" begin
-                model_params =
-                    ModelParams(background = BackgroundParams(constPoly = Enabled()))
-                @test_throws ArgumentError build_prior(
-                    model_params,
-                    CONFIGS;
-                    peak_area = PEAK_AREA,
-                )
-            end
-
-            @testset "lowEnergyTail requires peak_area" begin
-                model_params = ModelParams(peak = PeakParams(lowEnergyTail = Enabled()))
-                @test_throws ArgumentError build_prior(
-                    model_params,
-                    CONFIGS;
-                    peak_height = PEAK_HEIGHT,
-                )
-            end
-
-            @testset "highEnergyTail requires peak_area" begin
-                model_params = ModelParams(peak = PeakParams(highEnergyTail = Enabled()))
-                @test_throws ArgumentError build_prior(
-                    model_params,
-                    CONFIGS;
-                    peak_height = PEAK_HEIGHT,
-                )
-            end
 
         end
 
         @testset "Disabled components produce no prior entries" begin
 
             model_params = ModelParams(peak = PeakParams(gaussian = Enabled()))
-            prior = build_prior(
-                model_params,
-                CONFIGS;
-                peak_height = PEAK_HEIGHT,
-                peak_area = PEAK_AREA,
-            )
+            prior = build_prior(DATA, model_params, CONFIGS)
             @test hasproperty(prior, :gaussian_A)
             @test !hasproperty(prior, :compton_h)
             @test !hasproperty(prior, :quadPoly_C)
@@ -331,12 +201,7 @@
                 ),
                 background = BackgroundParams(quadPoly = Enabled(), linPoly = Enabled()),
             )
-            prior = build_prior(
-                model_params,
-                configs;
-                peak_height = PEAK_HEIGHT,
-                peak_area = PEAK_AREA,
-            )
+            prior = build_prior(DATA, model_params, configs)
 
             @test prior.mu isa Normal
             @test prior.mu.μ == MU
@@ -366,12 +231,7 @@
             peak = PeakParams(gaussian = Enabled()),
             background = BackgroundParams(constPoly = Enabled()),
         )
-        prior = build_prior(
-            model_params,
-            CONFIGS;
-            peak_height = PEAK_HEIGHT,
-            peak_area = PEAK_AREA,
-        )
+        prior = build_prior(DATA, model_params, CONFIGS)
 
         @testset "Return type" begin
 
@@ -397,12 +257,7 @@
         @testset "Posterior with only peak (no background)" begin
 
             module_params_peak = ModelParams(peak = PeakParams(gaussian = Enabled()))
-            prior_peak = build_prior(
-                module_params_peak,
-                CONFIGS;
-                peak_height = PEAK_HEIGHT,
-                peak_area = PEAK_AREA,
-            )
+            prior_peak = build_prior(DATA, model_params, CONFIGS)
             posterior = build_posterior(DATA, prior_peak, CONFIGS)
             @test posterior isa PosteriorMeasure
 
@@ -425,12 +280,7 @@
 
             model_params_background =
                 ModelParams(background = BackgroundParams(constPoly = Enabled()))
-            prior_background = build_prior(
-                model_params_background,
-                CONFIGS;
-                peak_height = PEAK_HEIGHT,
-                peak_area = PEAK_AREA,
-            )
+            prior_background = build_prior(DATA, model_params, CONFIGS)
             posterior = build_posterior(DATA, prior_background, CONFIGS)
             @test posterior isa PosteriorMeasure
 
@@ -450,12 +300,7 @@
         @testset "Unphysical parameters give -Inf" begin
 
             model_params = ModelParams(background = BackgroundParams(linPoly = Enabled()))
-            prior = build_prior(
-                model_params,
-                CONFIGS;
-                peak_height = PEAK_HEIGHT,
-                peak_area = PEAK_AREA,
-            )
+            prior = build_prior(DATA, model_params, CONFIGS)
             posterior = build_posterior(DATA, prior, CONFIGS)
 
             v = (mu = MU, linPoly_C = C_LIN)

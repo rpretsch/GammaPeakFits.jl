@@ -11,14 +11,10 @@
     BIN_SIZE = 0.5
     WINDOW = 100.0
 
-    bin_centers = collect((MU-WINDOW/2):BIN_SIZE:(MU+WINDOW/2))
-    bin_edges = collect((MU-WINDOW/2-BIN_SIZE/2):BIN_SIZE:(MU+WINDOW/2+BIN_SIZE/2))
-    data = SpectrumData(
-        bin_centers = bin_centers,
-        bin_edges = bin_edges,
-        weights = ones(Int, length(bin_centers)),
-        bin_size = BIN_SIZE,
+    model = ModelParams(
+        peak = PeakParams(gaussian = GaussianParams(A = A, mu = MU, sigma = SIGMA)),
     )
+    data = SpectrumData((MU-WINDOW/2), (MU+WINDOW/2), 1.0, model)
     X_ARRAY = data.bin_centers
 
     gaussian_params = GaussianParams(A = A, mu = MU, sigma = SIGMA)
@@ -111,7 +107,7 @@
 
     @testset "build_posterior" begin
         configs = FitConfigs(mu = MU, sigma = SIGMA)
-        prior = build_prior(model_params, configs; peak_height = H, peak_area = A)
+        prior = build_prior(data, model_params, configs)
         @test @inferred(build_posterior(data, prior, configs)) isa PosteriorMeasure
     end
 

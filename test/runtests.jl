@@ -9,6 +9,25 @@ using Test
 
 using BAT: PosteriorMeasure, bat_sample, TransformedMCMC, RandomWalk
 using Distributions
+using GammaPeakFits:
+    gaussian_integral,
+    compton_integral,
+    exGaussian_integral,
+    quadPoly_integral,
+    linPoly_integral,
+    constPoly_integral,
+    numerical_integral,
+    midpoint_integral,
+    analytical_integral,
+    quad_polynomial,
+    lin_polynomial,
+    const_polynomial,
+    is_present,
+    peak_model,
+    background_model,
+    gaussian,
+    compton,
+    exGaussian
 using SpecialFunctions: erfc, logerfcx
 using ValueShapes: NamedTupleDist
 

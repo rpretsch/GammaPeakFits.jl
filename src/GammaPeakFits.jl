@@ -19,22 +19,14 @@ posteriors.
 - Configuration: [`FitConfigs`](@ref)
 
 ## Model evaluation
-- Components: [`gaussian`](@ref), [`compton`](@ref), [`exGaussian`](@ref),
-  [`quad_polynomial`](@ref), [`lin_polynomial`](@ref), [`const_polynomial`](@ref)
-- Combined models: [`peak_model`](@ref), [`background_model`](@ref), [`full_model`](@ref)
+- [`full_model`](@ref)
 
 ## Fitting
 - [`PriorPair`](@ref), [`poisson_ll`](@ref), [`build_prior`](@ref), 
   [`build_posterior`](@ref)
 
-## Integrals
-- Components: [`gaussian_integral`](@ref), [`compton_integral`](@ref), 
-  [`exGaussian_integral`](@ref), [`quadPoly_integral`](@ref), [`linPoly_integral`](@ref), 
-  [`constPoly_integral`](@ref)
-- Combined integrals: [`numerical_integral`](@ref), [`analytical_integral`](@ref)
-
 ## Utils
-- [`cut_data`](@ref), [`get_peak_features`](@ref), [`is_present`](@ref)
+- [`cut_data`](@ref), [`get_peak_features`](@ref)
 
 ## Plotting
 - [`plot_data`](@ref)
@@ -149,17 +141,7 @@ export SpectrumData
 # Configuration struct
 export FitConfigs
 
-# Model evaluation - components
-export gaussian
-export compton
-export exGaussian
-export quad_polynomial
-export lin_polynomial
-export const_polynomial
-
-# Model evaluation - combined
-export peak_model
-export background_model
+# Model evaluation
 export full_model
 
 # Fitting
@@ -168,25 +150,11 @@ export poisson_ll
 export build_prior
 export build_posterior
 
-# Integrals - combined
-export numerical_integral
-export midpoint_integral
-export analytical_integral
-
-# Integrals - components
-export gaussian_integral
-export compton_integral
-export exGaussian_integral
-export quadPoly_integral
-export linPoly_integral
-export constPoly_integral
-
 # Plotting
 export plot_data
 
 # Utils
 export cut_data
 export get_peak_features
-export is_present
 
 end

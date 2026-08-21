@@ -40,7 +40,11 @@ function poisson_ll(data::SpectrumData, params::ModelParams, configs::FitConfigs
 end
 
 """
-    _expected_counts(method::AbstractIntegrationMethod, data::SpectrumData, params::ModelParams)
+    _expected_counts(
+        method::AbstractIntegrationMethod, 
+        data::SpectrumData, 
+        params::ModelParams
+    )
 
 Compute the expected counts per bin by integrating the full model according to the 
 integration method, dispatching on `method`.

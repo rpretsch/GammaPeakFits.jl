@@ -164,14 +164,6 @@
 
         end
 
-        @testset "Return type" begin
-
-            model_params = ModelParams(peak = PeakParams(gaussian = Enabled()))
-            prior = build_prior(DATA, model_params, CONFIGS)
-            @test prior isa NamedTupleDist
-
-        end
-
         @testset "Disabled components produce no prior entries" begin
 
             model_params = ModelParams(peak = PeakParams(gaussian = Enabled()))
@@ -182,44 +174,30 @@
 
         end
 
-        @testset "Configs values propagate into the priors" begin
+        @testset "Custom priors propagate into the combined prior" begin
 
-            prior_configs = PriorConfigs(
-                mu_std = 1.0,
-                sigma_std = 2.0,
-                lowEnergyTail_tau_upper = 5.0,
-                highEnergyTail_tau_upper = 6.0,
-                quadPoly_C_limits = (-2.0, 2.0),
-                linPoly_C_limits = (-3.0, 3.0),
-            )
-            configs = FitConfigs(mu = MU, sigma = SIGMA, prior = prior_configs)
-            model_params = ModelParams(
-                peak = PeakParams(
-                    gaussian = Enabled(),
-                    lowEnergyTail = Enabled(),
-                    highEnergyTail = Enabled(),
-                ),
-                background = BackgroundParams(quadPoly = Enabled(), linPoly = Enabled()),
-            )
-            prior = build_prior(DATA, model_params, configs)
+            priors = PriorPair[:gaussian_A=>truncated(Normal(1000, 10), 0, Inf)]
+            configs = FitConfigs(mu = MU, sigma = SIGMA)
+            model_params = ModelParams(peak = PeakParams(gaussian = Enabled()))
+            combined_prior = build_prior(DATA, model_params, configs; priors = priors)
 
-            @test prior.mu isa Normal
-            @test prior.mu.μ == MU
-            @test prior.mu.σ == 1.0
-            @test prior.sigma.untruncated isa Normal
-            @test prior.sigma.untruncated.μ == SIGMA
-            @test prior.sigma.untruncated.σ == 2.0
-            @test prior.lowEnergyTail_tau isa Uniform
-            @test prior.lowEnergyTail_tau.a == eps()
-            @test prior.lowEnergyTail_tau.b == 5.0
-            @test prior.highEnergyTail_tau isa Uniform
-            @test prior.highEnergyTail_tau.b == 6.0
-            @test prior.quadPoly_C isa Uniform
-            @test prior.quadPoly_C.a == -2.0
-            @test prior.quadPoly_C.b == 2.0
-            @test prior.linPoly_C isa Uniform
-            @test prior.linPoly_C.a == -3.0
-            @test prior.linPoly_C.b == 3.0
+            @test combined_prior.gaussian_A.untruncated isa Normal
+            @test combined_prior.gaussian_A.untruncated.μ == 1000
+            @test combined_prior.gaussian_A.untruncated.σ == 10
+
+        end
+
+        @testset "Unknown custom priors are regected" begin
+
+            priors = PriorPair[:gaussian_smth=>truncated(Normal(1000, 10), 0, Inf)]
+            configs = FitConfigs(mu = MU, sigma = SIGMA)
+            model_params = ModelParams(peak = PeakParams(gaussian = Enabled()))
+            @test_throws ArgumentError build_prior(
+                DATA,
+                model_params,
+                configs;
+                priors = priors,
+            )
 
         end
 

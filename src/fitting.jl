@@ -1,4 +1,14 @@
 """
+    PriorPair
+
+Shorthand for `Pair{Symbol,Distribution}``, used in [`build_prior`](@ref).
+
+# See also 
+- [`build_prior`](@ref)
+"""
+const PriorPair = Pair{Symbol,Distribution}
+
+"""
     poisson_ll(data::SpectrumData, params::ModelParams, configs::FitConfigs)
 
 Compute the Poisson log-likelihood for the model given observed counts.
@@ -57,28 +67,38 @@ _expected_counts(::Midpoint, data::SpectrumData, params::ModelParams) =
     midpoint_integral(data, params)
 
 """
-    build_prior(data::SpectrumData, params::ModelParams, configs::FitConfigs)
+    build_prior(
+        data::SpectrumData, 
+        params::ModelParams, 
+        configs::FitConfigs;
+        priors::Vector{PriorPair} = PriorPair[],
+    )
 
 Construct a prior distribution over the model parameters for Bayesian fitting.
 
 Components that are `Disabled()` are skipped. Components set to `Enabled()` or to a 
 concrete parameter struct receive a weakly informative prior.
 
-The expected peak centroid `configs.mu` and core width `configs.sigma`, as well as all prior
-widths and bounds, are taken from [`FitConfigs`](@ref) and can be tuned there.
+The expected peak centroid `configs.mu` and core width `configs.sigma` are taken from 
+[`FitConfigs`](@ref) and can be tuned there.
 
 # Arguments
 - `data::SpectrumData`: binned spectrum data
-- `params::ModelParams`: model specification indicating which components are enabled
+- `model::ModelParams`: model specification indicating which components are enabled
 - `configs::FitConfigs`: fitting configuration
+
+# Keyword arguments
+- `priors::PriorPair`: optional custom priors that overwrite the here set 
+  defaults for the specified symbols. Default: `PriorPair[]`
 
 # Returns
 - A `NamedTupleDist` (via `distprod`) over the enabled component parameters
 
 # Throws
-- An `ArgumentError` if both `params.peak` and `params.background` are `Disabled()`
+- An `ArgumentError` if both `model.peak` and `model.background` are `Disabled()`
 - An `ArgumentError` if a present container holds no enabled components 
   (e.g. `PeakParams()`)
+-  An `ArgumentError` if the specified `priors` do not fit the used model
 
 # Details
 
@@ -86,104 +106,115 @@ The following priors are defined per enabled component:
 
 | Symbol | Prior | Component |
 | --- | --- | --- |
-| `:mu` | `Normal(configs.mu, prior_configs.mu_std)` | all except `background.constPoly` |
-| `:sigma` | `truncated(Normal(configs.sigma, prior_configs.sigma_std), eps(), Inf)` | all `peak` components |
+| `:mu` | `Normal(configs.mu, 0.6)` | all except `background.constPoly` |
+| `:sigma` | `truncated(Normal(configs.sigma, 0.6), eps(), Inf)` | all `peak` components |
 | `:gaussian_A` | `Uniform(0, 2 * peak_area)` | `peak.gaussian` |
 | `:compton_h` | `Uniform(0, 4 * mean_background)` | `peak.compton` |
 | `:lowEnergyTail_A` | `Uniform(eps(), peak_area)` | `peak.lowEnergyTail` |
-| `:lowEnergyTail_tau` | `Uniform(eps(), prior_configs.lowEnergyTail_tau_upper)` | `peak.lowEnergyTail` |
+| `:lowEnergyTail_tau` | `Uniform(eps(), 10)` | `peak.lowEnergyTail` |
 | `:highEnergyTail_A` | `Uniform(eps(), peak_area)` | `peak.highEnergyTail` |
-| `:highEnergyTail_tau` | `Uniform(eps(), prior_configs.highEnergyTail_tau_upper)` | `peak.highEnergyTail` |
-| `:quadPoly_C` | `Uniform(prior_configs.quadPoly_C_limits)` | `background.quadPoly` |
-| `:linPoly_C` | `Uniform(prior_configs.linPoly_C_limits)` | `background.linPoly` |
+| `:highEnergyTail_tau` | `Uniform(eps(), 10)` | `peak.highEnergyTail` |
+| `:quadPoly_C` | `Uniform(-1, 1)` | `background.quadPoly` |
+| `:linPoly_C` | `Uniform(-10, 10)` | `background.linPoly` |
 | `:constPoly_C` | `Uniform(0, 2 * mean_background)` | `background.constPoly` |
 
 # See also
 - [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractComponent`](@ref) for the component 
   management
-- [`FitConfigs`](@ref) for tuning the prior centers, widths, and bounds
+- [`FitConfigs`](@ref) for tuning the `mu` and `sigma` prior centers
 - [`ModelParams`](@ref), [`PeakParams`](@ref), [`BackgroundParams`](@ref) for the model
   specification
 - [`poisson_ll`](@ref) for the likelihood that uses these priors
 """
-function build_prior(data::SpectrumData, params::ModelParams, configs::FitConfigs)
+function build_prior(
+    data::SpectrumData,
+    model::ModelParams,
+    configs::FitConfigs;
+    priors::Vector{PriorPair} = PriorPair[],
+)
     _, peak_area, mean_background = get_peak_features(data, configs.mu, configs.sigma)
 
-    peak_params = params.peak
-    background_params = params.background
-    prior_configs = configs.prior
+    peak_model = model.peak
+    background_model = model.background
 
-    if (!is_present(peak_params) && !is_present(background_params))
+    if (!is_present(peak_model) && !is_present(background_model))
         throw(ArgumentError("No model specified"))
     end
 
-    priors = []
+    default_priors = PriorPair[]
+
     needs_mu =
-        is_present(peak_params) && (
-            is_present(peak_params.gaussian) ||
-            is_present(peak_params.lowEnergyTail) ||
-            is_present(peak_params.highEnergyTail) ||
-            is_present(peak_params.compton)
+        is_present(peak_model) && (
+            is_present(peak_model.gaussian) ||
+            is_present(peak_model.lowEnergyTail) ||
+            is_present(peak_model.highEnergyTail) ||
+            is_present(peak_model.compton)
         ) ||
-        is_present(background_params) &&
-        (is_present(background_params.quadPoly) || is_present(background_params.linPoly))
-    needs_mu && push!(priors, :mu => Normal(configs.mu, prior_configs.mu_std))
+        is_present(background_model) &&
+        (is_present(background_model.quadPoly) || is_present(background_model.linPoly))
+    needs_mu && push!(default_priors, :mu => Normal(configs.mu, 0.6))
 
     needs_sigma =
-        is_present(peak_params) && (
-            is_present(peak_params.gaussian) ||
-            is_present(peak_params.lowEnergyTail) ||
-            is_present(peak_params.highEnergyTail) ||
-            is_present(peak_params.compton)
+        is_present(peak_model) && (
+            is_present(peak_model.gaussian) ||
+            is_present(peak_model.lowEnergyTail) ||
+            is_present(peak_model.highEnergyTail) ||
+            is_present(peak_model.compton)
         )
-    needs_sigma && push!(
-        priors,
-        :sigma => truncated(Normal(configs.sigma, prior_configs.sigma_std), eps(), Inf),
-    )
+    needs_sigma &&
+        push!(default_priors, :sigma => truncated(Normal(configs.sigma, 0.6), eps(), Inf))
 
-    if is_present(peak_params)
+    if is_present(peak_model)
 
-        is_present(peak_params.gaussian) &&
-            push!(priors, :gaussian_A => Uniform(0, 2 * peak_area))
+        is_present(peak_model.gaussian) &&
+            push!(default_priors, :gaussian_A => Uniform(0, 2 * peak_area))
 
-        is_present(peak_params.compton) &&
-            push!(priors, :compton_h => Uniform(0, 4 * mean_background))
+        is_present(peak_model.compton) &&
+            push!(default_priors, :compton_h => Uniform(0, 4 * mean_background))
 
-        if is_present(peak_params.lowEnergyTail)
-            push!(priors, :lowEnergyTail_A => Uniform(eps(), peak_area))
-            push!(
-                priors,
-                :lowEnergyTail_tau => Uniform(eps(), prior_configs.lowEnergyTail_tau_upper),
-            )
+        if is_present(peak_model.lowEnergyTail)
+            push!(default_priors, :lowEnergyTail_A => Uniform(eps(), peak_area))
+            push!(default_priors, :lowEnergyTail_tau => Uniform(eps(), 10))
         end
 
-        if is_present(peak_params.highEnergyTail)
-            push!(priors, :highEnergyTail_A => Uniform(eps(), peak_area))
-            push!(
-                priors,
-                :highEnergyTail_tau =>
-                    Uniform(eps(), prior_configs.highEnergyTail_tau_upper),
-            )
+        if is_present(peak_model.highEnergyTail)
+            push!(default_priors, :highEnergyTail_A => Uniform(eps(), peak_area))
+            push!(default_priors, :highEnergyTail_tau => Uniform(eps(), 10))
         end
 
     end
 
-    if is_present(background_params)
+    if is_present(background_model)
 
-        is_present(background_params.quadPoly) &&
-            push!(priors, :quadPoly_C => Uniform(prior_configs.quadPoly_C_limits...))
+        is_present(background_model.quadPoly) &&
+            push!(default_priors, :quadPoly_C => Uniform(-1, 1))
 
-        is_present(background_params.linPoly) &&
-            push!(priors, :linPoly_C => Uniform(prior_configs.linPoly_C_limits...))
+        is_present(background_model.linPoly) &&
+            push!(default_priors, :linPoly_C => Uniform(-10, 10))
 
-        is_present(background_params.constPoly) &&
-            push!(priors, :constPoly_C => Uniform(0, 2 * mean_background))
+        is_present(background_model.constPoly) &&
+            push!(default_priors, :constPoly_C => Uniform(0, 2 * mean_background))
 
     end
 
-    isempty(priors) && throw(ArgumentError("No model specified"))
+    isempty(default_priors) && throw(ArgumentError("No model specified"))
 
-    return distprod(; priors...)
+    if !isempty(priors)
+        default_symbols = Set(first.(default_priors))
+        user_symbols = Set(first.(priors))
+        extra_keys = setdiff(user_symbols, default_symbols)
+
+        isempty(extra_keys) || throw(ArgumentError("Unknown prior symbols: $(extra_keys)"))
+    end
+
+    merged_dict = Dict{Symbol,Distribution}(default_priors)
+    for (sym, dist) in priors
+        merged_dict[sym] = dist
+    end
+
+    merged_priors = sort(collect(Pair.(keys(merged_dict), values(merged_dict))), by = first)
+
+    return distprod(; merged_priors...)
 end
 
 """

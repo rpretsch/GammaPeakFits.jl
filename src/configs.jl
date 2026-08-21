@@ -1,33 +1,4 @@
 """
-    PriorConfigs
-
-Configuration options for the priors.
-
-# Fields
-- `mu_std::Float64`: standard deviation of the prior on `:mu` in keV. Default: `0.6`
-- `sigma_std::Float64`: standard deviation of the prior on `:sigma` in keV. Default: `0.6`
-- `lowEnergyTail_tau_upper::Float64`: upper bound of the `Uniform` prior on 
-  `:lowEnergyTail_tau` in keV. Default: `10.0`
-- `highEnergyTail_tau_upper::Float64`: upper bound of the `Uniform` prior on 
-  `:highEnergyTail_tau` in keV. Default: `10.0`
-- `quadPoly_C_limits::Tuple{Float64,Float64}`: `(lower, upper)` bounds of the `Uniform` 
-  prior on `:quadPoly_C` in counts/keV³. Default: `(-1.0, 1.0)`
-- `linPoly_C_limits::Tuple{Float64,Float64}`: `(lower, upper)` bounds of the `Uniform` 
-  prior on `:linPoly_C` in counts/keV². Default: `(-10.0, 10.0)`
-
-# See also
-- [`build_prior`](@ref) which consumes these configurations
-"""
-Base.@kwdef struct PriorConfigs
-    mu_std::Float64 = 0.6
-    sigma_std::Float64 = 0.6
-    lowEnergyTail_tau_upper::Float64 = 10.0
-    highEnergyTail_tau_upper::Float64 = 10.0
-    quadPoly_C_limits::Tuple{Float64,Float64} = (-1.0, 1.0)
-    linPoly_C_limits::Tuple{Float64,Float64} = (-10.0, 10.0)
-end
-
-"""
     AbstractIntegrationMethod
 
 Abstract supertype for the integration methods used to compute the expected bin counts in 
@@ -87,12 +58,10 @@ reasonable values.
   Default: `Analytical()`
 
 # See also
-- [`PriorConfigs`](@ref) for the configuration options for the priors
 - [`AbstractIntegrationMethod`](@ref) for the available integration methods
 """
 Base.@kwdef struct FitConfigs
     mu::Float64
     sigma::Float64
     integration_method::AbstractIntegrationMethod = Analytical()
-    prior::PriorConfigs = PriorConfigs()
 end

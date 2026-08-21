@@ -16,7 +16,7 @@ posteriors.
   [`ConstPolyParams`](@ref)
 - Containers: [`PeakParams`](@ref), [`BackgroundParams`](@ref), [`ModelParams`](@ref)
 - Data: [`SpectrumData`](@ref)
-- Configurations: [`PriorConfigs`](@ref), [`FitConfigs`](@ref)
+- Configuration: [`FitConfigs`](@ref)
 
 ## Model evaluation
 - Components: [`gaussian`](@ref), [`compton`](@ref), [`exGaussian`](@ref),
@@ -24,7 +24,8 @@ posteriors.
 - Combined models: [`peak_model`](@ref), [`background_model`](@ref), [`full_model`](@ref)
 
 ## Fitting
-- [`poisson_ll`](@ref), [`build_prior`](@ref), [`build_posterior`](@ref)
+- [`PriorPair`](@ref), [`poisson_ll`](@ref), [`build_prior`](@ref), 
+  [`build_posterior`](@ref)
 
 ## Integrals
 - Components: [`gaussian_integral`](@ref), [`compton_integral`](@ref), 
@@ -105,7 +106,7 @@ using ValueShapes: NamedTupleDist
 include("params.jl")
 # SpectrumData container, marker-based and synthetic-data constructors
 include("data.jl")
-# FitConfigs, PriorConfigs, and AbstractIntegrationMethod subtypes
+# FitConfigs, and AbstractIntegrationMethod subtypes
 include("configs.jl")
 # Component model evaluation (gaussian, compton, ...) and combined models
 include("models.jl")
@@ -145,8 +146,7 @@ export ModelParams
 # Data structs
 export SpectrumData
 
-# Configuration structs
-export PriorConfigs
+# Configuration struct
 export FitConfigs
 
 # Model evaluation - components
@@ -163,6 +163,7 @@ export background_model
 export full_model
 
 # Fitting
+export PriorPair
 export poisson_ll
 export build_prior
 export build_posterior

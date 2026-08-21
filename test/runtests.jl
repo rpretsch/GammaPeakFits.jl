@@ -7,7 +7,7 @@
 using GammaPeakFits
 using Test
 
-using BAT: PosteriorMeasure
+using BAT: PosteriorMeasure, bat_sample, TransformedMCMC, RandomWalk
 using Distributions
 using SpecialFunctions: erfc, logerfcx
 using ValueShapes: NamedTupleDist
@@ -48,6 +48,10 @@ using ValueShapes: NamedTupleDist
 
     if isempty(ARGS) || "utils" in ARGS
         include("test_utils.jl")
+    end
+
+    if isempty(ARGS) || "quickstart" in ARGS
+        include("test_quickstart.jl")
     end
 
 end

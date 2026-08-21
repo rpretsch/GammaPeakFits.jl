@@ -78,10 +78,16 @@ prior = build_prior(fit_data, fit_modelParams, configs)
 posterior = build_posterior(fit_data, prior, configs)
 
 # Sample with BAT.jl
+# using BAT: bat_sample
+# using StatsBase: mean
+#
 # result = bat_sample(
 #              posterior, 
 #              TransformedMCMC(proposal=RandomWalk(), nsteps=10^5, nchains=4)
-#          )
+#          ).result
+#
+# mean_result = mean(result)
+# mean_params = ModelParams(mean_result)
 ```
 """
 module GammaPeakFits

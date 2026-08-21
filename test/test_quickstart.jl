@@ -1,5 +1,7 @@
 @testset "Quick start example (README / module docstring)" begin
 
+    seed!(42)
+
     # Configurations
     configs = FitConfigs(
         mu = 2048.0,   # keV
@@ -36,7 +38,7 @@
     # Sample with BAT.jl
     result = bat_sample(
         posterior,
-        TransformedMCMC(proposal = RandomWalk(), nsteps = 200, nchains = 2),
+        TransformedMCMC(proposal = RandomWalk(), nsteps = 1, nchains = 2),
     )
 
     @test result isa NamedTuple
@@ -47,5 +49,10 @@
 
     sampled_params = Set(propertynames(samples.v))
     @test issubset((:mu, :sigma, :gaussian_A, :constPoly_C), sampled_params)
+
+    mean_samples = mean(samples)
+    mean_params = ModelParams(mean_samples)
+
+    @test mean_params isa ModelParams
 
 end

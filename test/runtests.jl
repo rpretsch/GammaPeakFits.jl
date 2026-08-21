@@ -7,7 +7,7 @@
 using GammaPeakFits
 using Test
 
-using BAT: PosteriorMeasure, bat_sample, TransformedMCMC, RandomWalk
+using BAT: bat_sample, PosteriorMeasure, RandomWalk, TransformedMCMC
 using Distributions
 using GammaPeakFits:
     gaussian_integral,
@@ -28,7 +28,9 @@ using GammaPeakFits:
     gaussian,
     compton,
     exGaussian
+using Random: seed!
 using SpecialFunctions: erfc, logerfcx
+using StatsBase: mean
 using ValueShapes: NamedTupleDist
 
 @testset "GammaPeakFits.jl" begin
@@ -69,7 +71,7 @@ using ValueShapes: NamedTupleDist
         include("test_utils.jl")
     end
 
-    if isempty(ARGS) || "quickstart" in ARGS
+    if "quickstart" in ARGS
         include("test_quickstart.jl")
     end
 

@@ -1,6 +1,7 @@
 [deps]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 BAT = "c0cd4b16-88b7-57fa-983b-ab80aecada7e"
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"

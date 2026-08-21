@@ -1,3 +1,14 @@
+using GammaPeakFits:
+    gaussian_integral,
+    compton_integral,
+    exGaussian_integral,
+    quadPoly_integral,
+    linPoly_integral,
+    constPoly_integral,
+    numerical_integral,
+    midpoint_integral,
+    analytical_integral
+
 @testset "integrals" begin
 
     MU = 2048.0

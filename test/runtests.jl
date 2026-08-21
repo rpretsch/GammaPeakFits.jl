@@ -7,32 +7,6 @@
 using GammaPeakFits
 using Test
 
-using BAT: bat_sample, PosteriorMeasure, RandomWalk, TransformedMCMC
-using Distributions
-using GammaPeakFits:
-    gaussian_integral,
-    compton_integral,
-    exGaussian_integral,
-    quadPoly_integral,
-    linPoly_integral,
-    constPoly_integral,
-    numerical_integral,
-    midpoint_integral,
-    analytical_integral,
-    quad_polynomial,
-    lin_polynomial,
-    const_polynomial,
-    is_present,
-    peak_model,
-    background_model,
-    gaussian,
-    compton,
-    exGaussian
-using Random: seed!
-using SpecialFunctions: erfc, logerfcx
-using StatsBase: mean
-using ValueShapes: NamedTupleDist
-
 @testset "GammaPeakFits.jl" begin
 
     if isempty(ARGS) || "Aqua" in ARGS
@@ -71,7 +45,11 @@ using ValueShapes: NamedTupleDist
         include("test_utils.jl")
     end
 
-    if "quickstart" in ARGS
+    if isempty(ARGS) || "plotting" in ARGS
+        include("test_plotting.jl")
+    end
+
+    if isempty(ARGS) || "quickstart" in ARGS
         include("test_quickstart.jl")
     end
 

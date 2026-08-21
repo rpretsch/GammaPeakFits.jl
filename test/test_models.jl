@@ -1,3 +1,16 @@
+using Distributions: Normal, pdf
+using GammaPeakFits:
+    gaussian,
+    compton,
+    exGaussian,
+    quad_polynomial,
+    lin_polynomial,
+    const_polynomial,
+    peak_model,
+    background_model,
+    full_model
+using SpecialFunctions: erfc, logerfcx
+
 @testset "models" begin
 
     MU = 2048.0

@@ -1,3 +1,24 @@
+using BAT: PosteriorMeasure
+using GammaPeakFits:
+    gaussian,
+    compton,
+    exGaussian,
+    quad_polynomial,
+    lin_polynomial,
+    const_polynomial,
+    peak_model,
+    background_model,
+    full_model,
+    gaussian_integral,
+    compton_integral,
+    exGaussian_integral,
+    quadPoly_integral,
+    linPoly_integral,
+    constPoly_integral,
+    numerical_integral,
+    midpoint_integral,
+    analytical_integral
+
 @testset "type stability" begin
 
     MU = 2048.0

@@ -1,3 +1,7 @@
+using BAT: TransformedMCMC, bat_sample, RandomWalk
+using Random: seed!
+using StatsBase: mean
+
 @testset "Quick start example (README / module docstring)" begin
 
     seed!(42)

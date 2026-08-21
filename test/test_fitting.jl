@@ -1,3 +1,6 @@
+using BAT: PosteriorMeasure
+using Distributions: Normal, Poisson, logpdf, truncated
+
 @testset "fitting" begin
 
     A = 1000.0

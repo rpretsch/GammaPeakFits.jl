@@ -43,12 +43,25 @@ Integrate the model via the midpoint rule over each energy bin.
 struct Midpoint <: AbstractIntegrationMethod end
 
 """
+    PriorPair
+
+Shorthand for `Pair{Symbol,<:Distribution}`, used for the custom priors in 
+[`FitConfigs`](@ref).
+
+# See also
+- [`FitConfigs`](@ref)
+- [`build_prior`](@ref)
+"""
+const PriorPair = Pair{Symbol,<:Distribution}
+
+"""
     FitConfigs
 
 Configuration options for the fitting process.
 
 `mu` and `sigma` are required and have no default values. All remaining fields default to 
-reasonable values.
+reasonable values. The configuration acts as the single source of truth for the fit window, 
+the prior centers, and the prior overrides.
 
 # Fields
 - `mu::Float64`: expected centroid position of the peak in keV
@@ -58,13 +71,17 @@ reasonable values.
 - `integration_method::AbstractIntegrationMethod`: the integration method used to compute 
   expected bin counts. Either `Analytical()`, `Numerical()`, or `Midpoint()`. 
   Default: `Analytical()`
+- `priors::Vector{PriorPair}`: custom priors that overwrite the defaults built by 
+  [`build_prior`](@ref) for the specified symbols. Default: `PriorPair[]`
 
 # See also
 - [`AbstractIntegrationMethod`](@ref) for the available integration methods
+- [`build_prior`](@ref) for the prior construction that consumes these options
 """
 Base.@kwdef struct FitConfigs
     mu::Float64
     sigma::Float64
     window_size::Float64 = 10 * sigma
     integration_method::AbstractIntegrationMethod = Analytical()
+    priors::Vector{PriorPair} = PriorPair[]
 end

@@ -1,14 +1,4 @@
 """
-    PriorPair
-
-Shorthand for `Pair{Symbol,<:Distribution}`, used in [`build_prior`](@ref).
-
-# See also 
-- [`build_prior`](@ref)
-"""
-const PriorPair = Pair{Symbol,<:Distribution}
-
-"""
     poisson_ll(data::SpectrumData, params::ModelParams, configs::FitConfigs)
 
 Compute the Poisson log-likelihood for the model given observed counts.
@@ -71,12 +61,7 @@ _expected_counts(::Midpoint, data::SpectrumData, params::ModelParams) =
     midpoint_integral(data, params)
 
 """
-    build_prior(
-        data::SpectrumData, 
-        params::ModelParams, 
-        configs::FitConfigs;
-        priors::Vector{<:PriorPair} = PriorPair[],
-    )
+    build_prior(data::SpectrumData, params::ModelParams, configs::FitConfigs)
 
 Construct a prior distribution over the model parameters for Bayesian fitting.
 
@@ -95,10 +80,6 @@ peak region needs to be contained in the data.
 - `model::ModelParams`: model specification indicating which components are enabled
 - `configs::FitConfigs`: fitting configuration
 
-# Keyword arguments
-- `priors`: optional custom priors as a vector of `Symbol => Distribution` pairs that 
-  overwrite the here set defaults for the specified symbols. Default: `PriorPair[]`
-
 # Returns
 - A `NamedTupleDist` (via `distprod`) over the enabled component parameters
 
@@ -106,7 +87,7 @@ peak region needs to be contained in the data.
 - An `ArgumentError` if both `model.peak` and `model.background` are `Disabled()`
 - An `ArgumentError` if `model.peak` is a `PeakParams` but holds no enabled components, 
   or analogously for `model.background`
-- An `ArgumentError` if the specified `priors` do not fit the used model
+- An `ArgumentError` if `configs.priors` does not fit the used model
 
 # Details
 
@@ -126,20 +107,18 @@ The following priors are defined per enabled component:
 | `:linPoly_C` | `Uniform(-10, 10)` | `background.linPoly` |
 | `:constPoly_C` | `Uniform(0, 2 * mean_background)` | `background.constPoly` |
 
+Custom priors in `configs.priors` overwrite these defaults for the specified symbols.
+
 # See also
 - [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractComponent`](@ref) for the component 
   management
-- [`FitConfigs`](@ref) for tuning the `mu` and `sigma` prior centers
+- [`FitConfigs`](@ref) for tuning the `mu` and `sigma` prior centers and for custom prior 
+  overrides
 - [`ModelParams`](@ref), [`PeakParams`](@ref), [`BackgroundParams`](@ref) for the model
   specification
 - [`poisson_ll`](@ref) for the likelihood that uses these priors
 """
-function build_prior(
-    data::SpectrumData,
-    model::ModelParams,
-    configs::FitConfigs;
-    priors::Vector{<:PriorPair} = PriorPair[],
-)
+function build_prior(data::SpectrumData, model::ModelParams, configs::FitConfigs)
     peak_model = model.peak
     background_model = model.background
 
@@ -225,16 +204,16 @@ function build_prior(
 
     end
 
-    if !isempty(priors)
+    if !isempty(configs.priors)
         default_symbols = Set(first.(default_priors))
-        user_symbols = Set(first.(priors))
+        user_symbols = Set(first.(configs.priors))
         extra_keys = setdiff(user_symbols, default_symbols)
 
         isempty(extra_keys) || throw(ArgumentError("Unknown prior symbols: $(extra_keys)"))
     end
 
     merged_dict = Dict{Symbol,Distribution}(default_priors)
-    for (sym, dist) in priors
+    for (sym, dist) in configs.priors
         merged_dict[sym] = dist
     end
 

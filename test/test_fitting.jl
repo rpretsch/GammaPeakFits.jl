@@ -224,10 +224,13 @@ using Distributions: Normal, Poisson, Uniform, logpdf, truncated
 
         @testset "Custom priors propagate into the combined prior" begin
 
-            priors = [:gaussian_A => truncated(Normal(1000, 10), 0, Inf)]
-            configs = FitConfigs(mu = MU, sigma = SIGMA)
+            configs = FitConfigs(
+                mu = MU,
+                sigma = SIGMA,
+                priors = [:gaussian_A => truncated(Normal(1000, 10), 0, Inf)],
+            )
             model_params = ModelParams(peak = PeakParams(gaussian = Enabled()))
-            combined_prior = build_prior(DATA, model_params, configs; priors = priors)
+            combined_prior = build_prior(DATA, model_params, configs)
 
             @test combined_prior.gaussian_A.untruncated isa Normal
             @test combined_prior.gaussian_A.untruncated.μ == 1000
@@ -235,17 +238,15 @@ using Distributions: Normal, Poisson, Uniform, logpdf, truncated
 
         end
 
-        @testset "Unknown custom priors are regected" begin
+        @testset "Unknown custom priors are rejected" begin
 
-            priors = PriorPair[:gaussian_smth=>truncated(Normal(1000, 10), 0, Inf)]
-            configs = FitConfigs(mu = MU, sigma = SIGMA)
-            model_params = ModelParams(peak = PeakParams(gaussian = Enabled()))
-            @test_throws ArgumentError build_prior(
-                DATA,
-                model_params,
-                configs;
-                priors = priors,
+            configs = FitConfigs(
+                mu = MU,
+                sigma = SIGMA,
+                priors = [:gaussian_smth => truncated(Normal(1000, 10), 0, Inf)],
             )
+            model_params = ModelParams(peak = PeakParams(gaussian = Enabled()))
+            @test_throws ArgumentError build_prior(DATA, model_params, configs)
 
         end
 

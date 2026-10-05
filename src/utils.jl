@@ -137,7 +137,7 @@ function get_peak_features(data::SpectrumData, configs::FitConfigs)
     mean_background = _mean_background(background_weights, data.bin_size)   # counts/keV
     peak_height =
         max(maximum(peak_weights) / data.bin_size - mean_background, 1.0 / data.bin_size)
-                                                                            # counts/keV
+    # counts/keV
     peak_area = sqrt(2 * pi) * sigma * peak_height                          # counts
 
     return peak_height, peak_area, mean_background

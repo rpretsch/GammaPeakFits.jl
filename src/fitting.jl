@@ -86,6 +86,10 @@ concrete parameter struct receive a weakly informative prior.
 The expected peak centroid `configs.mu` and core width `configs.sigma` are taken from 
 [`FitConfigs`](@ref) and can be tuned there.
 
+Peak-feature estimates are only computed when a peak component is enabled; for 
+background-only models the background level is estimated over the whole data range, so no 
+peak region needs to be contained in the data.
+
 # Arguments
 - `data::SpectrumData`: binned spectrum data
 - `model::ModelParams`: model specification indicating which components are enabled
@@ -136,8 +140,6 @@ function build_prior(
     configs::FitConfigs;
     priors::Vector{PriorPair} = PriorPair[],
 )
-    _, peak_area, mean_background = get_peak_features(data, configs)
-
     peak_model = model.peak
     background_model = model.background
 
@@ -145,26 +147,29 @@ function build_prior(
         throw(ArgumentError("No model specified"))
     end
 
-    default_priors = PriorPair[]
-
-    needs_mu =
-        is_present(peak_model) && (
-            is_present(peak_model.gaussian) ||
-            is_present(peak_model.lowEnergyTail) ||
-            is_present(peak_model.highEnergyTail) ||
-            is_present(peak_model.compton)
-        ) ||
-        is_present(background_model) &&
-        (is_present(background_model.quadPoly) || is_present(background_model.linPoly))
-    needs_mu && push!(default_priors, :mu => Normal(configs.mu, 0.6))
-
-    needs_sigma =
+    has_peak_component =
         is_present(peak_model) && (
             is_present(peak_model.gaussian) ||
             is_present(peak_model.lowEnergyTail) ||
             is_present(peak_model.highEnergyTail) ||
             is_present(peak_model.compton)
         )
+
+    if has_peak_component
+        _, peak_area, mean_background = get_peak_features(data, configs)
+    else
+        mean_background = _mean_background(data.weights, data.bin_size)
+    end
+
+    default_priors = PriorPair[]
+
+    needs_mu =
+        has_peak_component ||
+        is_present(background_model) &&
+        (is_present(background_model.quadPoly) || is_present(background_model.linPoly))
+    needs_mu && push!(default_priors, :mu => Normal(configs.mu, 0.6))
+
+    needs_sigma = has_peak_component
     needs_sigma &&
         push!(default_priors, :sigma => truncated(Normal(configs.sigma, 0.6), eps(), Inf))
 

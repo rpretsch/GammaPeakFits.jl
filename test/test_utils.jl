@@ -48,9 +48,8 @@ using GammaPeakFits: is_present
             data = SpectrumData([1.0, 3.0, 5.0], [10, 20, 30])
             configs = FitConfigs(mu = 3.0, sigma = 0.5)
             height, area, background = get_peak_features(data, configs)
-            # Raw estimates are zero: height 0 counts/bin, area 0 counts
             @test height == 1.0 / 2.0
-            @test area == 1.0
+            @test area == sqrt(2 * pi) * 0.5 * height
             @test background == mean([10.0, 30.0]) / 2.0
             @test height > 0
             @test area > eps()

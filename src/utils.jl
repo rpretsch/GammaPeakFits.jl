@@ -35,6 +35,29 @@ function cut_data(data::SpectrumData, configs::FitConfigs)
 end
 
 """
+    _mean_background(weights::Vector{Int}, bin_size::Float64)
+
+Estimate the mean background level in counts/keV from observed per-bin counts.
+
+The estimate is floored at one count per bin so that the `Uniform` prior bounds constructed 
+in [`build_prior`](@ref) stay valid, regardless of whether `weights` covers the full data 
+range or only the bins outside a peak region.
+
+# Arguments
+- `weights::Vector{Int}`: observed counts per bin
+- `bin_size::Float64`: width of one bin in keV
+
+# Returns
+- The mean background in counts/keV
+
+# See also
+- [`get_peak_features`](@ref) for peak-feature estimation
+- [`build_prior`](@ref) for the prior that consumes the estimate
+"""
+_mean_background(weights::Vector{Int}, bin_size::Float64) =
+    max(mean(weights), 1.0) / bin_size
+
+"""
     get_peak_features(data::SpectrumData, configs::FitConfigs)
 
 Estimate the peak height and area from observed count data.
@@ -44,10 +67,10 @@ region. First, the mean background is calculated from the bins outside peak regi
 the height is taken as the maximum observed count in the peak area minus the mean 
 background. The peak area is estimated as `sqrt(2 * pi) * configs.sigma * peak_height`.
 
-Poisson data can produce zero background counts or no peak above the background, so all 
-three estimates are floored at one count (one count per bin for `peak_height` and 
-`mean_background`, one count for `peak_area`). This keeps the `Uniform` prior bounds 
-constructed in [`build_prior`](@ref) strictly positive and valid.
+Poisson data can produce zero background counts or no peak above the background, so 
+`peak_height` and `mean_background` are floored at one count per bin; `peak_area` is 
+derived from the floored height. This keeps the `Uniform` prior bounds constructed in 
+[`build_prior`](@ref) valid.
 
 # Arguments
 - `data::SpectrumData`: binned spectrum data
@@ -110,15 +133,14 @@ function get_peak_features(data::SpectrumData, configs::FitConfigs)
         )
     end
 
-    background_weights = data.weights[.!peak_mask]                  # counts/bin
-    mean_background = max(mean(background_weights), 1.0)            # counts/bin
-    peak_height = max(maximum(peak_weights) - mean_background, 1.0) # counts/bin
+    background_weights = data.weights[.!peak_mask]                          # counts/bin
+    mean_background = _mean_background(background_weights, data.bin_size)   # counts/keV
+    peak_height =
+        max(maximum(peak_weights) / data.bin_size - mean_background, 1.0 / data.bin_size)
+                                                                            # counts/keV
+    peak_area = sqrt(2 * pi) * sigma * peak_height                          # counts
 
-    mean_background_keV = mean_background / data.bin_size   # counts/keV
-    peak_height_kev = peak_height / data.bin_size           # counts/keV
-    peak_area_keV = max(sqrt(2 * pi) * sigma * peak_height_kev, 1.0)  # counts
-
-    return peak_height_kev, peak_area_keV, mean_background_keV
+    return peak_height, peak_area, mean_background
 end
 
 """

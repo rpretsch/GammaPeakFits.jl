@@ -40,10 +40,8 @@ using GammaPeakFits:
 
     gaussian_params = GaussianParams(A = A, mu = MU, sigma = SIGMA)
     compton_params = ComptonParams(h = H, mu = MU, sigma = SIGMA)
-    lowEnergyTail_params =
-        ExGaussianParams(A = A, tau = TAU, is_lowEnergyTail = true, mu = MU, sigma = SIGMA)
-    highEnergyTail_params =
-        ExGaussianParams(A = A, tau = TAU, is_lowEnergyTail = false, mu = MU, sigma = SIGMA)
+    lowEnergyTail_params = LowETailParams(A = A, tau = TAU, mu = MU, sigma = SIGMA)
+    highEnergyTail_params = HighETailParams(A = A, tau = TAU, mu = MU, sigma = SIGMA)
     quadPoly_params = QuadPolyParams(C = C_QUAD, mu = MU)
     linPoly_params = LinPolyParams(C = C_LIN, mu = MU)
     constPoly_params = ConstPolyParams(C = C_CONST)
@@ -124,6 +122,25 @@ using GammaPeakFits:
                 FitConfigs(mu = MU, sigma = SIGMA, integration_method = integration_method)
             @test @inferred(poisson_ll(data, model_params, configs)) isa Float64
         end
+    end
+
+    @testset "flat parameter NamedTuple path" begin
+        configs = FitConfigs(mu = MU, sigma = SIGMA)
+        v = (
+            mu = MU,
+            sigma = SIGMA,
+            gaussian_A = A,
+            compton_h = H,
+            lowEnergyTail_A = A,
+            lowEnergyTail_tau = TAU,
+            highEnergyTail_A = A,
+            highEnergyTail_tau = TAU,
+            quadPoly_C = C_QUAD,
+            linPoly_C = C_LIN,
+            constPoly_C = C_CONST,
+        )
+        @test @inferred(ModelParams(v)) isa ModelParams
+        @test @inferred(poisson_ll(data, ModelParams(v), configs)) isa Float64
     end
 
     @testset "build_posterior" begin

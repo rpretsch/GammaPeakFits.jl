@@ -64,7 +64,8 @@ julia -e 'using Pkg; Pkg.develop(path="/path/to/GammaPeakFits")'
 
 ## Model Components
 
-Each component can be enabled or disabled by setting its field to a presence marker:
+Each component can be enabled or disabled by setting its field to a presence 
+marker:
 
 - `Disabled()` (default): the component is excluded.
 - `Enabled()`: the component is included in the fit using its prior.
@@ -103,7 +104,8 @@ f(x) = \frac{h}{2}\,
 
 #### Ex-Gaussian Tails
 
-The ex-Gaussian component models asymmetric peak tailing (low- or high-energy):
+The ex-Gaussian component models asymmetric peak tailing, either low- or 
+high-energy (`LowETailParams` or `HighETailParams`, respectively):
 
 ```math
 f(x) = \frac{A}{2\tau}\,
@@ -117,7 +119,6 @@ f(x) = \frac{A}{2\tau}\,
 | --- | --- | --- |
 | `A` | counts | Total integrated tail area |
 | `tau` | keV | Exponent relaxation time of the exponential tail |
-| `is_lowEnergyTail` | Boolean | Tail direction (`true`/`false` for low-/high-energy tails, respectively) |
 | `mu` | keV | Centroid position of the gaussian |
 | `sigma` | keV | Standard deviation of the gaussian |
 

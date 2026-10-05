@@ -92,18 +92,26 @@ Base.@kwdef struct ComptonParams <: AbstractComponent
 end
 
 """
-    ExGaussianParams <: AbstractComponent
+    AbstractExGaussianParams <: AbstractComponent
 
-Parameters for an exponentially modified Gaussian (ex-Gaussian) tail component, used to 
-model low- or high-energy tailing in gamma peaks.
+Abstract supertype for ex-Gaussian tail parameter structs.
+
+# See also
+- [`LowETailParams`](@ref), [`HighETailParams`](@ref)
+"""
+abstract type AbstractExGaussianParams <: AbstractComponent end
+
+"""
+    LowETailParams <: AbstractExGaussianParams
+
+Parameters for a low-energy ex-Gaussian tail component, used to model asymmetric 
+low-energy tailing in gamma peaks.
 
 `mu` and `sigma` are usually the same between all model components.
 
 # Fields
 - `A::Float64`: total integrated tail area in counts
-- `tau::Float64`: Exponent relaxation time of the exponential tail in keV
-- `is_lowEnergyTail::Bool`: Tail direction (`true`/`false` for low-/high-energy tails,
-  respectively)
+- `tau::Float64`: exponent relaxation time of the exponential tail in keV
 - `mu::Float64`: centroid position of the Gaussian core on the x-axis in keV
 - `sigma::Float64`: standard deviation of the Gaussian core in keV
 
@@ -112,32 +120,53 @@ model low- or high-energy tailing in gamma peaks.
 ```math
 f(x) = \\frac{A}{2\\tau}\\,
        \\exp\\!\\left(\\frac{1}{2}\\left(\\frac{\\sigma}{\\tau}\\right)^2
-       \\pm\\frac{x-\\mu}{\\tau}\\right)\\,
+       +\\frac{x-\\mu}{\\tau}\\right)\\,
        \\text{erfc}\\!\\left(\\frac{1}{\\sqrt{2}}\\left(\\frac{\\sigma}{\\tau}
-       \\pm\\frac{x-\\mu}{\\sigma}\\right)\\right)
+       +\\frac{x-\\mu}{\\sigma}\\right)\\right)
 ```
-
-The low-/high-energy tails correspond to a ``+``/``-`` sign for the ``\\pm`` sign above, 
-respectively.
-
-For numerical stability this is evaluated in log-space as
-
-```math
-\\log f(x) = \\log A - \\log(2\\tau) 
-             -\\frac{1}{2} \\left(\\frac{x-\\mu}{\\sigma}\\right)^2 
-             +\\text{logerfcx}\\!\\left(\\frac{1}{\\sqrt{2}}\\left(\\frac{\\sigma}{\\tau}
-             \\pm\\frac{x-\\mu}{\\sigma}\\right)\\right)
-```
-
-using `SpecialFunctions.logerfcx`. 
 
 # See also
 - [`exGaussian`](@ref) for evaluating the tail component
+- [`HighETailParams`](@ref) for the high-energy tail
 """
-Base.@kwdef struct ExGaussianParams <: AbstractComponent
+Base.@kwdef struct LowETailParams <: AbstractExGaussianParams
     A::Float64
     tau::Float64
-    is_lowEnergyTail::Bool
+    mu::Float64
+    sigma::Float64
+end
+
+"""
+    HighETailParams <: AbstractExGaussianParams
+
+Parameters for a high-energy ex-Gaussian tail component, used to model asymmetric 
+high-energy tailing in gamma peaks.
+
+`mu` and `sigma` are usually the same between all model components.
+
+# Fields
+- `A::Float64`: total integrated tail area in counts
+- `tau::Float64`: exponent relaxation time of the exponential tail in keV
+- `mu::Float64`: centroid position of the Gaussian core on the x-axis in keV
+- `sigma::Float64`: standard deviation of the Gaussian core in keV
+
+# Mathematical definition
+
+```math
+f(x) = \\frac{A}{2\\tau}\\,
+       \\exp\\!\\left(\\frac{1}{2}\\left(\\frac{\\sigma}{\\tau}\\right)^2
+       -\\frac{x-\\mu}{\\tau}\\right)\\,
+       \\text{erfc}\\!\\left(\\frac{1}{\\sqrt{2}}\\left(\\frac{\\sigma}{\\tau}
+       -\\frac{x-\\mu}{\\sigma}\\right)\\right)
+```
+
+# See also
+- [`exGaussian`](@ref) for evaluating the tail component
+- [`LowETailParams`](@ref) for the low-energy tail
+"""
+Base.@kwdef struct HighETailParams <: AbstractExGaussianParams
+    A::Float64
+    tau::Float64
     mu::Float64
     sigma::Float64
 end
@@ -168,8 +197,8 @@ which component is used in the fitting process (See [build_prior](@ref)).
 - [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractComponent`](@ref) for the component 
   management
 - [`peak_model`](@ref) for evaluating the combined peak shape
-- [`GaussianParams`](@ref), [`ComptonParams`](@ref), and [`ExGaussianParams`](@ref) for the
-  component parameters.
+- [`GaussianParams`](@ref), [`ComptonParams`](@ref), [`LowETailParams`](@ref), and 
+  [`HighETailParams`](@ref) for the component parameters.
 """
 Base.@kwdef struct PeakParams{
     G<:AbstractComponent,
@@ -388,19 +417,17 @@ function ModelParams(params::NamedTuple)
 
         lowEnergyTail_params =
             has_lowEnergyTail ?
-            ExGaussianParams(
+            LowETailParams(
                 A = params.lowEnergyTail_A,
                 tau = params.lowEnergyTail_tau,
-                is_lowEnergyTail = true,
                 mu = params.mu,
                 sigma = params.sigma,
             ) : Disabled()
         highEnergyTail_params =
             has_highEnergyTail ?
-            ExGaussianParams(
+            HighETailParams(
                 A = params.highEnergyTail_A,
                 tau = params.highEnergyTail_tau,
-                is_lowEnergyTail = false,
                 mu = params.mu,
                 sigma = params.sigma,
             ) : Disabled()

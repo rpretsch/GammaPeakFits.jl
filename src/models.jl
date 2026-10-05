@@ -80,13 +80,16 @@ function compton(x::Vector{Float64}, params::ComptonParams)
 end
 
 """
-    exGaussian(x::Union{Float64,Vector{Float64}}, params::ExGaussianParams)
+    exGaussian(x::Union{Float64,Vector{Float64}}, params::AbstractExGaussianParams)
 
 Evaluate an exponentially modified Gaussian (ex-Gaussian) tail component at `x`.
 
-Used to model asymmetric peak tailing.
-Is evaluated in log-space using the `SpecialFunctions.logerfcx` for numerical stability
-reasons.
+Used to model asymmetric peak tailing. The tail direction is determined by the parameter 
+type: [`LowETailParams`](@ref) evaluates a low-energy tail, [`HighETailParams`](@ref) a 
+high-energy tail. 
+
+Is evaluated in log-space using `SpecialFunctions.logerfcx` for numerical 
+stability reasons.
 
 # Mathematical definition
 
@@ -112,7 +115,7 @@ For numerical stability this is evaluated in log-space as
 
 # Arguments
 - `x::Union{Float64,Vector{Float64}}`: position(s) at which to evaluate in keV
-- `params::ExGaussianParams`: component parameters
+- `params::AbstractExGaussianParams`: tail component parameters
 
 # Returns
 - Scalar: the evaluated ex-Gaussian tail amplitude at `x` in counts/keV
@@ -123,9 +126,9 @@ For numerical stability this is evaluated in log-space as
   zero
 
 # See also
-- [`ExGaussianParams`](@ref) for the parameters
+- [`LowETailParams`](@ref), [`HighETailParams`](@ref) for the parameters
 """
-function exGaussian(x::Float64, params::ExGaussianParams)
+function exGaussian(x::Float64, params::AbstractExGaussianParams)
     tau = params.tau
     tau <= 0 && throw(ArgumentError("`tau` can't be zero or negative"))
     sigma = params.sigma
@@ -135,13 +138,33 @@ function exGaussian(x::Float64, params::ExGaussianParams)
     mu = params.mu
 
     logf =
-        log(A) - log(2 * tau) - 1/2 * ((x - mu)/sigma)^2 +
-        logerfcx(1/sqrt(2) * (sigma/tau - (-1)^params.is_lowEnergyTail * (x - mu)/sigma))
+        log(A) - log(2 * tau) - 1/2 * ((x - mu)/sigma)^2 + logerfcx(
+            1/sqrt(2) * (sigma/tau - (-1)^_is_low_energy_tail(params) * (x - mu)/sigma),
+        )
     return exp(logf)
 end
-function exGaussian(x::Vector{Float64}, params::ExGaussianParams)
+function exGaussian(x::Vector{Float64}, params::AbstractExGaussianParams)
     return exGaussian.(x, Ref(params))
 end
+
+"""
+    _is_low_energy_tail(params::AbstractExGaussianParams)
+
+Return `true` if `params` describes a low-energy tail and `false` for a high-energy tail,
+dispatching on the parameter type.
+
+# Arguments
+- `params::AbstractExGaussianParams`: tail component parameters
+
+# Returns
+- `true` for [`LowETailParams`](@ref), `false` for [`HighETailParams`](@ref)
+
+# See also
+- [`exGaussian`](@ref) for the component model
+- [`LowETailParams`](@ref), [`HighETailParams`](@ref) for the parameters
+"""
+_is_low_energy_tail(::LowETailParams) = true
+_is_low_energy_tail(::HighETailParams) = false
 
 """
     peak_model(x::Union{Float64,Vector{Float64}}, params::PeakParams)
@@ -365,7 +388,8 @@ _value(x::Vector{Float64}, ::Disabled) = zeros(eltype(x), length(x))
 # Peak components
 _value(x::Union{Float64,Vector{Float64}}, params::GaussianParams) = gaussian(x, params)
 _value(x::Union{Float64,Vector{Float64}}, params::ComptonParams) = compton(x, params)
-_value(x::Union{Float64,Vector{Float64}}, params::ExGaussianParams) = exGaussian(x, params)
+_value(x::Union{Float64,Vector{Float64}}, params::AbstractExGaussianParams) =
+    exGaussian(x, params)
 
 # Background components
 _value(x::Union{Float64,Vector{Float64}}, params::QuadPolyParams) =

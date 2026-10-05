@@ -104,9 +104,9 @@ peak region needs to be contained in the data.
 
 # Throws
 - An `ArgumentError` if both `model.peak` and `model.background` are `Disabled()`
-- An `ArgumentError` if a present container holds no enabled components 
-  (e.g. `PeakParams()`)
--  An `ArgumentError` if the specified `priors` do not fit the used model
+- An `ArgumentError` if `model.peak` is a `PeakParams` but holds no enabled components, 
+  or analogously for `model.background`
+- An `ArgumentError` if the specified `priors` do not fit the used model
 
 # Details
 
@@ -143,7 +143,7 @@ function build_prior(
     peak_model = model.peak
     background_model = model.background
 
-    if (!is_present(peak_model) && !is_present(background_model))
+    if !is_present(peak_model) && !is_present(background_model)
         throw(ArgumentError("No model specified"))
     end
 
@@ -153,6 +153,25 @@ function build_prior(
             is_present(peak_model.lowEnergyTail) ||
             is_present(peak_model.highEnergyTail) ||
             is_present(peak_model.compton)
+        )
+    peak_model isa PeakParams &&
+        !has_peak_component &&
+        throw(
+            ArgumentError("`model.peak` is a `PeakParams` but holds no enabled components"),
+        )
+
+    has_background_component =
+        is_present(background_model) && (
+            is_present(background_model.quadPoly) ||
+            is_present(background_model.linPoly) ||
+            is_present(background_model.constPoly)
+        )
+    background_model isa BackgroundParams &&
+        !has_background_component &&
+        throw(
+            ArgumentError(
+                "`model.background` is a `BackgroundParams` but holds no enabled components",
+            ),
         )
 
     if has_peak_component
@@ -165,7 +184,7 @@ function build_prior(
 
     needs_mu =
         has_peak_component ||
-        is_present(background_model) &&
+        has_background_component &&
         (is_present(background_model.quadPoly) || is_present(background_model.linPoly))
     needs_mu && push!(default_priors, :mu => Normal(configs.mu, 0.6))
 
@@ -205,8 +224,6 @@ function build_prior(
             push!(default_priors, :constPoly_C => Uniform(0, 2 * mean_background))
 
     end
-
-    isempty(default_priors) && throw(ArgumentError("No model specified"))
 
     if !isempty(priors)
         default_symbols = Set(first.(default_priors))

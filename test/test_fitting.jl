@@ -224,7 +224,7 @@ using Distributions: Normal, Poisson, Uniform, logpdf, truncated
 
         @testset "Custom priors propagate into the combined prior" begin
 
-            priors = PriorPair[:gaussian_A=>truncated(Normal(1000, 10), 0, Inf)]
+            priors = [:gaussian_A => truncated(Normal(1000, 10), 0, Inf)]
             configs = FitConfigs(mu = MU, sigma = SIGMA)
             model_params = ModelParams(peak = PeakParams(gaussian = Enabled()))
             combined_prior = build_prior(DATA, model_params, configs; priors = priors)

@@ -1,12 +1,12 @@
 """
     PriorPair
 
-Shorthand for `Pair{Symbol,Distribution}``, used in [`build_prior`](@ref).
+Shorthand for `Pair{Symbol,<:Distribution}`, used in [`build_prior`](@ref).
 
 # See also 
 - [`build_prior`](@ref)
 """
-const PriorPair = Pair{Symbol,Distribution}
+const PriorPair = Pair{Symbol,<:Distribution}
 
 """
     poisson_ll(data::SpectrumData, params::ModelParams, configs::FitConfigs)
@@ -75,7 +75,7 @@ _expected_counts(::Midpoint, data::SpectrumData, params::ModelParams) =
         data::SpectrumData, 
         params::ModelParams, 
         configs::FitConfigs;
-        priors::Vector{PriorPair} = PriorPair[],
+        priors::Vector{<:PriorPair} = PriorPair[],
     )
 
 Construct a prior distribution over the model parameters for Bayesian fitting.
@@ -96,8 +96,8 @@ peak region needs to be contained in the data.
 - `configs::FitConfigs`: fitting configuration
 
 # Keyword arguments
-- `priors::PriorPair`: optional custom priors that overwrite the here set 
-  defaults for the specified symbols. Default: `PriorPair[]`
+- `priors`: optional custom priors as a vector of `Symbol => Distribution` pairs that 
+  overwrite the here set defaults for the specified symbols. Default: `PriorPair[]`
 
 # Returns
 - A `NamedTupleDist` (via `distprod`) over the enabled component parameters
@@ -138,7 +138,7 @@ function build_prior(
     data::SpectrumData,
     model::ModelParams,
     configs::FitConfigs;
-    priors::Vector{PriorPair} = PriorPair[],
+    priors::Vector{<:PriorPair} = PriorPair[],
 )
     peak_model = model.peak
     background_model = model.background

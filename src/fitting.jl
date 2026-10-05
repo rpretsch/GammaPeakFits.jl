@@ -136,7 +136,7 @@ function build_prior(
     configs::FitConfigs;
     priors::Vector{PriorPair} = PriorPair[],
 )
-    _, peak_area, mean_background = get_peak_features(data, configs.mu, configs.sigma)
+    _, peak_area, mean_background = get_peak_features(data, configs)
 
     peak_model = model.peak
     background_model = model.background

@@ -63,8 +63,7 @@ data = SpectrumData(lower_limit, upper_limit, bin_size, generation_modelParams)
 #        )
 
 # cut appropriate fit window
-window_size = 100.0 # keV
-fit_data = cut_data(data, configs.mu, window_size)
+fit_data = cut_data(data, configs)
 
 # Specify which components to include for fitting
 peak_params = PeakParams(gaussian = Enabled())

@@ -53,6 +53,8 @@ reasonable values.
 # Fields
 - `mu::Float64`: expected centroid position of the peak in keV
 - `sigma::Float64`: expected standard deviation of the Gaussian core in keV
+- `window_size::Float64`: full width of the fit window in keV, centered on `mu`. Should be 
+  large enough to contain the `mu +- 3 * sigma` peak region. Default: `10 * sigma`
 - `integration_method::AbstractIntegrationMethod`: the integration method used to compute 
   expected bin counts. Either `Analytical()`, `Numerical()`, or `Midpoint()`. 
   Default: `Analytical()`
@@ -63,5 +65,6 @@ reasonable values.
 Base.@kwdef struct FitConfigs
     mu::Float64
     sigma::Float64
+    window_size::Float64 = 10 * sigma
     integration_method::AbstractIntegrationMethod = Analytical()
 end

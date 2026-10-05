@@ -7,7 +7,7 @@ using GammaPeakFits: is_present
 
     @testset "cut_data" begin
 
-        cut = cut_data(DATA, 5.0, 4.0)
+        cut = cut_data(DATA, FitConfigs(mu = 5.0, sigma = 0.5, window_size = 4.0))
         @test cut.bin_centers == [4.0, 5.0, 6.0]
         @test cut.weights == [4, 5, 6]
         @test cut.bin_size == 1.0
@@ -25,7 +25,8 @@ using GammaPeakFits: is_present
     @testset "get_peak_features" begin
 
         @testset "Peak height and Peak area" begin
-            height, area, background = get_peak_features(DATA, 5.0, 1.0)
+            configs = FitConfigs(mu = 5.0, sigma = 1.0)
+            height, area, background = get_peak_features(DATA, configs)
             @test height == 8.0 - mean([1.0, 9.0, 10.0])
             @test area == sqrt(2 * pi) * 1.0 * height / 1.0
             @test background == mean([1.0, 9.0, 10.0])
@@ -36,7 +37,8 @@ using GammaPeakFits: is_present
 
         @testset "Converts counts/bin to counts/keV via bin_size" begin
             data = SpectrumData([1.0, 3.0, 5.0], [10, 100, 30])
-            height, area, background = get_peak_features(data, 3.0, 0.5)
+            configs = FitConfigs(mu = 3.0, sigma = 0.5)
+            height, area, background = get_peak_features(data, configs)
             @test height == (100.0 - mean([10.0, 30.0])) / 2.0
             @test area == sqrt(2 * pi) * 0.5 * height
             @test background == mean([10.0, 30.0]) / 2.0
@@ -44,7 +46,8 @@ using GammaPeakFits: is_present
 
         @testset "Sanity floors keep estimates positive" begin
             data = SpectrumData([1.0, 3.0, 5.0], [10, 20, 30])
-            height, area, background = get_peak_features(data, 3.0, 0.5)
+            configs = FitConfigs(mu = 3.0, sigma = 0.5)
+            height, area, background = get_peak_features(data, configs)
             # Raw estimates are zero: height 0 counts/bin, area 0 counts
             @test height == 1.0 / 2.0
             @test area == 1.0
@@ -55,24 +58,29 @@ using GammaPeakFits: is_present
         end
 
         @testset "Throws for non-positive sigma" begin
-            @test_throws ArgumentError get_peak_features(DATA, 5.0, 0.0)
-            @test_throws ArgumentError get_peak_features(DATA, 5.0, -1.0)
+            configs_zero = FitConfigs(mu = 5.0, sigma = 0.0)
+            configs_negative = FitConfigs(mu = 5.0, sigma = -1.0)
+            @test_throws ArgumentError get_peak_features(DATA, configs_zero)
+            @test_throws ArgumentError get_peak_features(DATA, configs_negative)
         end
 
         @testset "Throws when peak region not contained in data" begin
             data = SpectrumData([1.0, 3.0, 5.0], [10, 20, 30])
-            @test_throws ArgumentError get_peak_features(data, 2.0, 1.0)
+            configs = FitConfigs(mu = 2.0, sigma = 1.0)
+            @test_throws ArgumentError get_peak_features(data, configs)
         end
 
         @testset "Throws when peak region contains no bin centers" begin
             data = SpectrumData([1.0, 3.0, 5.0], [10, 20, 30])
-            @test_throws ArgumentError get_peak_features(data, 2.0, 0.1)
+            configs = FitConfigs(mu = 2.0, sigma = 0.1)
+            @test_throws ArgumentError get_peak_features(data, configs)
         end
 
         @testset "Throws when only peak region is contained in data" begin
             data = SpectrumData([1.0, 3.0, 5.0], [10, 20, 30])
             # `mu +- 3 * sigma` covers [1, 5] exactly, the data range
-            @test_throws ArgumentError get_peak_features(data, 3.0, 2 / 3)
+            configs = FitConfigs(mu = 3.0, sigma = 2 / 3)
+            @test_throws ArgumentError get_peak_features(data, configs)
         end
 
     end

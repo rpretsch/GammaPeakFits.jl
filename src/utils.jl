@@ -1,22 +1,27 @@
 """
-    cut_data(data::SpectrumData, mu::Float64, window_size::Float64)
+    cut_data(data::SpectrumData, configs::FitConfigs)
 
-Slice a spectrum to a region of interest centered on a peak.
+Slice a spectrum to the fit window centered on a peak.
 
-Only bins that lie entirely within `[mu - window_size/2, mu + window_size/2]` are retained.
+Only bins that lie entirely within 
+`[configs.mu - configs.window_size/2, configs.mu + configs.window_size/2]` are retained.
 
 # Arguments
 - `data::SpectrumData`: binned spectrum data
-- `mu::Float64`: centroid position of the region in keV
-- `window_size::Float64`: full width of the region in keV
+- `configs::FitConfigs`: fitting configuration providing the centroid `mu` and the full 
+  window width `window_size`
 
 # Returns
 - A new `SpectrumData` containing only the bins in the selected window
 
 # See also
+- [`FitConfigs`](@ref) for the configuration options
 - [`SpectrumData`](@ref) for the data struct
 """
-function cut_data(data::SpectrumData, mu::Float64, window_size::Float64)
+function cut_data(data::SpectrumData, configs::FitConfigs)
+
+    mu = configs.mu
+    window_size = configs.window_size
 
     mask_edges = (mu - window_size/2) .<= data.bin_edges .<= (mu + window_size/2)
     mask_centers = mask_edges[1:(end-1)] .& mask_edges[2:end]
@@ -30,14 +35,14 @@ function cut_data(data::SpectrumData, mu::Float64, window_size::Float64)
 end
 
 """
-    get_peak_features(data::SpectrumData, mu::Float64, sigma::Float64)
+    get_peak_features(data::SpectrumData, configs::FitConfigs)
 
 Estimate the peak height and area from observed count data.
 
-Bins within `+-3 * sigma` of the centroid are identified as the peak region. First, the 
-mean background is calculated from the bins outside peak region. Then the height is taken 
-as the maximum observed count in the peak area minus the mean background. 
-The peak area is estimated as `sqrt(2 * pi) * sigma * peak_height`.
+Bins within `+-3 * configs.sigma` of the centroid `configs.mu` are identified as the peak 
+region. First, the mean background is calculated from the bins outside peak region. Then 
+the height is taken as the maximum observed count in the peak area minus the mean 
+background. The peak area is estimated as `sqrt(2 * pi) * configs.sigma * peak_height`.
 
 Poisson data can produce zero background counts or no peak above the background, so all 
 three estimates are floored at one count (one count per bin for `peak_height` and 
@@ -46,8 +51,8 @@ constructed in [`build_prior`](@ref) strictly positive and valid.
 
 # Arguments
 - `data::SpectrumData`: binned spectrum data
-- `mu::Float64`: estimated centroid position in keV
-- `sigma::Float64`: estimated standard deviation in keV (`sigma > 0`)
+- `configs::FitConfigs`: fitting configuration providing the centroid `mu` and the width 
+  `sigma` (`sigma > 0`)
 
 # Returns
 - A tuple `(peak_height, peak_area, mean_background)` containing the estimated height and 
@@ -63,10 +68,14 @@ constructed in [`build_prior`](@ref) strictly positive and valid.
   `data.bin_centers`
 
 # See also
+- [`FitConfigs`](@ref) for the configuration options
 - [`SpectrumData`](@ref) for the data struct
 - [`build_prior`](@ref) which uses these estimates for prior construction
 """
-function get_peak_features(data::SpectrumData, mu::Float64, sigma::Float64)
+function get_peak_features(data::SpectrumData, configs::FitConfigs)
+
+    mu = configs.mu
+    sigma = configs.sigma
 
     sigma > 0 || throw(ArgumentError("`sigma` must be positive, got $sigma"))
 

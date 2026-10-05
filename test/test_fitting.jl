@@ -1,5 +1,5 @@
 using BAT: PosteriorMeasure
-using Distributions: Normal, Poisson, logpdf, truncated
+using Distributions: Normal, Poisson, Uniform, logpdf, truncated
 
 @testset "fitting" begin
 
@@ -174,6 +174,51 @@ using Distributions: Normal, Poisson, logpdf, truncated
             @test hasproperty(prior, :gaussian_A)
             @test !hasproperty(prior, :compton_h)
             @test !hasproperty(prior, :quadPoly_C)
+
+        end
+
+        @testset "Sanity floors yield valid prior bounds" begin
+
+            model_params = ModelParams(
+                peak = PeakParams(gaussian = Enabled()),
+                background = BackgroundParams(constPoly = Enabled()),
+            )
+            configs = FitConfigs(mu = 3.0, sigma = 0.5)
+
+            @testset "Zero background counts" begin
+
+                data = SpectrumData(
+                    bin_centers = [1.0, 2.0, 3.0, 4.0, 5.0],
+                    bin_edges = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5],
+                    weights = [0, 0, 10, 0, 0],
+                    bin_size = 1.0,
+                )
+                prior = build_prior(data, model_params, configs)
+
+                @test prior.gaussian_A isa Uniform
+                @test prior.constPoly_C isa Uniform
+                @test prior.gaussian_A.b > 0
+                # Mean background is floored at one count per bin:
+                @test prior.constPoly_C.b ≈ 2.0
+
+            end
+
+            @testset "No peak above background" begin
+
+                data = SpectrumData(
+                    bin_centers = [1.0, 2.0, 3.0, 4.0, 5.0],
+                    bin_edges = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5],
+                    weights = [4, 4, 0, 0, 4],
+                    bin_size = 1.0,
+                )
+                prior = build_prior(data, model_params, configs)
+
+                @test prior.gaussian_A isa Uniform
+                @test prior.gaussian_A.b > 0
+                @test prior.constPoly_C isa Uniform
+                @test prior.constPoly_C.b > 0
+
+            end
 
         end
 

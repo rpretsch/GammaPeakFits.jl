@@ -39,10 +39,15 @@ mean background is calculated from the bins outside peak region. Then the height
 as the maximum observed count in the peak area minus the mean background. 
 The peak area is estimated as `sqrt(2 * pi) * sigma * peak_height`.
 
+Poisson data can produce zero background counts or no peak above the background, so all 
+three estimates are floored at one count (one count per bin for `peak_height` and 
+`mean_background`, one count for `peak_area`). This keeps the `Uniform` prior bounds 
+constructed in [`build_prior`](@ref) strictly positive and valid.
+
 # Arguments
 - `data::SpectrumData`: binned spectrum data
 - `mu::Float64`: estimated centroid position in keV
-- `sigma::Float64`: estimated standard deviation in keV
+- `sigma::Float64`: estimated standard deviation in keV (`sigma > 0`)
 
 # Returns
 - A tuple `(peak_height, peak_area, mean_background)` containing the estimated height and 
@@ -50,8 +55,10 @@ The peak area is estimated as `sqrt(2 * pi) * sigma * peak_height`.
   (counts/keV, counts, counts/keV)
 
 # Throws
+- An `ArgumentError` if `sigma` is not positive
 - An `ArgumentError` if `mu +- 3 * sigma` is not contained within the range of 
   `data.bin_centers`
+- An `ArgumentError` if the peak region contains no bin centers
 - An `ArgumentError` if only the peak region is contained within the range of 
   `data.bin_centers`
 
@@ -60,6 +67,8 @@ The peak area is estimated as `sqrt(2 * pi) * sigma * peak_height`.
 - [`build_prior`](@ref) which uses these estimates for prior construction
 """
 function get_peak_features(data::SpectrumData, mu::Float64, sigma::Float64)
+
+    sigma > 0 || throw(ArgumentError("`sigma` must be positive, got $sigma"))
 
     lower_peak_limit = mu - 3 * sigma
     upper_peak_limit = mu + 3 * sigma
@@ -76,6 +85,14 @@ function get_peak_features(data::SpectrumData, mu::Float64, sigma::Float64)
     peak_mask = lower_peak_limit .<= data.bin_centers .<= upper_peak_limit
     peak_weights = data.weights[peak_mask]                  # counts/bin
 
+    if isempty(peak_weights)
+        throw(
+            ArgumentError(
+                "Peak region [$lower_peak_limit, $upper_peak_limit] keV contains no bin centers. Use a larger `sigma` or supply data with finer bins.",
+            ),
+        )
+    end
+
     if length(peak_weights) >= length(data.weights)
         throw(
             ArgumentError(
@@ -84,14 +101,13 @@ function get_peak_features(data::SpectrumData, mu::Float64, sigma::Float64)
         )
     end
 
-    background_weights = data.weights[.!peak_mask]          # counts/bin
-    mean_background = mean(background_weights)              # counts/bin
-    peak_height = maximum(peak_weights) - mean_background   # counts/bin
-    peak_area = sqrt(2 * pi) * sigma * peak_height          # counts/bin * keV
+    background_weights = data.weights[.!peak_mask]                  # counts/bin
+    mean_background = max(mean(background_weights), 1.0)            # counts/bin
+    peak_height = max(maximum(peak_weights) - mean_background, 1.0) # counts/bin
 
     mean_background_keV = mean_background / data.bin_size   # counts/keV
     peak_height_kev = peak_height / data.bin_size           # counts/keV
-    peak_area_keV = peak_area / data.bin_size               # counts
+    peak_area_keV = max(sqrt(2 * pi) * sigma * peak_height_kev, 1.0)  # counts
 
     return peak_height_kev, peak_area_keV, mean_background_keV
 end

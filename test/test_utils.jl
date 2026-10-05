@@ -35,11 +35,28 @@ using GammaPeakFits: is_present
         end
 
         @testset "Converts counts/bin to counts/keV via bin_size" begin
+            data = SpectrumData([1.0, 3.0, 5.0], [10, 100, 30])
+            height, area, background = get_peak_features(data, 3.0, 0.5)
+            @test height == (100.0 - mean([10.0, 30.0])) / 2.0
+            @test area == sqrt(2 * pi) * 0.5 * height
+            @test background == mean([10.0, 30.0]) / 2.0
+        end
+
+        @testset "Sanity floors keep estimates positive" begin
             data = SpectrumData([1.0, 3.0, 5.0], [10, 20, 30])
             height, area, background = get_peak_features(data, 3.0, 0.5)
-            @test height == (20.0 - mean([10.0, 30.0])) / 2.0
-            @test area == sqrt(2 * pi) * 0.5 * height / 2.0
+            # Raw estimates are zero: height 0 counts/bin, area 0 counts
+            @test height == 1.0 / 2.0
+            @test area == 1.0
             @test background == mean([10.0, 30.0]) / 2.0
+            @test height > 0
+            @test area > eps()
+            @test background > 0
+        end
+
+        @testset "Throws for non-positive sigma" begin
+            @test_throws ArgumentError get_peak_features(DATA, 5.0, 0.0)
+            @test_throws ArgumentError get_peak_features(DATA, 5.0, -1.0)
         end
 
         @testset "Throws when peak region not contained in data" begin
@@ -47,9 +64,15 @@ using GammaPeakFits: is_present
             @test_throws ArgumentError get_peak_features(data, 2.0, 1.0)
         end
 
+        @testset "Throws when peak region contains no bin centers" begin
+            data = SpectrumData([1.0, 3.0, 5.0], [10, 20, 30])
+            @test_throws ArgumentError get_peak_features(data, 2.0, 0.1)
+        end
+
         @testset "Throws when only peak region is contained in data" begin
             data = SpectrumData([1.0, 3.0, 5.0], [10, 20, 30])
-            @test_throws ArgumentError get_peak_features(data, 2.0, 1.0)
+            # `mu +- 3 * sigma` covers [1, 5] exactly, the data range
+            @test_throws ArgumentError get_peak_features(data, 3.0, 2 / 3)
         end
 
     end

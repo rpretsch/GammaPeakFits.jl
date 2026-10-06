@@ -1,3 +1,25 @@
+using BAT: PosteriorMeasure
+using GammaPeakFits:
+    gaussian,
+    compton,
+    exGaussian,
+    _is_low_energy_tail,
+    quad_polynomial,
+    lin_polynomial,
+    const_polynomial,
+    peak_model,
+    background_model,
+    full_model,
+    gaussian_integral,
+    compton_integral,
+    exGaussian_integral,
+    quadPoly_integral,
+    linPoly_integral,
+    constPoly_integral,
+    numerical_integral,
+    midpoint_integral,
+    analytical_integral
+
 @testset "type stability" begin
 
     MU = 2048.0
@@ -11,22 +33,16 @@
     BIN_SIZE = 0.5
     WINDOW = 100.0
 
-    bin_centers = collect((MU-WINDOW/2):BIN_SIZE:(MU+WINDOW/2))
-    bin_edges = collect((MU-WINDOW/2-BIN_SIZE/2):BIN_SIZE:(MU+WINDOW/2+BIN_SIZE/2))
-    data = SpectrumData(
-        bin_centers = bin_centers,
-        bin_edges = bin_edges,
-        weights = ones(Int, length(bin_centers)),
-        bin_size = BIN_SIZE,
+    model = ModelParams(
+        peak = PeakParams(gaussian = GaussianParams(A = A, mu = MU, sigma = SIGMA)),
     )
+    data = SpectrumData((MU-WINDOW/2), (MU+WINDOW/2), 1.0, model)
     X_ARRAY = data.bin_centers
 
     gaussian_params = GaussianParams(A = A, mu = MU, sigma = SIGMA)
     compton_params = ComptonParams(h = H, mu = MU, sigma = SIGMA)
-    lowEnergyTail_params =
-        ExGaussianParams(A = A, tau = TAU, is_lowEnergyTail = true, mu = MU, sigma = SIGMA)
-    highEnergyTail_params =
-        ExGaussianParams(A = A, tau = TAU, is_lowEnergyTail = false, mu = MU, sigma = SIGMA)
+    lowEnergyTail_params = LowETailParams(A = A, tau = TAU, mu = MU, sigma = SIGMA)
+    highEnergyTail_params = HighETailParams(A = A, tau = TAU, mu = MU, sigma = SIGMA)
     quadPoly_params = QuadPolyParams(C = C_QUAD, mu = MU)
     linPoly_params = LinPolyParams(C = C_LIN, mu = MU)
     constPoly_params = ConstPolyParams(C = C_CONST)
@@ -52,6 +68,8 @@
         @test @inferred(exGaussian(X_ARRAY, lowEnergyTail_params)) isa Vector{Float64}
         @test @inferred(exGaussian(MU, highEnergyTail_params)) isa Float64
         @test @inferred(exGaussian(X_ARRAY, highEnergyTail_params)) isa Vector{Float64}
+        @test @inferred(_is_low_energy_tail(lowEnergyTail_params)) isa Bool
+        @test @inferred(_is_low_energy_tail(highEnergyTail_params)) isa Bool
         @test @inferred(quad_polynomial(MU, quadPoly_params)) isa Float64
         @test @inferred(quad_polynomial(X_ARRAY, quadPoly_params)) isa Vector{Float64}
         @test @inferred(lin_polynomial(MU, linPoly_params)) isa Float64
@@ -109,9 +127,28 @@
         end
     end
 
+    @testset "flat parameter NamedTuple path" begin
+        configs = FitConfigs(mu = MU, sigma = SIGMA)
+        param_values = (
+            mu = MU,
+            sigma = SIGMA,
+            gaussian_A = A,
+            compton_h = H,
+            lowEnergyTail_A = A,
+            lowEnergyTail_tau = TAU,
+            highEnergyTail_A = A,
+            highEnergyTail_tau = TAU,
+            quadPoly_C = C_QUAD,
+            linPoly_C = C_LIN,
+            constPoly_C = C_CONST,
+        )
+        @test @inferred(ModelParams(param_values)) isa ModelParams
+        @test @inferred(poisson_ll(data, ModelParams(param_values), configs)) isa Float64
+    end
+
     @testset "build_posterior" begin
         configs = FitConfigs(mu = MU, sigma = SIGMA)
-        prior = build_prior(model_params, configs; peak_height = H, peak_area = A)
+        prior = build_prior(data, model_params, configs)
         @test @inferred(build_posterior(data, prior, configs)) isa PosteriorMeasure
     end
 

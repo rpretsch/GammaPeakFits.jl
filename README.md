@@ -64,7 +64,8 @@ julia -e 'using Pkg; Pkg.develop(path="/path/to/GammaPeakFits")'
 
 ## Model Components
 
-Each component can be enabled or disabled by setting its field to a presence marker:
+Each component can be enabled or disabled by setting its field to a presence
+marker:
 
 - `Disabled()` (default): the component is excluded.
 - `Enabled()`: the component is included in the fit using its prior.
@@ -103,7 +104,10 @@ f(x) = \frac{h}{2}\,
 
 #### Ex-Gaussian Tails
 
-The ex-Gaussian component models asymmetric peak tailing (low- or high-energy):
+The ex-Gaussian component models asymmetric peak tailing, either low- or
+high-energy. Both variants subtype the exported `AbstractExGaussianParams`, and
+the tail direction is encoded in the parameter type (`LowETailParams` or
+`HighETailParams`, respectively):
 
 ```math
 f(x) = \frac{A}{2\tau}\,
@@ -117,7 +121,6 @@ f(x) = \frac{A}{2\tau}\,
 | --- | --- | --- |
 | `A` | counts | Total integrated tail area |
 | `tau` | keV | Exponent relaxation time of the exponential tail |
-| `is_lowEnergyTail` | Boolean | Tail direction (`true`/`false` for low-/high-energy tails, respectively) |
 | `mu` | keV | Centroid position of the gaussian |
 | `sigma` | keV | Standard deviation of the gaussian |
 
@@ -169,6 +172,46 @@ f(x) = C
 | --- | --- | --- |
 | `C` | counts/keV | Constant offset |
 
+## Priors
+
+`build_prior(data, model, configs)` builds a `NamedTupleDist` over the enabled
+model components. Each enabled component receives a weakly informative prior:
+
+| Symbol | Prior | Component |
+| --- | --- | --- |
+| `:mu` | `Normal(configs.mu, 0.6)` | all except `background.constPoly` |
+| `:sigma` | `truncated(Normal(configs.sigma, 0.6), eps(), Inf)` | all `peak` components |
+| `:gaussian_A` | `Uniform(0, 2 * peak_area)` | `peak.gaussian` |
+| `:compton_h` | `Uniform(0, 4 * mean_background)` | `peak.compton` |
+| `:lowEnergyTail_A` | `Uniform(eps(), peak_area)` | `peak.lowEnergyTail` |
+| `:lowEnergyTail_tau` | `Uniform(eps(), 10)` | `peak.lowEnergyTail` |
+| `:highEnergyTail_A` | `Uniform(eps(), peak_area)` | `peak.highEnergyTail` |
+| `:highEnergyTail_tau` | `Uniform(eps(), 10)` | `peak.highEnergyTail` |
+| `:quadPoly_C` | `Uniform(-1, 1)` | `background.quadPoly` |
+| `:linPoly_C` | `Uniform(-10, 10)` | `background.linPoly` |
+| `:constPoly_C` | `Uniform(0, 2 * mean_background)` | `background.constPoly` |
+
+The bounds are derived from the observed data. The peak height used for
+`peak_area` and the `mean_background` estimate are floored at one count per
+bin. For models with a peak component the data must contain the
+`mu +- 3 * sigma` region; slicing the spectrum with `cut_data(data, configs)`
+and the default `window_size = 10 * sigma` guarantees this.
+
+Custom priors overwrite the defaults for the given symbols via `configs.priors`:
+
+```julia
+using Distributions: Normal, truncated
+
+configs = FitConfigs(
+              mu = 2048.0,  # keV
+              sigma = 5.0,  # keV
+              priors = [:gaussian_A => truncated(Normal(1000, 10), 0, Inf)],
+          )
+```
+
+Every custom symbol must belong to an enabled component, otherwise
+`build_prior` throws an `ArgumentError`.
+
 ## Usage
 
 ```julia
@@ -204,8 +247,7 @@ data = SpectrumData(lower_limit, upper_limit, bin_size, generation_modelParams)
 #        )
 
 # cut appropriate fit window
-window_size = 100.0 # keV
-fit_data = cut_data(data, configs.mu, window_size)
+fit_data = cut_data(data, configs)
 
 # Specify which components to include for fitting
 peak_params = PeakParams(gaussian = Enabled())
@@ -215,26 +257,23 @@ fit_modelParams = ModelParams(
                       background = background_params
                   )
 
-# Get needed peak features
-peak_height, peak_area = get_peak_features(fit_data, configs.mu, configs.sigma) 
-# (counts/keV, counts)
-
 # Build the prior
-prior = build_prior(
-            fit_modelParams,
-            configs; 
-            peak_height = peak_height, 
-            peak_area = peak_area,
-        )
+prior = build_prior(fit_data, fit_modelParams, configs)
 
 # Build the posterior
 posterior = build_posterior(fit_data, prior, configs)
 
 # Sample with BAT.jl
+# using BAT: bat_sample
+# using StatsBase: mean
+#
 # result = bat_sample(
 #              posterior, 
 #              TransformedMCMC(proposal=RandomWalk(), nsteps=10^5, nchains=4)
-#          )
+#          ).result
+#
+# mean_result = mean(result)
+# mean_params = ModelParams(mean_result)
 ```
 
 ## License

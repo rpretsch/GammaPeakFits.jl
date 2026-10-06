@@ -3,14 +3,12 @@
 # Recommended (activates test/Project.toml, matching CI):
 #     julia --project=. -e 'using Pkg; Pkg.test()'                        # full suite
 #     julia --project=. -e 'using Pkg; Pkg.test(; test_args=["models"])'  # selected suites
+#
+# Suites: Aqua, params, data, configs, models, integrals, fitting, stability, utils,
+# plotting, quickstart.
 
 using GammaPeakFits
 using Test
-
-using BAT: PosteriorMeasure
-using Distributions
-using SpecialFunctions: erfc, logerfcx
-using ValueShapes: NamedTupleDist
 
 @testset "GammaPeakFits.jl" begin
 
@@ -48,6 +46,14 @@ using ValueShapes: NamedTupleDist
 
     if isempty(ARGS) || "utils" in ARGS
         include("test_utils.jl")
+    end
+
+    if isempty(ARGS) || "plotting" in ARGS
+        include("test_plotting.jl")
+    end
+
+    if isempty(ARGS) || "quickstart" in ARGS
+        include("test_quickstart.jl")
     end
 
 end

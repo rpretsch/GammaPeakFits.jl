@@ -12,28 +12,22 @@ posteriors.
 - Integration methods: [`AbstractIntegrationMethod`](@ref), [`Analytical`](@ref),
   [`Numerical`](@ref), [`Midpoint`](@ref)
 - Component parameters: [`GaussianParams`](@ref), [`ComptonParams`](@ref),
-  [`ExGaussianParams`](@ref), [`QuadPolyParams`](@ref), [`LinPolyParams`](@ref),
+  [`AbstractExGaussianParams`](@ref), [`LowETailParams`](@ref),
+  [`HighETailParams`](@ref), [`QuadPolyParams`](@ref), [`LinPolyParams`](@ref),
   [`ConstPolyParams`](@ref)
 - Containers: [`PeakParams`](@ref), [`BackgroundParams`](@ref), [`ModelParams`](@ref)
 - Data: [`SpectrumData`](@ref)
-- Configurations: [`PriorConfigs`](@ref), [`FitConfigs`](@ref)
+- Configuration: [`FitConfigs`](@ref)
 
 ## Model evaluation
-- Components: [`gaussian`](@ref), [`compton`](@ref), [`exGaussian`](@ref),
-  [`quad_polynomial`](@ref), [`lin_polynomial`](@ref), [`const_polynomial`](@ref)
-- Combined models: [`peak_model`](@ref), [`background_model`](@ref), [`full_model`](@ref)
+- [`full_model`](@ref)
 
 ## Fitting
-- [`poisson_ll`](@ref), [`build_prior`](@ref), [`build_posterior`](@ref)
-
-## Integrals
-- Components: [`gaussian_integral`](@ref), [`compton_integral`](@ref), 
-  [`exGaussian_integral`](@ref), [`quadPoly_integral`](@ref), [`linPoly_integral`](@ref), 
-  [`constPoly_integral`](@ref)
-- Combined integrals: [`numerical_integral`](@ref), [`analytical_integral`](@ref)
+- [`PriorPair`](@ref), [`poisson_ll`](@ref), [`build_prior`](@ref), 
+  [`build_posterior`](@ref)
 
 ## Utils
-- [`cut_data`](@ref), [`get_peak_features`](@ref), [`is_present`](@ref)
+- [`cut_data`](@ref)
 
 ## Plotting
 - [`plot_data`](@ref)
@@ -70,34 +64,30 @@ data = SpectrumData(lower_limit, upper_limit, bin_size, generation_modelParams)
 #        )
 
 # cut appropriate fit window
-window_size = 100.0 # keV
-fit_data = cut_data(data, configs.mu, window_size)
+fit_data = cut_data(data, configs)
 
 # Specify which components to include for fitting
 peak_params = PeakParams(gaussian = Enabled())
 background_params = BackgroundParams(constPoly = Enabled())
 fit_modelParams = ModelParams(peak = peak_params, background = background_params)
 
-# Get needed peak features
-peak_height, peak_area = get_peak_features(fit_data, configs.mu, configs.sigma) 
-# (counts/keV, counts)
-
 # Build the prior
-prior = build_prior(
-            fit_modelParams,
-            configs;
-            peak_height = peak_height, 
-            peak_area = peak_area
-        )
+prior = build_prior(fit_data, fit_modelParams, configs)
 
 # Build the posterior
 posterior = build_posterior(fit_data, prior, configs)
 
 # Sample with BAT.jl
+# using BAT: bat_sample
+# using StatsBase: mean
+#
 # result = bat_sample(
 #              posterior, 
 #              TransformedMCMC(proposal=RandomWalk(), nsteps=10^5, nchains=4)
-#          )
+#          ).result
+#
+# mean_result = mean(result)
+# mean_params = ModelParams(mean_result)
 ```
 """
 module GammaPeakFits
@@ -114,7 +104,7 @@ using ValueShapes: NamedTupleDist
 include("params.jl")
 # SpectrumData container, marker-based and synthetic-data constructors
 include("data.jl")
-# FitConfigs, PriorConfigs, and AbstractIntegrationMethod subtypes
+# FitConfigs, and AbstractIntegrationMethod subtypes
 include("configs.jl")
 # Component model evaluation (gaussian, compton, ...) and combined models
 include("models.jl")
@@ -141,7 +131,9 @@ export Midpoint
 # Parameter structs - components
 export GaussianParams
 export ComptonParams
-export ExGaussianParams
+export AbstractExGaussianParams
+export LowETailParams
+export HighETailParams
 export QuadPolyParams
 export LinPolyParams
 export ConstPolyParams
@@ -154,47 +146,22 @@ export ModelParams
 # Data structs
 export SpectrumData
 
-# Configuration structs
-export PriorConfigs
+# Configuration struct
 export FitConfigs
 
-# Model evaluation - components
-export gaussian
-export compton
-export exGaussian
-export quad_polynomial
-export lin_polynomial
-export const_polynomial
-
-# Model evaluation - combined
-export peak_model
-export background_model
+# Model evaluation
 export full_model
 
 # Fitting
+export PriorPair
 export poisson_ll
 export build_prior
 export build_posterior
-
-# Integrals - combined
-export numerical_integral
-export midpoint_integral
-export analytical_integral
-
-# Integrals - components
-export gaussian_integral
-export compton_integral
-export exGaussian_integral
-export quadPoly_integral
-export linPoly_integral
-export constPoly_integral
 
 # Plotting
 export plot_data
 
 # Utils
 export cut_data
-export get_peak_features
-export is_present
 
 end

@@ -1,3 +1,14 @@
+using GammaPeakFits:
+    gaussian_integral,
+    compton_integral,
+    exGaussian_integral,
+    quadPoly_integral,
+    linPoly_integral,
+    constPoly_integral,
+    numerical_integral,
+    midpoint_integral,
+    analytical_integral
+
 @testset "integrals" begin
 
     MU = 2048.0
@@ -39,13 +50,7 @@
         end
 
         @testset "exGaussian_integral (low-energy tail)" begin
-            params = ExGaussianParams(
-                A = A,
-                tau = TAU,
-                is_lowEnergyTail = true,
-                mu = MU,
-                sigma = SIGMA,
-            )
+            params = LowETailParams(A = A, tau = TAU, mu = MU, sigma = SIGMA)
             model_params = ModelParams(peak = PeakParams(lowEnergyTail = params))
             integral = exGaussian_integral(data, params)
             @test length(integral) == length(bin_centers)
@@ -53,13 +58,7 @@
         end
 
         @testset "exGaussian_integral (high-energy tail)" begin
-            params = ExGaussianParams(
-                A = A,
-                tau = TAU,
-                is_lowEnergyTail = false,
-                mu = MU,
-                sigma = SIGMA,
-            )
+            params = HighETailParams(A = A, tau = TAU, mu = MU, sigma = SIGMA)
             model_params = ModelParams(peak = PeakParams(highEnergyTail = params))
             integral = exGaussian_integral(data, params)
             @test length(integral) == length(bin_centers)
@@ -135,20 +134,8 @@
             peak = PeakParams(
                 gaussian = GaussianParams(A = A, mu = MU, sigma = SIGMA),
                 compton = ComptonParams(h = H, mu = MU, sigma = SIGMA),
-                lowEnergyTail = ExGaussianParams(
-                    A = A,
-                    tau = TAU,
-                    is_lowEnergyTail = true,
-                    mu = MU,
-                    sigma = SIGMA,
-                ),
-                highEnergyTail = ExGaussianParams(
-                    A = A,
-                    tau = TAU,
-                    is_lowEnergyTail = false,
-                    mu = MU,
-                    sigma = SIGMA,
-                ),
+                lowEnergyTail = LowETailParams(A = A, tau = TAU, mu = MU, sigma = SIGMA),
+                highEnergyTail = HighETailParams(A = A, tau = TAU, mu = MU, sigma = SIGMA),
             ),
             background = BackgroundParams(
                 quadPoly = QuadPolyParams(C = C_QUAD, mu = MU),

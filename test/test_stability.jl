@@ -126,7 +126,7 @@ using GammaPeakFits:
 
     @testset "flat parameter NamedTuple path" begin
         configs = FitConfigs(mu = MU, sigma = SIGMA)
-        v = (
+        param_values = (
             mu = MU,
             sigma = SIGMA,
             gaussian_A = A,
@@ -139,8 +139,8 @@ using GammaPeakFits:
             linPoly_C = C_LIN,
             constPoly_C = C_CONST,
         )
-        @test @inferred(ModelParams(v)) isa ModelParams
-        @test @inferred(poisson_ll(data, ModelParams(v), configs)) isa Float64
+        @test @inferred(ModelParams(param_values)) isa ModelParams
+        @test @inferred(poisson_ll(data, ModelParams(param_values), configs)) isa Float64
     end
 
     @testset "build_posterior" begin

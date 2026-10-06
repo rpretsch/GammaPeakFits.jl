@@ -35,7 +35,7 @@ function cut_data(data::SpectrumData, configs::FitConfigs)
 end
 
 """
-    _mean_background(weights::Vector{Int}, bin_size::Float64)
+    mean_background(weights::Vector{Int}, bin_size::Float64)
 
 Estimate the mean background level in counts/keV from observed per-bin counts.
 
@@ -54,7 +54,7 @@ range or only the bins outside a peak region.
 - [`get_peak_features`](@ref) for peak-feature estimation
 - [`build_prior`](@ref) for the prior that consumes the estimate
 """
-_mean_background(weights::Vector{Int}, bin_size::Float64) =
+mean_background(weights::Vector{Int}, bin_size::Float64) =
     max(mean(weights), 1.0) / bin_size
 
 """
@@ -134,13 +134,15 @@ function get_peak_features(data::SpectrumData, configs::FitConfigs)
     end
 
     background_weights = data.weights[.!peak_mask]                          # counts/bin
-    mean_background = _mean_background(background_weights, data.bin_size)   # counts/keV
-    peak_height =
-        max(maximum(peak_weights) / data.bin_size - mean_background, 1.0 / data.bin_size)
+    mean_background_val = mean_background(background_weights, data.bin_size)   # counts/keV
+    peak_height = max(
+        maximum(peak_weights) / data.bin_size - mean_background_val,
+        1.0 / data.bin_size,
+    )
     # counts/keV
     peak_area = sqrt(2 * pi) * sigma * peak_height                          # counts
 
-    return peak_height, peak_area, mean_background
+    return peak_height, peak_area, mean_background_val
 end
 
 """

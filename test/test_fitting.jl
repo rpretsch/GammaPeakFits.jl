@@ -138,6 +138,38 @@ using Distributions: Normal, Poisson, Uniform, logpdf, truncated
 
         end
 
+        @testset "Throws on empty containers next to a valid block" begin
+
+            model_params = ModelParams(
+                peak = PeakParams(),
+                background = BackgroundParams(constPoly = Enabled()),
+            )
+            @test_throws ArgumentError build_prior(DATA, model_params, CONFIGS)
+
+            model_params = ModelParams(
+                peak = PeakParams(gaussian = Enabled()),
+                background = BackgroundParams(),
+            )
+            @test_throws ArgumentError build_prior(DATA, model_params, CONFIGS)
+
+        end
+
+        @testset "Throws on non-container peak and background values" begin
+
+            model_params = ModelParams(peak = Enabled())
+            @test_throws ArgumentError build_prior(DATA, model_params, CONFIGS)
+
+            model_params = ModelParams(peak = GaussianParams(A = A, mu = MU, sigma = SIGMA))
+            @test_throws ArgumentError build_prior(DATA, model_params, CONFIGS)
+
+            model_params = ModelParams(background = Enabled())
+            @test_throws ArgumentError build_prior(DATA, model_params, CONFIGS)
+
+            model_params = ModelParams(background = ConstPolyParams(C = C_CONST))
+            @test_throws ArgumentError build_prior(DATA, model_params, CONFIGS)
+
+        end
+
         @testset "mu prior always except in constPoly background" begin
 
             model_params = ModelParams(background = BackgroundParams(constPoly = Enabled()))
@@ -265,7 +297,7 @@ using Distributions: Normal, Poisson, Uniform, logpdf, truncated
             posterior = build_posterior(DATA, prior, CONFIGS)
             @test posterior isa PosteriorMeasure
 
-            v = (mu = MU, sigma = SIGMA, gaussian_A = A, constPoly_C = C_CONST)
+            param_values = (mu = MU, sigma = SIGMA, gaussian_A = A, constPoly_C = C_CONST)
             expected = poisson_ll(
                 DATA,
                 ModelParams(
@@ -276,19 +308,19 @@ using Distributions: Normal, Poisson, Uniform, logpdf, truncated
                 ),
                 CONFIGS,
             )
-            @test posterior.likelihood._log_f(v) == expected
+            @test posterior.likelihood._log_f(param_values) == expected
             @test isfinite(expected)
 
         end
 
         @testset "Posterior with only peak (no background)" begin
 
-            module_params_peak = ModelParams(peak = PeakParams(gaussian = Enabled()))
-            prior_peak = build_prior(DATA, model_params, CONFIGS)
+            model_params_peak = ModelParams(peak = PeakParams(gaussian = Enabled()))
+            prior_peak = build_prior(DATA, model_params_peak, CONFIGS)
             posterior = build_posterior(DATA, prior_peak, CONFIGS)
             @test posterior isa PosteriorMeasure
 
-            v = (mu = MU, sigma = SIGMA, gaussian_A = A)
+            param_values = (mu = MU, sigma = SIGMA, gaussian_A = A)
             expected = poisson_ll(
                 DATA,
                 ModelParams(
@@ -298,7 +330,7 @@ using Distributions: Normal, Poisson, Uniform, logpdf, truncated
                 ),
                 CONFIGS,
             )
-            @test posterior.likelihood._log_f(v) == expected
+            @test posterior.likelihood._log_f(param_values) == expected
             @test isfinite(expected)
 
         end
@@ -307,11 +339,11 @@ using Distributions: Normal, Poisson, Uniform, logpdf, truncated
 
             model_params_background =
                 ModelParams(background = BackgroundParams(constPoly = Enabled()))
-            prior_background = build_prior(DATA, model_params, CONFIGS)
+            prior_background = build_prior(DATA, model_params_background, CONFIGS)
             posterior = build_posterior(DATA, prior_background, CONFIGS)
             @test posterior isa PosteriorMeasure
 
-            v = (constPoly_C = C_CONST,)
+            param_values = (constPoly_C = C_CONST,)
             expected = poisson_ll(
                 DATA,
                 ModelParams(
@@ -319,7 +351,7 @@ using Distributions: Normal, Poisson, Uniform, logpdf, truncated
                 ),
                 CONFIGS,
             )
-            @test posterior.likelihood._log_f(v) == expected
+            @test posterior.likelihood._log_f(param_values) == expected
             @test isfinite(expected)
 
         end
@@ -330,8 +362,8 @@ using Distributions: Normal, Poisson, Uniform, logpdf, truncated
             prior = build_prior(DATA, model_params, CONFIGS)
             posterior = build_posterior(DATA, prior, CONFIGS)
 
-            v = (mu = MU, linPoly_C = C_LIN)
-            @test posterior.likelihood._log_f(v) == -Inf
+            param_values = (mu = MU, linPoly_C = C_LIN)
+            @test posterior.likelihood._log_f(param_values) == -Inf
 
         end
 

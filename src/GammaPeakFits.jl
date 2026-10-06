@@ -12,8 +12,9 @@ posteriors.
 - Integration methods: [`AbstractIntegrationMethod`](@ref), [`Analytical`](@ref),
   [`Numerical`](@ref), [`Midpoint`](@ref)
 - Component parameters: [`GaussianParams`](@ref), [`ComptonParams`](@ref),
-  [`LowETailParams`](@ref), [`HighETailParams`](@ref), [`QuadPolyParams`](@ref),
-  [`LinPolyParams`](@ref), [`ConstPolyParams`](@ref)
+  [`AbstractExGaussianParams`](@ref), [`LowETailParams`](@ref),
+  [`HighETailParams`](@ref), [`QuadPolyParams`](@ref), [`LinPolyParams`](@ref),
+  [`ConstPolyParams`](@ref)
 - Containers: [`PeakParams`](@ref), [`BackgroundParams`](@ref), [`ModelParams`](@ref)
 - Data: [`SpectrumData`](@ref)
 - Configuration: [`FitConfigs`](@ref)
@@ -26,7 +27,7 @@ posteriors.
   [`build_posterior`](@ref)
 
 ## Utils
-- [`cut_data`](@ref), [`get_peak_features`](@ref)
+- [`cut_data`](@ref)
 
 ## Plotting
 - [`plot_data`](@ref)
@@ -130,6 +131,7 @@ export Midpoint
 # Parameter structs - components
 export GaussianParams
 export ComptonParams
+export AbstractExGaussianParams
 export LowETailParams
 export HighETailParams
 export QuadPolyParams
@@ -161,6 +163,5 @@ export plot_data
 
 # Utils
 export cut_data
-export get_peak_features
 
 end

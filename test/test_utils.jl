@@ -1,5 +1,5 @@
 using StatsBase: mean
-using GammaPeakFits: is_present
+using GammaPeakFits: get_peak_features, is_present, mean_background
 
 @testset "utils" begin
 
@@ -19,6 +19,14 @@ using GammaPeakFits: is_present
 
         @test !is_present(Disabled())
         @test is_present(Enabled())
+
+    end
+
+    @testset "mean_background" begin
+
+        @test mean_background([2, 4], 2.0) == 1.5
+        # Floored at one count per bin: one count / 0.5 keV bin = 2 counts/keV
+        @test mean_background([0, 0], 0.5) == 2.0
 
     end
 

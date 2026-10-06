@@ -85,6 +85,8 @@ peak region needs to be contained in the data.
 
 # Throws
 - An `ArgumentError` if both `model.peak` and `model.background` are `Disabled()`
+- An `ArgumentError` if either `model.peak` or `model.background` is set to something
+  other than its container type (`PeakParams`/`BackgroundParams`) or `Disabled()`
 - An `ArgumentError` if `model.peak` is a `PeakParams` but holds no enabled components, 
   or analogously for `model.background`
 - An `ArgumentError` if `configs.priors` does not fit the used model
@@ -126,6 +128,17 @@ function build_prior(data::SpectrumData, model::ModelParams, configs::FitConfigs
         throw(ArgumentError("No model specified"))
     end
 
+    peak_model isa Disabled ||
+        peak_model isa PeakParams ||
+        throw(ArgumentError("`model.peak` must be a `PeakParams` or `Disabled()`"))
+    background_model isa Disabled ||
+        background_model isa BackgroundParams ||
+        throw(
+            ArgumentError(
+                "`model.background` must be a `BackgroundParams` or `Disabled()`",
+            ),
+        )
+
     has_peak_component =
         is_present(peak_model) && (
             is_present(peak_model.gaussian) ||
@@ -154,9 +167,9 @@ function build_prior(data::SpectrumData, model::ModelParams, configs::FitConfigs
         )
 
     if has_peak_component
-        _, peak_area, mean_background = get_peak_features(data, configs)
+        _, peak_area, mean_background_val = get_peak_features(data, configs)
     else
-        mean_background = _mean_background(data.weights, data.bin_size)
+        mean_background_val = mean_background(data.weights, data.bin_size)
     end
 
     default_priors = PriorPair[]
@@ -177,7 +190,7 @@ function build_prior(data::SpectrumData, model::ModelParams, configs::FitConfigs
             push!(default_priors, :gaussian_A => Uniform(0, 2 * peak_area))
 
         is_present(peak_model.compton) &&
-            push!(default_priors, :compton_h => Uniform(0, 4 * mean_background))
+            push!(default_priors, :compton_h => Uniform(0, 4 * mean_background_val))
 
         if is_present(peak_model.lowEnergyTail)
             push!(default_priors, :lowEnergyTail_A => Uniform(eps(), peak_area))
@@ -200,7 +213,7 @@ function build_prior(data::SpectrumData, model::ModelParams, configs::FitConfigs
             push!(default_priors, :linPoly_C => Uniform(-10, 10))
 
         is_present(background_model.constPoly) &&
-            push!(default_priors, :constPoly_C => Uniform(0, 2 * mean_background))
+            push!(default_priors, :constPoly_C => Uniform(0, 2 * mean_background_val))
 
     end
 

@@ -183,7 +183,7 @@ Aggregate container for all components that form a gamma-ray peak.
 
 Each component is optional — set the corresponding field to `Disabled()` to exclude it. 
 Setting it to `Enabled()` instead of specifying a `XParams` object allows for controlling 
-which component is used in the fitting process (See [build_prior](@ref)).
+which component is used in the fitting process (See [`build_prior`](@ref)).
 
 `mu` and `sigma` are usually the same between all model components.
 
@@ -286,7 +286,7 @@ Aggregate container for all components that form the background model.
 
 Each component is optional — set the corresponding field to `Disabled()` to exclude it. 
 Setting it to `Enabled()` instead of specifying a `XParams` object allows for controlling 
-which component is used in the fitting process (See [build_prior](@ref)).
+which component is used in the fitting process (See [`build_prior`](@ref)).
 
 `mu` and `sigma` are usually the same between all model components.
 
@@ -298,7 +298,7 @@ which component is used in the fitting process (See [build_prior](@ref)).
 # See also
 - [`Enabled`](@ref), [`Disabled`](@ref), [`AbstractComponent`](@ref) for the component 
   management
-- [background_model](@ref) for evaluating the background model
+- [`background_model`](@ref) for evaluating the background model
 - [`QuadPolyParams`](@ref), [`LinPolyParams`](@ref), and [`ConstPolyParams`](@ref) for the
   component parameters.
 """

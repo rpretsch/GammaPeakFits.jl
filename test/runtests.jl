@@ -3,6 +3,9 @@
 # Recommended (activates test/Project.toml, matching CI):
 #     julia --project=. -e 'using Pkg; Pkg.test()'                        # full suite
 #     julia --project=. -e 'using Pkg; Pkg.test(; test_args=["models"])'  # selected suites
+#
+# Suites: Aqua, params, data, configs, models, integrals, fitting, stability, utils,
+# plotting, quickstart.
 
 using GammaPeakFits
 using Test

@@ -64,7 +64,7 @@ julia -e 'using Pkg; Pkg.develop(path="/path/to/GammaPeakFits")'
 
 ## Model Components
 
-Each component can be enabled or disabled by setting its field to a presence 
+Each component can be enabled or disabled by setting its field to a presence
 marker:
 
 - `Disabled()` (default): the component is excluded.
@@ -104,8 +104,10 @@ f(x) = \frac{h}{2}\,
 
 #### Ex-Gaussian Tails
 
-The ex-Gaussian component models asymmetric peak tailing, either low- or 
-high-energy (`LowETailParams` or `HighETailParams`, respectively):
+The ex-Gaussian component models asymmetric peak tailing, either low- or
+high-energy. Both variants subtype the exported `AbstractExGaussianParams`, and
+the tail direction is encoded in the parameter type (`LowETailParams` or
+`HighETailParams`, respectively):
 
 ```math
 f(x) = \frac{A}{2\tau}\,
@@ -169,6 +171,46 @@ f(x) = C
 | Parameter | Unit | Description |
 | --- | --- | --- |
 | `C` | counts/keV | Constant offset |
+
+## Priors
+
+`build_prior(data, model, configs)` builds a `NamedTupleDist` over the enabled
+model components. Each enabled component receives a weakly informative prior:
+
+| Symbol | Prior | Component |
+| --- | --- | --- |
+| `:mu` | `Normal(configs.mu, 0.6)` | all except `background.constPoly` |
+| `:sigma` | `truncated(Normal(configs.sigma, 0.6), eps(), Inf)` | all `peak` components |
+| `:gaussian_A` | `Uniform(0, 2 * peak_area)` | `peak.gaussian` |
+| `:compton_h` | `Uniform(0, 4 * mean_background)` | `peak.compton` |
+| `:lowEnergyTail_A` | `Uniform(eps(), peak_area)` | `peak.lowEnergyTail` |
+| `:lowEnergyTail_tau` | `Uniform(eps(), 10)` | `peak.lowEnergyTail` |
+| `:highEnergyTail_A` | `Uniform(eps(), peak_area)` | `peak.highEnergyTail` |
+| `:highEnergyTail_tau` | `Uniform(eps(), 10)` | `peak.highEnergyTail` |
+| `:quadPoly_C` | `Uniform(-1, 1)` | `background.quadPoly` |
+| `:linPoly_C` | `Uniform(-10, 10)` | `background.linPoly` |
+| `:constPoly_C` | `Uniform(0, 2 * mean_background)` | `background.constPoly` |
+
+The bounds are derived from the observed data. The peak height used for
+`peak_area` and the `mean_background` estimate are floored at one count per
+bin. For models with a peak component the data must contain the
+`mu +- 3 * sigma` region; slicing the spectrum with `cut_data(data, configs)`
+and the default `window_size = 10 * sigma` guarantees this.
+
+Custom priors overwrite the defaults for the given symbols via `configs.priors`:
+
+```julia
+using Distributions: Normal, truncated
+
+configs = FitConfigs(
+              mu = 2048.0,  # keV
+              sigma = 5.0,  # keV
+              priors = [:gaussian_A => truncated(Normal(1000, 10), 0, Inf)],
+          )
+```
+
+Every custom symbol must belong to an enabled component, otherwise
+`build_prior` throws an `ArgumentError`.
 
 ## Usage
 

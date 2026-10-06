@@ -100,7 +100,6 @@ Components marked `Disabled()` contribute zero.
 - [`analytical_integral`](@ref) for the combined integral
 - [`_expected_counts`](@ref) for the integration-method dispatch
 """
-# Disabled components
 _integral(data::SpectrumData, ::Disabled) =
     zeros(eltype(data.bin_centers), length(data.bin_centers))
 

@@ -381,7 +381,6 @@ Components marked `Disabled()` contribute zero.
 # See also
 - [`full_model`](@ref) for the combined model
 """
-# Disabled components
 _value(x::Float64, ::Disabled) = zero(x)
 _value(x::Vector{Float64}, ::Disabled) = zeros(eltype(x), length(x))
 

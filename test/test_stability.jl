@@ -3,6 +3,7 @@ using GammaPeakFits:
     gaussian,
     compton,
     exGaussian,
+    _is_low_energy_tail,
     quad_polynomial,
     lin_polynomial,
     const_polynomial,
@@ -67,6 +68,8 @@ using GammaPeakFits:
         @test @inferred(exGaussian(X_ARRAY, lowEnergyTail_params)) isa Vector{Float64}
         @test @inferred(exGaussian(MU, highEnergyTail_params)) isa Float64
         @test @inferred(exGaussian(X_ARRAY, highEnergyTail_params)) isa Vector{Float64}
+        @test @inferred(_is_low_energy_tail(lowEnergyTail_params)) isa Bool
+        @test @inferred(_is_low_energy_tail(highEnergyTail_params)) isa Bool
         @test @inferred(quad_polynomial(MU, quadPoly_params)) isa Float64
         @test @inferred(quad_polynomial(X_ARRAY, quadPoly_params)) isa Vector{Float64}
         @test @inferred(lin_polynomial(MU, linPoly_params)) isa Float64

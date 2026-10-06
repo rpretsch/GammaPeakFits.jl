@@ -3,6 +3,7 @@ using GammaPeakFits:
     gaussian,
     compton,
     exGaussian,
+    _is_low_energy_tail,
     quad_polynomial,
     lin_polynomial,
     const_polynomial,
@@ -110,6 +111,18 @@ using SpecialFunctions: erfc, logerfcx
                     logerfcx(1/sqrt(2) * (SIGMA/TAU - (X_ARRAY - MU)/SIGMA)),
                 )
                 @test result == expected
+
+            end
+
+            @testset "_is_low_energy_tail" begin
+
+                lowEnergyTail_params =
+                    LowETailParams(A = A, tau = TAU, mu = MU, sigma = SIGMA)
+                highEnergyTail_params =
+                    HighETailParams(A = A, tau = TAU, mu = MU, sigma = SIGMA)
+
+                @test _is_low_energy_tail(lowEnergyTail_params) === true
+                @test _is_low_energy_tail(highEnergyTail_params) === false
 
             end
 

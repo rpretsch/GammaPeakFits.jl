@@ -102,9 +102,9 @@ The following priors are defined per enabled component:
 | `:gaussian_A` | `Uniform(0, 2 * peak_area)` | `peak.gaussian` |
 | `:compton_h` | `Uniform(0, 4 * mean_background)` | `peak.compton` |
 | `:lowEnergyTail_A` | `Uniform(eps(), peak_area)` | `peak.lowEnergyTail` |
-| `:lowEnergyTail_tau` | `Uniform(eps(), 10)` | `peak.lowEnergyTail` |
+| `:lowEnergyTail_tau` | `Uniform(eps(), 5 * configs.sigma)` | `peak.lowEnergyTail` |
 | `:highEnergyTail_A` | `Uniform(eps(), peak_area)` | `peak.highEnergyTail` |
-| `:highEnergyTail_tau` | `Uniform(eps(), 10)` | `peak.highEnergyTail` |
+| `:highEnergyTail_tau` | `Uniform(eps(), 5 * configs.sigma)` | `peak.highEnergyTail` |
 | `:quadPoly_C` | `Uniform(-2b/h^2, 2b/h^2)` | `background.quadPoly` |
 | `:linPoly_C` | `Uniform(-2b/h, 2b/h)` | `background.linPoly` |
 | `:constPoly_C` | `Uniform(0, 2 * mean_background)` | `background.constPoly` |
@@ -113,6 +113,9 @@ where `b` is the estimated mean background level (counts/keV) and `h` is the hal
 the fit window (`configs.window_size / 2`, keV). The bounds are chosen so that each 
 polynomial term can vary by up to twice the background level across the window, making them 
 scale with the observed data (see [`background_poly_bounds`](@ref)).
+
+The ex-Gaussian tail relaxation lengths `tau` are bounded by `5 * configs.sigma`, i.e. the 
+tail decay is measured in units of the core width.
 
 Custom priors in `configs.priors` overwrite these defaults for the specified symbols.
 
@@ -199,12 +202,12 @@ function build_prior(data::SpectrumData, model::ModelParams, configs::FitConfigs
 
         if is_present(peak_model.lowEnergyTail)
             push!(default_priors, :lowEnergyTail_A => Uniform(eps(), peak_area))
-            push!(default_priors, :lowEnergyTail_tau => Uniform(eps(), 10))
+            push!(default_priors, :lowEnergyTail_tau => Uniform(eps(), 5 * configs.sigma))
         end
 
         if is_present(peak_model.highEnergyTail)
             push!(default_priors, :highEnergyTail_A => Uniform(eps(), peak_area))
-            push!(default_priors, :highEnergyTail_tau => Uniform(eps(), 10))
+            push!(default_priors, :highEnergyTail_tau => Uniform(eps(), 5 * configs.sigma))
         end
 
     end

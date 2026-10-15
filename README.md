@@ -181,9 +181,9 @@ model components. Each enabled component receives a weakly informative prior:
 | `:gaussian_A`         | `Uniform(0, 2 * peak_area)`                         | `peak.gaussian`                   |
 | `:compton_h`          | `Uniform(0, 4 * mean_background)`                   | `peak.compton`                    |
 | `:lowEnergyTail_A`    | `Uniform(eps(), peak_area)`                         | `peak.lowEnergyTail`              |
-| `:lowEnergyTail_tau`  | `Uniform(eps(), 10)`                                | `peak.lowEnergyTail`              |
+| `:lowEnergyTail_tau`  | `Uniform(eps(), 5 * configs.sigma)`                 | `peak.lowEnergyTail`              |
 | `:highEnergyTail_A`   | `Uniform(eps(), peak_area)`                         | `peak.highEnergyTail`             |
-| `:highEnergyTail_tau` | `Uniform(eps(), 10)`                                | `peak.highEnergyTail`             |
+| `:highEnergyTail_tau` | `Uniform(eps(), 5 * configs.sigma)`                 | `peak.highEnergyTail`             |
 | `:quadPoly_C`         | `Uniform(-2b/h^2, 2b/h^2)`                          | `background.quadPoly`             |
 | `:linPoly_C`          | `Uniform(-2b/h, 2b/h)`                              | `background.linPoly`              |
 | `:constPoly_C`        | `Uniform(0, 2 * mean_background)`                   | `background.constPoly`            |
@@ -196,7 +196,8 @@ quadratic bounds scale with `b` and `h` so that each term can vary by up to
 twice the background level across the window. For models with a peak component
 the data must contain the `mu +- 3 * sigma` region; slicing the spectrum with
 `cut_data(data, configs)` and the default `window_size = 10 * sigma` guarantees
-this.
+this. The ex-Gaussian tail relaxation lengths `tau` are bounded by
+`5 * configs.sigma`, measuring the tail decay in units of the core width.
 
 Custom priors overwrite the defaults for the given symbols via `configs.priors`:
 

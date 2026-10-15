@@ -230,6 +230,26 @@ using GammaPeakFits: mean_background, background_poly_bounds
 
         end
 
+        @testset "Tail priors scale with the core width" begin
+
+            model_params = ModelParams(
+                peak = PeakParams(
+                    gaussian = Enabled(),
+                    lowEnergyTail = Enabled(),
+                    highEnergyTail = Enabled(),
+                ),
+            )
+            prior = build_prior(DATA, model_params, CONFIGS)
+
+            @test prior.lowEnergyTail_tau isa Uniform
+            @test prior.lowEnergyTail_tau.a == eps()
+            @test prior.lowEnergyTail_tau.b == 5 * SIGMA
+            @test prior.highEnergyTail_tau isa Uniform
+            @test prior.highEnergyTail_tau.a == eps()
+            @test prior.highEnergyTail_tau.b == 5 * SIGMA
+
+        end
+
         @testset "Sanity floors yield valid prior bounds" begin
 
             model_params = ModelParams(

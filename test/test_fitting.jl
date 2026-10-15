@@ -1,5 +1,6 @@
 using BAT: PosteriorMeasure
 using Distributions: Normal, Poisson, Uniform, logpdf, truncated
+using GammaPeakFits: mean_background, background_poly_bounds
 
 @testset "fitting" begin
 
@@ -206,6 +207,26 @@ using Distributions: Normal, Poisson, Uniform, logpdf, truncated
             @test hasproperty(prior, :gaussian_A)
             @test !hasproperty(prior, :compton_h)
             @test !hasproperty(prior, :quadPoly_C)
+
+        end
+
+        @testset "Polynomial background priors scale with the data" begin
+
+            model_params = ModelParams(
+                background = BackgroundParams(quadPoly = Enabled(), linPoly = Enabled()),
+            )
+            prior = build_prior(DATA, model_params, CONFIGS)
+
+            # Background-only model: the level is estimated over the whole data range
+            background = mean_background(DATA.weights, DATA.bin_size)
+            lin_bound, quad_bound = background_poly_bounds(background, DATA, CONFIGS)
+
+            @test prior.linPoly_C isa Uniform
+            @test prior.linPoly_C.a == - lin_bound
+            @test prior.linPoly_C.b == lin_bound
+            @test prior.quadPoly_C isa Uniform
+            @test prior.quadPoly_C.a == - quad_bound
+            @test prior.quadPoly_C.b == quad_bound
 
         end
 

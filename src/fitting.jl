@@ -105,9 +105,14 @@ The following priors are defined per enabled component:
 | `:lowEnergyTail_tau` | `Uniform(eps(), 10)` | `peak.lowEnergyTail` |
 | `:highEnergyTail_A` | `Uniform(eps(), peak_area)` | `peak.highEnergyTail` |
 | `:highEnergyTail_tau` | `Uniform(eps(), 10)` | `peak.highEnergyTail` |
-| `:quadPoly_C` | `Uniform(-1, 1)` | `background.quadPoly` |
-| `:linPoly_C` | `Uniform(-10, 10)` | `background.linPoly` |
+| `:quadPoly_C` | `Uniform(-2b/h^2, 2b/h^2)` | `background.quadPoly` |
+| `:linPoly_C` | `Uniform(-2b/h, 2b/h)` | `background.linPoly` |
 | `:constPoly_C` | `Uniform(0, 2 * mean_background)` | `background.constPoly` |
+
+where `b` is the estimated mean background level (counts/keV) and `h` is the half-width of 
+the fit window (`configs.window_size / 2`, keV). The bounds are chosen so that each 
+polynomial term can vary by up to twice the background level across the window, making them 
+scale with the observed data (see [`background_poly_bounds`](@ref)).
 
 Custom priors in `configs.priors` overwrite these defaults for the specified symbols.
 
@@ -206,11 +211,13 @@ function build_prior(data::SpectrumData, model::ModelParams, configs::FitConfigs
 
     if is_present(background_model)
 
+        lin_bound, quad_bound = background_poly_bounds(mean_background_val, data, configs)
+
         is_present(background_model.quadPoly) &&
-            push!(default_priors, :quadPoly_C => Uniform(-1, 1))
+            push!(default_priors, :quadPoly_C => Uniform(-quad_bound, quad_bound))
 
         is_present(background_model.linPoly) &&
-            push!(default_priors, :linPoly_C => Uniform(-10, 10))
+            push!(default_priors, :linPoly_C => Uniform(-lin_bound, lin_bound))
 
         is_present(background_model.constPoly) &&
             push!(default_priors, :constPoly_C => Uniform(0, 2 * mean_background_val))

@@ -187,13 +187,17 @@ model components. Each enabled component receives a weakly informative prior:
 | `:lowEnergyTail_tau` | `Uniform(eps(), 10)` | `peak.lowEnergyTail` |
 | `:highEnergyTail_A` | `Uniform(eps(), peak_area)` | `peak.highEnergyTail` |
 | `:highEnergyTail_tau` | `Uniform(eps(), 10)` | `peak.highEnergyTail` |
-| `:quadPoly_C` | `Uniform(-1, 1)` | `background.quadPoly` |
-| `:linPoly_C` | `Uniform(-10, 10)` | `background.linPoly` |
+| `:quadPoly_C` | `Uniform(-2b/h^2, 2b/h^2)` | `background.quadPoly` |
+| `:linPoly_C` | `Uniform(-2b/h, 2b/h)` | `background.linPoly` |
 | `:constPoly_C` | `Uniform(0, 2 * mean_background)` | `background.constPoly` |
 
 The bounds are derived from the observed data. The peak height used for
 `peak_area` and the `mean_background` estimate are floored at one count per
-bin. For models with a peak component the data must contain the
+bin. For the polynomial background, `b` is the mean background level
+(counts/keV) and `h = window_size / 2` is the half-width of the fit window
+(keV); the linear and quadratic bounds scale with `b` and `h` so that each term
+can vary by up to twice the background level across the window. For models with
+a peak component the data must contain the
 `mu +- 3 * sigma` region; slicing the spectrum with `cut_data(data, configs)`
 and the default `window_size = 10 * sigma` guarantees this.
 

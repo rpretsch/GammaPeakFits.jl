@@ -58,6 +58,53 @@ mean_background(weights::Vector{Int}, bin_size::Float64) =
     max(mean(weights), 1.0) / bin_size
 
 """
+    background_poly_bounds(mean_background::Real, data::SpectrumData, configs::FitConfigs)
+
+Compute symmetric prior bounds for the linear and quadratic background coefficients.
+
+The polynomial background is expanded around the centroid `configs.mu`,
+
+```math
+f_{\\text{bg}}(x) = C_q\\,(x - \\mu)^2 + C_l\\,(x - \\mu) + C_c,
+```
+
+so the coefficients `C_l` (counts/keV²) and `C_q` (counts/keV³) are dimensionful. Their 
+natural scale is set by the mean background level `mean_background` (counts/keV) and the 
+half-width of the fit window `h = configs.window_size / 2` (keV): the bounds are chosen so 
+that each term can vary by up to twice the background level across the window, giving
+
+```math
+|C_l| \\le \\frac{2\\,\\text{mean\\_background}}{h}, \\qquad
+|C_q| \\le \\frac{2\\,\\text{mean\\_background}}{h^2}.
+```
+
+# Arguments
+- `mean_background::Real`: estimated mean background level in counts/keV
+- `data::SpectrumData`: binned spectrum data
+- `configs::FitConfigs`: fitting configuration providing `mu` and `window_size`
+
+# Returns
+- A `Tuple` `(lin_bound, quad_bound)` with the positive bounds for `C_l` and `C_q`
+
+# See also
+- [`mean_background`](@ref) for the background-level estimate
+- [`build_prior`](@ref) which consumes these bounds
+"""
+function background_poly_bounds(
+    mean_background::Real,
+    data::SpectrumData,
+    configs::FitConfigs,
+)
+    half_window = configs.window_size / 2
+    half_window = max(half_window, data.bin_size)
+
+    lin_bound = 2 * mean_background / half_window
+    quad_bound = 2 * mean_background / half_window^2
+
+    return lin_bound, quad_bound
+end
+
+"""
     get_peak_features(data::SpectrumData, configs::FitConfigs)
 
 Estimate the peak height and area from observed count data.

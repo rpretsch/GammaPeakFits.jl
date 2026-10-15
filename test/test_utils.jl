@@ -1,5 +1,5 @@
 using StatsBase: mean
-using GammaPeakFits: get_peak_features, is_present, mean_background
+using GammaPeakFits: get_peak_features, is_present, mean_background, background_poly_bounds
 
 @testset "utils" begin
 
@@ -27,6 +27,16 @@ using GammaPeakFits: get_peak_features, is_present, mean_background
         @test mean_background([2, 4], 2.0) == 1.5
         # Floored at one count per bin: one count / 0.5 keV bin = 2 counts/keV
         @test mean_background([0, 0], 0.5) == 2.0
+
+    end
+
+    @testset "background_poly_bounds" begin
+
+        # window_size = 4 => h = 2; b = 4 counts/keV
+        configs = FitConfigs(mu = 5.0, sigma = 0.4)
+        lin_bound, quad_bound = background_poly_bounds(4.0, DATA, configs)
+        @test lin_bound == 2 * 4.0 / 2
+        @test quad_bound == 2 * 4.0 / 2^2
 
     end
 

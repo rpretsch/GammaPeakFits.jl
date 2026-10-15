@@ -393,7 +393,8 @@ _value(x::Union{Real,AbstractVector{<:Real}}, params::AbstractExGaussianParams) 
 # Background components
 _value(x::Union{Real,AbstractVector{<:Real}}, params::QuadPolyParams) =
     quad_polynomial(x, params)
-_value(x::Union{Real,AbstractVector{<:Real}}, params::LinPolyParams) = lin_polynomial(x, params)
+_value(x::Union{Real,AbstractVector{<:Real}}, params::LinPolyParams) =
+    lin_polynomial(x, params)
 _value(x::Union{Real,AbstractVector{<:Real}}, params::ConstPolyParams) =
     const_polynomial(x, params)
 

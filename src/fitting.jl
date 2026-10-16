@@ -24,8 +24,9 @@ Poisson distribution with that expected rate.
 """
 function poisson_ll(data::SpectrumData, params::ModelParams, configs::FitConfigs)
     expected_counts = _expected_counts(configs.integration_method, data, params)
-    any(x -> (x < 0 || !isfinite(x)), expected_counts) && return -Inf
-    result_vector = logpdf.(Poisson.(expected_counts), data.weights)
+    any(x -> (x < 0 || !isfinite(x)), expected_counts) &&
+        return convert(eltype(expected_counts), -Inf)
+    result_vector = logpdf.(Poisson.(max.(expected_counts, eps())), data.weights)
     return sum(result_vector)
 end
 

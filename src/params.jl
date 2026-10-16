@@ -35,16 +35,16 @@ When present in a slot, the component contributes zero to the model and its inte
 struct Disabled <: AbstractComponent end
 
 """
-    GaussianParams <: AbstractComponent
+    GaussianParams{T<:Real} <: AbstractComponent
 
 Additional parameters for a scaled Gaussian (normal) peak component.
 
 `mu` and `sigma` are usually the same between all model components.
 
 # Fields
-- `A::Float64`: total integrated peak area in counts
-- `mu::Float64`: centroid position of the peak on the x-axis in keV
-- `sigma::Float64`: standard deviation of the Gaussian core (`sigma > 0`) in keV
+- `A::T`: total integrated peak area in counts
+- `mu::T`: centroid position of the peak on the x-axis in keV
+- `sigma::T`: standard deviation of the Gaussian core (`sigma > 0`) in keV
 
 # Mathematical definition
 
@@ -56,14 +56,14 @@ f(x) = \\frac{A}{\\sqrt{2\\pi}\\sigma} \\,
 # See also
 - [`gaussian`](@ref) for evaluating the gaussian
 """
-Base.@kwdef struct GaussianParams <: AbstractComponent
-    A::Float64
-    mu::Float64
-    sigma::Float64
+Base.@kwdef struct GaussianParams{T<:Real} <: AbstractComponent
+    A::T
+    mu::T
+    sigma::T
 end
 
 """
-    ComptonParams <: AbstractComponent
+    ComptonParams{T<:Real} <: AbstractComponent
 
 Parameters for a Compton-edge step function component, modelled as a scaled complementary 
 error function.
@@ -71,9 +71,9 @@ error function.
 `mu` and `sigma` are usually the same between all model components.
 
 # Fields
-- `h::Float64`: step height in counts/keV
-- `mu::Float64`: centroid position of the peak on the x-axis in keV
-- `sigma::Float64`: standard deviation of the Gaussian core (`sigma > 0`) in keV
+- `h::T`: step height in counts/keV
+- `mu::T`: centroid position of the peak on the x-axis in keV
+- `sigma::T`: standard deviation of the Gaussian core (`sigma > 0`) in keV
 
 # Mathematical definition
 
@@ -85,10 +85,10 @@ f(x) = \\frac{h}{2} \\,
 # See also
 - [`compton`](@ref) for evaluating the Compton-edge
 """
-Base.@kwdef struct ComptonParams <: AbstractComponent
-    h::Float64
-    mu::Float64
-    sigma::Float64
+Base.@kwdef struct ComptonParams{T<:Real} <: AbstractComponent
+    h::T
+    mu::T
+    sigma::T
 end
 
 """
@@ -102,7 +102,7 @@ Abstract supertype for ex-Gaussian tail parameter structs.
 abstract type AbstractExGaussianParams <: AbstractComponent end
 
 """
-    LowETailParams <: AbstractExGaussianParams
+    LowETailParams{T<:Real} <: AbstractExGaussianParams
 
 Parameters for a low-energy ex-Gaussian tail component, used to model asymmetric 
 low-energy tailing in gamma peaks.
@@ -110,10 +110,10 @@ low-energy tailing in gamma peaks.
 `mu` and `sigma` are usually the same between all model components.
 
 # Fields
-- `A::Float64`: total integrated tail area in counts
-- `tau::Float64`: exponent relaxation time of the exponential tail in keV
-- `mu::Float64`: centroid position of the Gaussian core on the x-axis in keV
-- `sigma::Float64`: standard deviation of the Gaussian core in keV
+- `A::T`: total integrated tail area in counts
+- `tau::T`: exponent relaxation time of the exponential tail in keV
+- `mu::T`: centroid position of the Gaussian core on the x-axis in keV
+- `sigma::T`: standard deviation of the Gaussian core in keV
 
 # Mathematical definition
 
@@ -129,15 +129,15 @@ f(x) = \\frac{A}{2\\tau}\\,
 - [`exGaussian`](@ref) for evaluating the tail component
 - [`HighETailParams`](@ref) for the high-energy tail
 """
-Base.@kwdef struct LowETailParams <: AbstractExGaussianParams
-    A::Float64
-    tau::Float64
-    mu::Float64
-    sigma::Float64
+Base.@kwdef struct LowETailParams{T<:Real} <: AbstractExGaussianParams
+    A::T
+    tau::T
+    mu::T
+    sigma::T
 end
 
 """
-    HighETailParams <: AbstractExGaussianParams
+    HighETailParams{T<:Real} <: AbstractExGaussianParams
 
 Parameters for a high-energy ex-Gaussian tail component, used to model asymmetric 
 high-energy tailing in gamma peaks.
@@ -145,10 +145,10 @@ high-energy tailing in gamma peaks.
 `mu` and `sigma` are usually the same between all model components.
 
 # Fields
-- `A::Float64`: total integrated tail area in counts
-- `tau::Float64`: exponent relaxation time of the exponential tail in keV
-- `mu::Float64`: centroid position of the Gaussian core on the x-axis in keV
-- `sigma::Float64`: standard deviation of the Gaussian core in keV
+- `A::T`: total integrated tail area in counts
+- `tau::T`: exponent relaxation time of the exponential tail in keV
+- `mu::T`: centroid position of the Gaussian core on the x-axis in keV
+- `sigma::T`: standard deviation of the Gaussian core in keV
 
 # Mathematical definition
 
@@ -164,11 +164,11 @@ f(x) = \\frac{A}{2\\tau}\\,
 - [`exGaussian`](@ref) for evaluating the tail component
 - [`LowETailParams`](@ref) for the low-energy tail
 """
-Base.@kwdef struct HighETailParams <: AbstractExGaussianParams
-    A::Float64
-    tau::Float64
-    mu::Float64
-    sigma::Float64
+Base.@kwdef struct HighETailParams{T<:Real} <: AbstractExGaussianParams
+    A::T
+    tau::T
+    mu::T
+    sigma::T
 end
 
 """
@@ -213,13 +213,13 @@ Base.@kwdef struct PeakParams{
 end
 
 """
-    QuadPolyParams <: AbstractComponent
+    QuadPolyParams{T<:Real} <: AbstractComponent
 
 Parameters for the quadratic polynomial term in the background model.
 
 # Fields
-- `C::Float64`: scaling coefficient in counts/keV³
-- `mu::Float64`: centering value for the polynomial expansion in keV. Usually the centroid 
+- `C::T`: scaling coefficient in counts/keV³
+- `mu::T`: centering value for the polynomial expansion in keV. Usually the centroid 
   of the gamma-peak.
 
 # Mathematical definition
@@ -231,19 +231,19 @@ f(x) = C \\cdot (x - \\mu)^2
 # See also
 - [`quad_polynomial`](@ref) for evaluating the term
 """
-Base.@kwdef struct QuadPolyParams <: AbstractComponent
-    C::Float64
-    mu::Float64
+Base.@kwdef struct QuadPolyParams{T<:Real} <: AbstractComponent
+    C::T
+    mu::T
 end
 
 """
-    LinPolyParams <: AbstractComponent
+    LinPolyParams{T<:Real} <: AbstractComponent
 
 Parameters for the linear polynomial term in the background model.
 
 # Fields
-- `C::Float64`: scaling coefficient in counts/keV²
-- `mu::Float64`: centering value for the polynomial expansion in keV. Usually the centroid 
+- `C::T`: scaling coefficient in counts/keV²
+- `mu::T`: centering value for the polynomial expansion in keV. Usually the centroid 
   of the gamma-peak.
 
 # Mathematical definition
@@ -255,24 +255,24 @@ f(x) = C \\cdot (x - \\mu)
 # See also
 - [`lin_polynomial`](@ref) for evaluating the term
 """
-Base.@kwdef struct LinPolyParams <: AbstractComponent
-    C::Float64
-    mu::Float64
+Base.@kwdef struct LinPolyParams{T<:Real} <: AbstractComponent
+    C::T
+    mu::T
 end
 
 """
-    ConstPolyParams <: AbstractComponent
+    ConstPolyParams{T<:Real} <: AbstractComponent
 
 Parameters for the constant polynomial term in the background model.
 
 # Fields
-- `C::Float64`: constant offset in counts/keV
+- `C::T`: constant offset in counts/keV
 
 # See also
 - [`const_polynomial`](@ref) for evaluating the term
 """
-Base.@kwdef struct ConstPolyParams <: AbstractComponent
-    C::Float64
+Base.@kwdef struct ConstPolyParams{T<:Real} <: AbstractComponent
+    C::T
 end
 
 """

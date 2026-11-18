@@ -35,7 +35,9 @@ markers.
   `length(weights) + 1`
 - An `ArgumentError` if `bin_size` is not supplied and only a single bin marker is given,
   since the bin size cannot be estimated
-- An `ArgumentError` if `bin_size` is not supplied and the bins are not evenly spaced
+- An `ArgumentError` if the bins are not evenly spaced
+- An `ArgumentError` if `bin_size` is supplied and does not match the spacing of
+  `bin_markers`
 
 ---
 
@@ -80,16 +82,25 @@ function SpectrumData(
     binMarker_length = length(bin_markers)
     weights_length = length(weights)
 
-    if isnothing(bin_size)
-        (binMarker_length == 1) && throw(
+    if binMarker_length > 1
+        bin_sizes = bin_markers[2:end] - bin_markers[1:(end-1)]
+        mean_bin_size = mean(bin_sizes)
+        all(≈(mean_bin_size), bin_sizes) ||
+            throw(ArgumentError("Your bins are not evenly spaced"))
+        isnothing(bin_size) ||
+            bin_size ≈ mean_bin_size ||
+            throw(
+                ArgumentError(
+                    "`bin_size` $bin_size does not match the bin spacing $mean_bin_size",
+                ),
+            )
+        bin_size = something(bin_size, mean_bin_size)
+    elseif isnothing(bin_size)
+        throw(
             ArgumentError(
                 "Bin size can not be estimated, you must supply it directly via `bin_size`",
             ),
         )
-        bin_sizes = bin_markers[2:end] - bin_markers[1:(end-1)]
-        mean_bin_size = mean(bin_sizes)
-        all(≈(mean_bin_size), bin_sizes) ? bin_size = mean_bin_size :
-        throw(ArgumentError("Your bins are not evenly spaced"))
     end
 
     if binMarker_length == weights_length
@@ -135,5 +146,93 @@ function SpectrumData(
         bin_edges = bin_edges,
         weights = weights,
         bin_size = bin_size,
+    )
+end
+
+"""
+    bin_energies(
+        energies::AbstractVector{<:Real},
+        bin_size::Real;
+        energy_range::Union{Tuple{Real,Real},Nothing} = nothing,
+    ) -> SpectrumData
+
+Histogram single energies, e.g. of detector hits, into bins of `bin_size`.
+
+# Arguments
+- `energies::AbstractVector{<:Real}`: energies in keV
+- `bin_size::Real`: bin width in keV
+
+# Keyword Arguments
+- `energy_range::Union{Tuple{Real,Real},Nothing} = nothing`: lower edge of the first and
+  upper edge of the last bin in keV; energies outside are dropped. If `nothing`, the bins
+  cover all energies, with edges at whole multiples of `bin_size`
+
+# Throws
+- An `ArgumentError` if `bin_size` is not positive
+- An `ArgumentError` if `energy_range` is not a whole multiple of `bin_size` wide
+- An `ArgumentError` if `energies` is empty and no `energy_range` is given
+
+# Returns
+- A `SpectrumData` object with the counts per bin
+"""
+function bin_energies(
+    energies::AbstractVector{<:Real},
+    bin_size::Real;
+    energy_range::Union{Tuple{Real,Real},Nothing} = nothing,
+)
+    bin_size > 0 || throw(ArgumentError("`bin_size` must be positive, got $bin_size"))
+
+    if isnothing(energy_range)
+        isempty(energies) && throw(
+            ArgumentError("No energies to derive the range from, supply `energy_range`"),
+        )
+        first_bin = floor(Int, minimum(energies) / bin_size)
+        last_bin = floor(Int, maximum(energies) / bin_size)
+        bin_edges = collect(Float64, (first_bin:(last_bin+1)) .* bin_size)
+    else
+        lower, upper = energy_range
+        nbins = round(Int, (upper - lower) / bin_size)
+        nbins >= 1 && nbins * bin_size ≈ upper - lower || throw(
+            ArgumentError(
+                "`energy_range` $energy_range is no whole multiple of $bin_size wide",
+            ),
+        )
+        bin_edges = collect(Float64, lower .+ (0:nbins) .* bin_size)
+    end
+
+    weights = fit(Histogram, energies, bin_edges).weights
+    return SpectrumData(bin_edges, weights; bin_size = Float64(bin_size))
+end
+
+"""
+    rebin(data::SpectrumData, bin_size::Real) -> SpectrumData
+
+Merge neighbouring bins of `data` into bins of `bin_size`; an incomplete group of bins at
+the upper end is dropped.
+
+# Arguments
+- `data::SpectrumData`: binned spectrum
+- `bin_size::Real`: new bin width in keV, a whole multiple of `data.bin_size`
+
+# Throws
+- An `ArgumentError` if `bin_size` is no whole multiple of `data.bin_size`
+- An `ArgumentError` if `bin_size` is wider than the whole spectrum
+
+# Returns
+- A `SpectrumData` object with the counts per new bin
+"""
+function rebin(data::SpectrumData, bin_size::Real)
+    factor = round(Int, bin_size / data.bin_size)
+    factor >= 1 && factor * data.bin_size ≈ bin_size || throw(
+        ArgumentError("`bin_size` $bin_size is no whole multiple of $(data.bin_size)"),
+    )
+    nbins = length(data.weights) ÷ factor
+    nbins >= 1 || throw(ArgumentError("`bin_size` $bin_size is wider than the spectrum"))
+    weights = vec(sum(reshape(data.weights[1:(nbins*factor)], factor, nbins); dims = 1))
+
+    return SpectrumData(
+        data.bin_edges[1:factor:(nbins*factor+1)],
+        weights;
+        bin_size = Float64(bin_size),
     )
 end

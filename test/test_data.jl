@@ -114,6 +114,68 @@
                 @test_throws ArgumentError SpectrumData([1.0, 2.0, 4.0], [1, 2, 3])
             end
 
+            @testset "throws on bin_size not matching the markers" begin
+                @test_throws ArgumentError SpectrumData(
+                    collect(1.0:4.0),
+                    [1, 2, 3, 4];
+                    bin_size = 2.0,
+                )
+            end
+
+        end
+
+        @testset "bin_energies" begin
+            energies = [0.2, 0.7, 1.1, 1.9, 2.5]
+
+            @testset "derived energy range" begin
+                data = bin_energies(energies, 1.0)
+                @test data.bin_edges == [0.0, 1.0, 2.0, 3.0]
+                @test data.weights == [2, 2, 1]
+                @test data.bin_size == 1.0
+            end
+
+            @testset "explicit energy range drops energies outside" begin
+                data = bin_energies(energies, 0.5; energy_range = (0.5, 2.0))
+                @test data.bin_edges == [0.5, 1.0, 1.5, 2.0]
+                @test data.weights == [1, 1, 1]
+            end
+
+            @testset "float-rounded bin size" begin
+                data = bin_energies(fill(1000.05, 3), 0.1; energy_range = (1000.0, 1010.0))
+                @test length(data.weights) == 100
+                @test data.weights[1] == 3
+            end
+
+            @testset "throws" begin
+                @test_throws ArgumentError bin_energies(energies, 0.0)
+                @test_throws ArgumentError bin_energies(
+                    energies,
+                    0.3;
+                    energy_range = (0.0, 1.0),
+                )
+                @test_throws ArgumentError bin_energies(Float64[], 1.0)
+            end
+        end
+
+        @testset "rebin" begin
+            data = SpectrumData(collect(0.0:1.0:5.0), [1, 2, 3, 4, 5])
+
+            @testset "merges neighbouring bins, drops the incomplete rest" begin
+                merged = rebin(data, 2.0)
+                @test merged.bin_edges == [0.0, 2.0, 4.0]
+                @test merged.weights == [3, 7]
+                @test merged.bin_size == 2.0
+            end
+
+            @testset "same bin size keeps the spectrum" begin
+                @test rebin(data, 1.0).weights == data.weights
+            end
+
+            @testset "throws" begin
+                @test_throws ArgumentError rebin(data, 1.5)  # no whole multiple
+                @test_throws ArgumentError rebin(data, 0.5)  # finer than the data
+                @test_throws ArgumentError rebin(data, 6.0)  # wider than the spectrum
+            end
         end
 
     end

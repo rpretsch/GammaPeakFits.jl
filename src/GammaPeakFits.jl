@@ -19,6 +19,9 @@ posteriors.
 - Data: [`SpectrumData`](@ref)
 - Configuration: [`FitConfigs`](@ref)
 
+## Data
+- [`bin_energies`](@ref), [`rebin`](@ref)
+
 ## Model evaluation
 - [`full_model`](@ref)
 
@@ -94,7 +97,7 @@ using DensityInterface: logfuncdensity
 using Distributions
 using QuadGK: quadgk
 using SpecialFunctions: erf, erfc, logerfcx
-using StatsBase: mean
+using StatsBase: Histogram, fit, mean
 using ValueShapes: NamedTupleDist
 
 # Component/container parameter structs and Enabled/Disabled presence markers
@@ -140,6 +143,8 @@ export ModelParams
 
 # Data structs
 export SpectrumData
+export bin_energies
+export rebin
 
 # Configuration struct
 export FitConfigs

@@ -88,6 +88,20 @@
                 @test data.bin_size == 1.0
             end
 
+            @testset "float-rounded bin markers" begin
+                markers = collect(range(1000.0; step = 0.1, length = 101))
+
+                data = SpectrumData(markers, collect(1:100))
+                @test length(data.bin_centers) == 100
+                @test data.bin_size ≈ 0.1
+                @test data.bin_centers ≈ markers[1:(end-1)] .+ 0.05
+
+                data = SpectrumData(markers, collect(1:101))
+                @test length(data.bin_edges) == 102
+                @test data.bin_size ≈ 0.1
+                @test data.bin_edges ≈ [markers .- 0.05; markers[end] + 0.05]
+            end
+
             @testset "throws on mismatched marker/weight sizes" begin
                 @test_throws ArgumentError SpectrumData(collect(1.0:4.0), [1, 2])
             end

@@ -94,6 +94,7 @@ using DensityInterface: logfuncdensity
 using Distributions
 using QuadGK: quadgk
 using SpecialFunctions: erf, erfc, logerfcx
+using StatsBase: mean
 using ValueShapes: NamedTupleDist
 
 # Component/container parameter structs and Enabled/Disabled presence markers

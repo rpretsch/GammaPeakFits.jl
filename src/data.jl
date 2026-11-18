@@ -87,18 +87,17 @@ function SpectrumData(
             ),
         )
         bin_sizes = bin_markers[2:end] - bin_markers[1:(end-1)]
-        all(==(bin_sizes[1]), bin_sizes) ? bin_size = bin_sizes[1] :
+        mean_bin_size = mean(bin_sizes)
+        all(≈(mean_bin_size), bin_sizes) ? bin_size = mean_bin_size :
         throw(ArgumentError("Your bins are not evenly spaced"))
     end
 
     if binMarker_length == weights_length
         bin_centers = bin_markers
-        bin_edges =
-            collect((bin_centers[1]-bin_size/2):bin_size:(bin_centers[end]+bin_size/2))
+        bin_edges = [bin_centers .- bin_size/2; bin_centers[end] + bin_size/2]
     elseif binMarker_length == (weights_length + 1)
         bin_edges = bin_markers
-        bin_centers =
-            collect((bin_edges[1]+bin_size/2):bin_size:(bin_edges[end]-bin_size/2))
+        bin_centers = (bin_edges[1:(end-1)] .+ bin_edges[2:end]) ./ 2
     else
         throw(
             ArgumentError(

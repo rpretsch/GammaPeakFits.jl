@@ -36,7 +36,11 @@ using GammaPeakFits:
     model = ModelParams(
         peak = PeakParams(gaussian = GaussianParams(A = A, mu = MU, sigma = SIGMA)),
     )
-    data = SpectrumData((MU-WINDOW/2), (MU+WINDOW/2), 1.0, model)
+    data = sample_spectrum(
+        model,
+        1.0;
+        energy_range = (MU - WINDOW / 2 - 0.5, MU + WINDOW / 2 + 0.5),
+    )
     X_ARRAY = data.bin_centers
 
     gaussian_params = GaussianParams(A = A, mu = MU, sigma = SIGMA)

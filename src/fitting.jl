@@ -99,7 +99,7 @@ The following priors are defined per enabled component:
 | --- | --- | --- |
 | `:mu` | `Normal(configs.mu, 0.6)` | all except `background.constPoly` |
 | `:sigma` | `truncated(Normal(configs.sigma, 0.6), eps(), Inf)` | all `peak` components |
-| `:gaussian_A` | `Uniform(0, 2 * peak_area)` | `peak.gaussian` |
+| `:gaussian_A` | `Uniform(0, 3 * peak_area)` | `peak.gaussian` |
 | `:compton_h` | `Uniform(0, 4 * mean_background)` | `peak.compton` |
 | `:lowEnergyTail_A` | `Uniform(eps(), peak_area)` | `peak.lowEnergyTail` |
 | `:lowEnergyTail_tau` | `Uniform(eps(), 5 * configs.sigma)` | `peak.lowEnergyTail` |
@@ -195,7 +195,7 @@ function build_prior(data::SpectrumData, model::ModelParams, configs::FitConfigs
     if is_present(peak_model)
 
         is_present(peak_model.gaussian) &&
-            push!(default_priors, :gaussian_A => Uniform(0, 2 * peak_area))
+            push!(default_priors, :gaussian_A => Uniform(0, 3 * peak_area))
 
         is_present(peak_model.compton) &&
             push!(default_priors, :compton_h => Uniform(0, 4 * mean_background_val))

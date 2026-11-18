@@ -178,7 +178,7 @@ model components. Each enabled component receives a weakly informative prior:
 | --------------------- | --------------------------------------------------- | --------------------------------- |
 | `:mu`                 | `Normal(configs.mu, 0.6)`                           | all except `background.constPoly` |
 | `:sigma`              | `truncated(Normal(configs.sigma, 0.6), eps(), Inf)` | all `peak` components             |
-| `:gaussian_A`         | `Uniform(0, 2 * peak_area)`                         | `peak.gaussian`                   |
+| `:gaussian_A`         | `Uniform(0, 3 * peak_area)`                         | `peak.gaussian`                   |
 | `:compton_h`          | `Uniform(0, 4 * mean_background)`                   | `peak.compton`                    |
 | `:lowEnergyTail_A`    | `Uniform(eps(), peak_area)`                         | `peak.lowEnergyTail`              |
 | `:lowEnergyTail_tau`  | `Uniform(eps(), 5 * configs.sigma)`                 | `peak.lowEnergyTail`              |

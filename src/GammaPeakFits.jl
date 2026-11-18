@@ -29,9 +29,6 @@ posteriors.
 ## Utils
 - [`cut_data`](@ref)
 
-## Plotting
-- [`plot_data`](@ref)
-
 # Quick start
 
 ```julia
@@ -93,7 +90,6 @@ posterior = build_posterior(fit_data, prior, configs)
 module GammaPeakFits
 
 using BAT
-using CairoMakie
 using DensityInterface: logfuncdensity
 using Distributions
 using QuadGK: quadgk
@@ -114,8 +110,6 @@ include("fitting.jl")
 include("integrals.jl")
 # Data slicing (cut_data), peak-feature estimation, is_present
 include("utils.jl")
-# Plotting
-include("plotting.jl")
 
 # Types - presence markers
 export AbstractComponent
@@ -157,9 +151,6 @@ export PriorPair
 export poisson_ll
 export build_prior
 export build_posterior
-
-# Plotting
-export plot_data
 
 # Utils
 export cut_data

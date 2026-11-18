@@ -5,7 +5,7 @@
 #     julia --project=. -e 'using Pkg; Pkg.test(; test_args=["models"])'  # selected suites
 #
 # Suites: Aqua, params, data, configs, models, integrals, fitting, stability, utils,
-# plotting, quickstart.
+# quickstart.
 
 using GammaPeakFits
 using Test
@@ -46,10 +46,6 @@ using Test
 
     if isempty(ARGS) || "utils" in ARGS
         include("test_utils.jl")
-    end
-
-    if isempty(ARGS) || "plotting" in ARGS
-        include("test_plotting.jl")
     end
 
     if isempty(ARGS) || "quickstart" in ARGS

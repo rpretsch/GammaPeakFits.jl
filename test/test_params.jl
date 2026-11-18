@@ -5,7 +5,6 @@
     A = 1000.0
     H = 50.0
     TAU = 0.1
-    IS_LOWENERGYTAIL = true
     C_QUAD = 1.0
     C_LIN = 10.0
     C_CONST = 100.0
@@ -28,20 +27,22 @@
             @test compton_params isa ComptonParams
         end
 
-        @testset "ExGaussianParams" begin
-            exGaussian_params = ExGaussianParams(
-                A = A,
-                tau = TAU,
-                is_lowEnergyTail = IS_LOWENERGYTAIL,
-                mu = MU,
-                sigma = SIGMA,
-            )
-            @test exGaussian_params.A == A
-            @test exGaussian_params.tau == TAU
-            @test exGaussian_params.is_lowEnergyTail == IS_LOWENERGYTAIL
-            @test exGaussian_params.mu == MU
-            @test exGaussian_params.sigma == SIGMA
-            @test exGaussian_params isa ExGaussianParams
+        @testset "LowETailParams" begin
+            lowETail_params = LowETailParams(A = A, tau = TAU, mu = MU, sigma = SIGMA)
+            @test lowETail_params.A == A
+            @test lowETail_params.tau == TAU
+            @test lowETail_params.mu == MU
+            @test lowETail_params.sigma == SIGMA
+            @test lowETail_params isa LowETailParams
+        end
+
+        @testset "HighETailParams" begin
+            highETail_params = HighETailParams(A = A, tau = TAU, mu = MU, sigma = SIGMA)
+            @test highETail_params.A == A
+            @test highETail_params.tau == TAU
+            @test highETail_params.mu == MU
+            @test highETail_params.sigma == SIGMA
+            @test highETail_params isa HighETailParams
         end
 
         @testset "QuadPolyParams" begin

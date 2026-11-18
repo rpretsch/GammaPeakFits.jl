@@ -100,14 +100,14 @@ Components marked `Disabled()` contribute zero.
 - [`analytical_integral`](@ref) for the combined integral
 - [`_expected_counts`](@ref) for the integration-method dispatch
 """
-# Disabled components
 _integral(data::SpectrumData, ::Disabled) =
     zeros(eltype(data.bin_centers), length(data.bin_centers))
 
 # Peak components
 _integral(data::SpectrumData, params::GaussianParams) = gaussian_integral(data, params)
 _integral(data::SpectrumData, params::ComptonParams) = compton_integral(data, params)
-_integral(data::SpectrumData, params::ExGaussianParams) = exGaussian_integral(data, params)
+_integral(data::SpectrumData, params::AbstractExGaussianParams) =
+    exGaussian_integral(data, params)
 
 # Background components
 _integral(data::SpectrumData, params::QuadPolyParams) = quadPoly_integral(data, params)
@@ -194,9 +194,12 @@ function compton_integral(data::SpectrumData, params::ComptonParams)
 end
 
 """
-    exGaussian_integral(data::SpectrumData, params::ExGaussianParams)
+    exGaussian_integral(data::SpectrumData, params::AbstractExGaussianParams)
 
 Integrate the ex-Gaussian tail component analytically over each energy bin.
+
+The tail direction is determined by the parameter type: [`LowETailParams`](@ref) evaluates 
+a low-energy tail, [`HighETailParams`](@ref) a high-energy tail.
 
 # Mathematical definition
 
@@ -212,19 +215,19 @@ respectively.
 
 # Arguments
 - `data::SpectrumData`: binned spectrum data
-- `params::ExGaussianParams`: tail component parameters
+- `params::AbstractExGaussianParams`: tail component parameters
 
 # Returns
 - An array of expected tail counts per bin
 
 # See also
 - [`exGaussian`](@ref) for the component model
-- [`ExGaussianParams`](@ref) for the parameters
+- [`LowETailParams`](@ref), [`HighETailParams`](@ref) for the parameters
 """
-function exGaussian_integral(data::SpectrumData, params::ExGaussianParams)
-    function _antiderivative(x::Float64, params::ExGaussianParams)
+function exGaussian_integral(data::SpectrumData, params::AbstractExGaussianParams)
+    function _antiderivative(x::Float64, params::AbstractExGaussianParams)
         return params.A/2 * erf((x - params.mu)/(sqrt(2) * params.sigma)) -
-               (-1)^params.is_lowEnergyTail * params.tau * exGaussian(x, params)
+               (-1)^_is_low_energy_tail(params) * params.tau * exGaussian(x, params)
     end
     antiderivative_values = _antiderivative.(data.bin_edges, Ref(params))
     return antiderivative_values[2:end] .- antiderivative_values[1:(end-1)]

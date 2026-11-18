@@ -1,33 +1,4 @@
 """
-    PriorConfigs
-
-Configuration options for the priors.
-
-# Fields
-- `mu_std::Float64`: standard deviation of the prior on `:mu` in keV. Default: `0.6`
-- `sigma_std::Float64`: standard deviation of the prior on `:sigma` in keV. Default: `0.6`
-- `lowEnergyTail_tau_upper::Float64`: upper bound of the `Uniform` prior on 
-  `:lowEnergyTail_tau` in keV. Default: `10.0`
-- `highEnergyTail_tau_upper::Float64`: upper bound of the `Uniform` prior on 
-  `:highEnergyTail_tau` in keV. Default: `10.0`
-- `quadPoly_C_limits::Tuple{Float64,Float64}`: `(lower, upper)` bounds of the `Uniform` 
-  prior on `:quadPoly_C` in counts/keV³. Default: `(-1.0, 1.0)`
-- `linPoly_C_limits::Tuple{Float64,Float64}`: `(lower, upper)` bounds of the `Uniform` 
-  prior on `:linPoly_C` in counts/keV². Default: `(-10.0, 10.0)`
-
-# See also
-- [`build_prior`](@ref) which consumes these configurations
-"""
-Base.@kwdef struct PriorConfigs
-    mu_std::Float64 = 0.6
-    sigma_std::Float64 = 0.6
-    lowEnergyTail_tau_upper::Float64 = 10.0
-    highEnergyTail_tau_upper::Float64 = 10.0
-    quadPoly_C_limits::Tuple{Float64,Float64} = (-1.0, 1.0)
-    linPoly_C_limits::Tuple{Float64,Float64} = (-10.0, 10.0)
-end
-
-"""
     AbstractIntegrationMethod
 
 Abstract supertype for the integration methods used to compute the expected bin counts in 
@@ -72,27 +43,45 @@ Integrate the model via the midpoint rule over each energy bin.
 struct Midpoint <: AbstractIntegrationMethod end
 
 """
+    PriorPair
+
+Shorthand for `Pair{Symbol,<:Distribution}`, used for the custom priors in 
+[`FitConfigs`](@ref).
+
+# See also
+- [`FitConfigs`](@ref)
+- [`build_prior`](@ref)
+"""
+const PriorPair = Pair{Symbol,<:Distribution}
+
+"""
     FitConfigs
 
 Configuration options for the fitting process.
 
 `mu` and `sigma` are required and have no default values. All remaining fields default to 
-reasonable values.
+reasonable values. The configuration acts as the single source of truth for the fit window, 
+the prior centers, and the prior overrides.
 
 # Fields
 - `mu::Float64`: expected centroid position of the peak in keV
 - `sigma::Float64`: expected standard deviation of the Gaussian core in keV
+- `window_size::Float64`: full width of the fit window in keV, centered on `mu`. Should be 
+  large enough to contain the `mu +- 3 * sigma` peak region. Default: `10 * sigma`
 - `integration_method::AbstractIntegrationMethod`: the integration method used to compute 
   expected bin counts. Either `Analytical()`, `Numerical()`, or `Midpoint()`. 
   Default: `Analytical()`
+- `priors::Vector{PriorPair}`: custom priors that overwrite the defaults built by 
+  [`build_prior`](@ref) for the specified symbols. Default: `PriorPair[]`
 
 # See also
-- [`PriorConfigs`](@ref) for the configuration options for the priors
 - [`AbstractIntegrationMethod`](@ref) for the available integration methods
+- [`build_prior`](@ref) for the prior construction that consumes these options
 """
 Base.@kwdef struct FitConfigs
     mu::Float64
     sigma::Float64
+    window_size::Float64 = 10 * sigma
     integration_method::AbstractIntegrationMethod = Analytical()
-    prior::PriorConfigs = PriorConfigs()
+    priors::Vector{PriorPair} = PriorPair[]
 end

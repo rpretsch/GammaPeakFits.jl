@@ -1,3 +1,17 @@
+using Distributions: Normal, pdf
+using GammaPeakFits:
+    gaussian,
+    compton,
+    exGaussian,
+    _is_low_energy_tail,
+    quad_polynomial,
+    lin_polynomial,
+    const_polynomial,
+    peak_model,
+    background_model,
+    full_model
+using SpecialFunctions: erfc, logerfcx
+
 @testset "models" begin
 
     MU = 2048.0
@@ -74,13 +88,7 @@
 
             @testset "low-energy tail" begin
 
-                exGaussian_params = ExGaussianParams(
-                    A = A,
-                    tau = TAU,
-                    is_lowEnergyTail = true,
-                    mu = MU,
-                    sigma = SIGMA,
-                )
+                exGaussian_params = LowETailParams(A = A, tau = TAU, mu = MU, sigma = SIGMA)
                 result = exGaussian(X_ARRAY, exGaussian_params)
                 @test result == exGaussian.(X_ARRAY, Ref(exGaussian_params))
 
@@ -94,13 +102,8 @@
 
             @testset "high-energy tail" begin
 
-                exGaussian_params = ExGaussianParams(
-                    A = A,
-                    tau = TAU,
-                    is_lowEnergyTail = false,
-                    mu = MU,
-                    sigma = SIGMA,
-                )
+                exGaussian_params =
+                    HighETailParams(A = A, tau = TAU, mu = MU, sigma = SIGMA)
                 result = exGaussian(X_ARRAY, exGaussian_params)
 
                 expected = @. exp(
@@ -111,68 +114,44 @@
 
             end
 
+            @testset "_is_low_energy_tail" begin
+
+                lowEnergyTail_params =
+                    LowETailParams(A = A, tau = TAU, mu = MU, sigma = SIGMA)
+                highEnergyTail_params =
+                    HighETailParams(A = A, tau = TAU, mu = MU, sigma = SIGMA)
+
+                @test _is_low_energy_tail(lowEnergyTail_params) === true
+                @test _is_low_energy_tail(highEnergyTail_params) === false
+
+            end
+
             @testset "throws on non-positive tau" begin
 
-                invalid_params = ExGaussianParams(
-                    A = A,
-                    tau = 0.0,
-                    is_lowEnergyTail = true,
-                    mu = MU,
-                    sigma = SIGMA,
-                )
+                invalid_params = LowETailParams(A = A, tau = 0.0, mu = MU, sigma = SIGMA)
                 @test_throws ArgumentError exGaussian(MU, invalid_params)
 
-                invalid_params = ExGaussianParams(
-                    A = A,
-                    tau = -TAU,
-                    is_lowEnergyTail = true,
-                    mu = MU,
-                    sigma = SIGMA,
-                )
+                invalid_params = LowETailParams(A = A, tau = -TAU, mu = MU, sigma = SIGMA)
                 @test_throws ArgumentError exGaussian(MU, invalid_params)
 
             end
 
             @testset "throws on non-positive sigma" begin
 
-                invalid_params = ExGaussianParams(
-                    A = A,
-                    tau = TAU,
-                    is_lowEnergyTail = true,
-                    mu = MU,
-                    sigma = 0.0,
-                )
+                invalid_params = LowETailParams(A = A, tau = TAU, mu = MU, sigma = 0.0)
                 @test_throws ArgumentError exGaussian(MU, invalid_params)
 
-                invalid_params = ExGaussianParams(
-                    A = A,
-                    tau = TAU,
-                    is_lowEnergyTail = true,
-                    mu = MU,
-                    sigma = -SIGMA,
-                )
+                invalid_params = LowETailParams(A = A, tau = TAU, mu = MU, sigma = -SIGMA)
                 @test_throws ArgumentError exGaussian(MU, invalid_params)
 
             end
 
             @testset "throws on non-positive A" begin
 
-                invalid_params = ExGaussianParams(
-                    A = 0.0,
-                    tau = TAU,
-                    is_lowEnergyTail = true,
-                    mu = MU,
-                    sigma = SIGMA,
-                )
+                invalid_params = LowETailParams(A = 0.0, tau = TAU, mu = MU, sigma = SIGMA)
                 @test_throws ArgumentError exGaussian(MU, invalid_params)
 
-                invalid_params = ExGaussianParams(
-                    A = -A,
-                    tau = TAU,
-                    is_lowEnergyTail = true,
-                    mu = MU,
-                    sigma = SIGMA,
-                )
+                invalid_params = LowETailParams(A = -A, tau = TAU, mu = MU, sigma = SIGMA)
                 @test_throws ArgumentError exGaussian(MU, invalid_params)
 
             end

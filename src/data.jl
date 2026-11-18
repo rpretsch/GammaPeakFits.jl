@@ -41,31 +41,17 @@ markers.
 
 ---
 
-    SpectrumData(
-        lower_limit::Float64, 
-        upper_limit::Float64, 
-        bin_size::Float64, 
-        params::ModelParams,
-    )
+    SpectrumData(hist::Histogram{<:Real,1}; bin_size::Union{Float64,Nothing} = nothing)
 
-Generate synthetic spectrum data from a model over a uniform grid of 
-`(lower_limit):bin_size:(upper_limit)`, then sampling Poisson-distributed counts for each 
-bin.
-
-# Arguments
-- `lower_limit::Float64`: start of the energy range in keV
-- `upper_limit::Float64`: end of the energy range in keV
-- `bin_size::Float64`: width of each bin in keV
-- `params::ModelParams`: model parameters used to compute expected counts
+Construct a `SpectrumData` from a one-dimensional `StatsBase.Histogram` of counts, via the
+bin edges constructor above.
 
 # Throws
-- An `ArgumentError` if the model produces negative or non-finite expected counts
-
-# Returns
-- A `SpectrumData` object
+- An `ArgumentError` if `hist` is a density or its weights are no non-negative whole numbers
 
 # See also
-- [`full_model`](@ref) for the used model
+- [`bin_energies`](@ref) to histogram single energies
+- [`sample_spectrum`](@ref) to draw synthetic data from a model
 """
 Base.@kwdef struct SpectrumData
     bin_centers::Vector{Float64}
@@ -125,28 +111,45 @@ function SpectrumData(
     )
 end
 
-function SpectrumData(
-    lower_limit::Float64,
-    upper_limit::Float64,
-    bin_size::Float64,
-    params::ModelParams,
-)
-    bin_centers = collect(range(lower_limit, upper_limit; step = bin_size))
-    bin_edges =
-        collect(range(lower_limit - bin_size/2, upper_limit + bin_size/2; step = bin_size))
-    expected_counts = full_model(bin_centers, params) .* bin_size
-    any(x -> !isfinite(x) || x<0, expected_counts) && throw(
+function SpectrumData(hist::Histogram{<:Real,1}; bin_size::Union{Float64,Nothing} = nothing)
+    hist.isdensity && throw(ArgumentError("`hist` is a density, counts per bin are needed"))
+    all(w -> isinteger(w) && w >= 0, hist.weights) || throw(
+        ArgumentError("`hist` has weights that are no counts (non-negative whole numbers)"),
+    )
+    return SpectrumData(collect(Float64, only(hist.edges)), Int.(hist.weights); bin_size)
+end
+
+"""
+    _uniform_edges(lower::Real, upper::Real, bin_size::Real)
+
+Return the edges of uniform bins of `bin_size` from `lower` to `upper`. The edges are
+computed from integer bin indices as `lower + i * bin_size`, so that rounding neither
+accumulates over the bins nor changes their number, as it can for a float range.
+
+# Arguments
+- `lower::Real`: lower edge of the first bin in keV
+- `upper::Real`: upper edge of the last bin in keV
+- `bin_size::Real`: bin width in keV
+
+# Throws
+- An `ArgumentError` if `bin_size` is not positive
+- An `ArgumentError` if `upper - lower` is not a positive whole multiple of `bin_size`
+
+# Returns
+- A `Vector{Float64}` of `n + 1` edges for `n = (upper - lower) / bin_size` bins
+
+# See also
+- [`bin_energies`](@ref), [`sample_spectrum`](@ref) for the users
+"""
+function _uniform_edges(lower::Real, upper::Real, bin_size::Real)
+    bin_size > 0 || throw(ArgumentError("`bin_size` must be positive, got $bin_size"))
+    nbins = round(Int, (upper - lower) / bin_size)
+    nbins >= 1 && nbins * bin_size ≈ upper - lower || throw(
         ArgumentError(
-            "Model produced negative or non-finite expected counts; check parameters.",
+            "Energy range ($lower, $upper) is no whole multiple of $bin_size wide",
         ),
     )
-    weights = rand.(Poisson.(expected_counts))
-    return SpectrumData(
-        bin_centers = bin_centers,
-        bin_edges = bin_edges,
-        weights = weights,
-        bin_size = bin_size,
-    )
+    return collect(Float64, lower .+ (0:nbins) .* bin_size)
 end
 
 """
@@ -190,18 +193,10 @@ function bin_energies(
         last_bin = floor(Int, maximum(energies) / bin_size)
         bin_edges = collect(Float64, (first_bin:(last_bin+1)) .* bin_size)
     else
-        lower, upper = energy_range
-        nbins = round(Int, (upper - lower) / bin_size)
-        nbins >= 1 && nbins * bin_size ≈ upper - lower || throw(
-            ArgumentError(
-                "`energy_range` $energy_range is no whole multiple of $bin_size wide",
-            ),
-        )
-        bin_edges = collect(Float64, lower .+ (0:nbins) .* bin_size)
+        bin_edges = _uniform_edges(energy_range..., bin_size)
     end
 
-    weights = fit(Histogram, energies, bin_edges).weights
-    return SpectrumData(bin_edges, weights; bin_size = Float64(bin_size))
+    return SpectrumData(fit(Histogram, energies, bin_edges); bin_size = Float64(bin_size))
 end
 
 """
@@ -235,4 +230,50 @@ function rebin(data::SpectrumData, bin_size::Real)
         weights;
         bin_size = Float64(bin_size),
     )
+end
+
+"""
+    sample_spectrum(
+        params::ModelParams,
+        bin_size::Real;
+        energy_range::Tuple{Real,Real},
+    ) -> SpectrumData
+
+Draw a synthetic spectrum from a model: Poisson-distributed counts around the expected
+counts per bin, the model at the bin center times `bin_size`.
+
+# Arguments
+- `params::ModelParams`: model parameters used to compute the expected counts
+- `bin_size::Real`: bin width in keV
+
+# Keyword Arguments
+- `energy_range::Tuple{Real,Real}`: lower edge of the first and upper edge of the last bin
+  in keV
+
+# Throws
+- An `ArgumentError` if `bin_size` is not positive or `energy_range` is not a whole
+  multiple of `bin_size` wide
+- An `ArgumentError` if the model produces negative or non-finite expected counts
+
+# Returns
+- A `SpectrumData` object with the sampled counts per bin
+
+# See also
+- [`full_model`](@ref) for the used model
+"""
+function sample_spectrum(
+    params::ModelParams,
+    bin_size::Real;
+    energy_range::Tuple{Real,Real},
+)
+    bin_edges = _uniform_edges(energy_range..., bin_size)
+    bin_centers = (bin_edges[1:(end-1)] .+ bin_edges[2:end]) ./ 2
+    expected_counts = full_model(bin_centers, params) .* bin_size
+    any(x -> !isfinite(x) || x < 0, expected_counts) && throw(
+        ArgumentError(
+            "Model produced negative or non-finite expected counts; check parameters.",
+        ),
+    )
+    weights = rand.(Poisson.(expected_counts))
+    return SpectrumData(bin_edges, weights; bin_size = Float64(bin_size))
 end

@@ -1,3 +1,5 @@
+using StatsBase: Histogram
+
 @testset "data" begin
 
     MU = 2048.0
@@ -26,39 +28,47 @@
 
         end
 
-        @testset "outer constructor" begin
+        @testset "sample_spectrum" begin
 
             gaussian_params = GaussianParams(A = A, mu = MU, sigma = SIGMA)
             model_params = ModelParams(peak = PeakParams(gaussian = gaussian_params))
 
-            data = SpectrumData(1.0, 4096.0, 0.5, model_params)
+            data = sample_spectrum(model_params, 0.5; energy_range = (0.0, 4096.0))
             @test data.bin_centers isa Vector{Float64}
-            @test length(data.bin_centers) == 8191
-            @test length(data.bin_edges) == 8192
-            @test length(data.weights) == 8191
+            @test length(data.bin_centers) == 8192
+            @test length(data.bin_edges) == 8193
+            @test length(data.weights) == 8192
             @test data.weights isa Vector{Int64}
             @test data.bin_size == 0.5
             @test data isa SpectrumData
 
         end
 
-        @testset "outer constructor throws on negative expected counts" begin
+        @testset "sample_spectrum throws on negative expected counts" begin
 
             model_params = ModelParams(
                 background = BackgroundParams(linPoly = LinPolyParams(C = -1.0, mu = 0.0)),
             )
-            @test_throws ArgumentError SpectrumData(1.0, 10.0, 1.0, model_params)
+            @test_throws ArgumentError sample_spectrum(
+                model_params,
+                1.0;
+                energy_range = (0.5, 10.5),
+            )
 
         end
 
-        @testset "outer constructor throws on non-finite expected counts" begin
+        @testset "sample_spectrum throws on non-finite expected counts" begin
 
             model_params = ModelParams(
                 peak = PeakParams(
                     gaussian = GaussianParams(A = 1.0e308, mu = MU, sigma = 0.1),
                 ),
             )
-            @test_throws ArgumentError SpectrumData(2040.0, 2050.0, 1.0, model_params)
+            @test_throws ArgumentError sample_spectrum(
+                model_params,
+                1.0;
+                energy_range = (2039.5, 2050.5),
+            )
 
         end
 
@@ -122,6 +132,23 @@
                 )
             end
 
+        end
+
+        @testset "histogram constructor" begin
+            data = SpectrumData(Histogram(0.0:1.0:4.0, [1, 2, 3, 4]))
+            @test data.bin_edges == collect(0.0:1.0:4.0)
+            @test data.bin_centers == [0.5, 1.5, 2.5, 3.5]
+            @test data.weights == [1, 2, 3, 4]
+            @test data.bin_size == 1.0
+
+            # Float weights that are whole numbers, e.g. from simulations
+            @test SpectrumData(Histogram(0.0:1.0:2.0, [1.0, 2.0])).weights == [1, 2]
+
+            @test_throws ArgumentError SpectrumData(Histogram(0.0:1.0:2.0, [1.5, 2.0]))
+            @test_throws ArgumentError SpectrumData(Histogram(0.0:1.0:2.0, [-1, 2]))
+            @test_throws ArgumentError SpectrumData(
+                Histogram(0.0:1.0:2.0, [1.0, 2.0], :left, true),
+            )
         end
 
         @testset "bin_energies" begin

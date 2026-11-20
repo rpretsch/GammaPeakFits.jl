@@ -120,6 +120,45 @@ function SpectrumData(hist::Histogram{<:Real,1}; bin_size::Union{Float64,Nothing
 end
 
 """
+    _check_spectrum(hist::Histogram{<:Real,1}) -> Real
+
+Check that `hist` is a binned spectrum the fit functions can use: at least one bin, uniform 
+bins, counts per bin (no density) that are non-negative whole numbers. The bin spacing is 
+compared with `≈`, so that rounded float edges are accepted.
+
+# Arguments
+- `hist::Histogram{<:Real,1}`: one-dimensional histogram of counts per bin
+
+# Throws
+- An `ArgumentError` if `hist` has no bins
+- An `ArgumentError` if the bins are not evenly spaced
+- An `ArgumentError` if `hist` is a density
+- An `ArgumentError` if a weight is no non-negative whole number
+
+# Returns
+- The bin width in keV (in the number type of the edges), the mean spacing of the bin edges
+"""
+function _check_spectrum(hist::Histogram{<:Real,1})
+
+    edges = only(hist.edges)
+    length(edges) >= 2 || throw(ArgumentError("`hist` has no bins"))
+
+    bin_sizes = diff(edges)
+    bin_size = mean(bin_sizes)
+    all(≈(bin_size), bin_sizes) ||
+        throw(ArgumentError("The bins of `hist` are not evenly spaced"))
+
+    hist.isdensity && throw(ArgumentError("`hist` is a density, counts per bin are needed"))
+
+    all(w -> isinteger(w) && w >= 0, hist.weights) || throw(
+        ArgumentError("`hist` has weights that are no counts (non-negative whole numbers)"),
+    )
+
+    return bin_size
+
+end
+
+"""
     _uniform_edges(lower::Real, upper::Real, bin_size::Real)
 
 Return the edges of uniform bins of `bin_size` from `lower` to `upper`. The edges are

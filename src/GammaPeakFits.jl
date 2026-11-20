@@ -94,6 +94,9 @@ module GammaPeakFits
 using BAT
 using DensityInterface: logfuncdensity
 using Distributions
+using LegendSpecFits: GaussPeak, LowETailPeak, HighETailPeak, GaussianStep, PolynomialShape
+using MeasureBase: AbstractMeasure
+using PropertyFunctions: @pf
 using QuadGK: quadgk
 using SpecialFunctions: erf, erfc, logerfcx
 using StatsBase: Histogram, fit, mean
@@ -160,5 +163,13 @@ export build_posterior
 
 # Utils
 export cut_data
+
+# Re-exports - spectral shapes (LegendSpecFits) and model kernels (PropertyFunctions)
+export GaussPeak
+export LowETailPeak
+export HighETailPeak
+export GaussianStep
+export PolynomialShape
+export @pf
 
 end

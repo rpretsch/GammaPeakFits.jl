@@ -1,4 +1,5 @@
 using BAT: PosteriorMeasure
+using StatsBase: Histogram
 using GammaPeakFits:
     gaussian,
     compton,
@@ -18,7 +19,8 @@ using GammaPeakFits:
     constPoly_integral,
     numerical_integral,
     midpoint_integral,
-    analytical_integral
+    analytical_integral,
+    _check_spectrum
 
 @testset "type stability" begin
 
@@ -62,6 +64,10 @@ using GammaPeakFits:
         constPoly = constPoly_params,
     )
     model_params = ModelParams(peak = peak_params, background = background_params)
+
+    @testset "data checks" begin
+        @test @inferred(_check_spectrum(Histogram(0.0:0.5:2.0, [1, 2, 3, 4]))) isa Real
+    end
 
     @testset "component models (scalar/vector)" begin
         @test @inferred(gaussian(MU, gaussian_params)) isa Float64

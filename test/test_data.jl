@@ -6,6 +6,26 @@ using StatsBase: Histogram
     SIGMA = 10.0
     A = 1000.0
 
+    @testset "_check_spectrum" begin
+        check = GammaPeakFits._check_spectrum
+
+        @test check(Histogram(0.0:0.5:2.0, [1, 2, 3, 4])) == 0.5
+        @test check(Histogram([0.0, 1.0], [0])) == 1.0  # single bin
+        # Float weights that are whole numbers, e.g. from simulations
+        @test check(Histogram(0.0:1.0:2.0, [1.0, 2.0])) == 1.0
+        # Float-rounded edges
+        @test check(
+            Histogram(collect(range(1000.0; step = 0.1, length = 101)), ones(Int, 100)),
+        ) ≈ 0.1
+
+        @test_throws ArgumentError check(Histogram([0.0], Int[]))  # no bins
+        @test_throws ArgumentError check(Histogram([0.0, 1.0, 3.0], [1, 2]))  # uneven
+        @test_throws ArgumentError check(Histogram(0.0:1.0:2.0, [1.0, 2.0], :left, true))
+        # density
+        @test_throws ArgumentError check(Histogram(0.0:1.0:2.0, [1.5, 2.0]))  # not whole
+        @test_throws ArgumentError check(Histogram(0.0:1.0:2.0, [-1, 2]))  # negative
+    end
+
     @testset "SpectrumData" begin
 
         @testset "inner constructor" begin

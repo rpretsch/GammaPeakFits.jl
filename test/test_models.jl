@@ -7,6 +7,7 @@ using StatsBase: Histogram
     C_CONST = 100.0
     BIN_SIZE = 0.5
     EDGES = (MU-3*SIGMA):BIN_SIZE:(MU+3*SIGMA)
+    UNEVEN_EDGES = [0.0, 1.0, 3.0]
 
     @testset "expected_counts" begin
         background = PolynomialShape(C_CONST)
@@ -15,7 +16,8 @@ using StatsBase: Histogram
         @test expected_counts(background, EDGES) ≈ expected
         @test expected_counts(background, Histogram(EDGES, zeros(Int, length(EDGES) - 1))) ≈
               expected
-        @test_throws ArgumentError expected_counts(background, [0.0, 1.0, 3.0])  # uneven
+        # Uneven bins, rejected by _check_edges
+        @test_throws ArgumentError expected_counts(background, UNEVEN_EDGES)
     end
 
 end

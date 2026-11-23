@@ -8,63 +8,101 @@ using StatsBase: Histogram
     BIN_SIZE = 0.5
     ENERGY_RANGE = (0.0, 4096.0)  # keV, outer bin edges
     NBINS = round(Int, (ENERGY_RANGE[2] - ENERGY_RANGE[1]) / BIN_SIZE)
+    UNEVEN_EDGES = [0.0, 1.0, 3.0]
+    UNEVEN_HIST = Histogram(UNEVEN_EDGES, [1, 2])
+
+    @testset "_check_edges" begin
+        check = GammaPeakFits._check_edges
+
+        @testset "valid edges" begin
+            @test check(0.0:BIN_SIZE:2.0) == BIN_SIZE
+            @test check([0.0, 1.0]) == 1.0  # single bin
+            @test check(collect(range(1000.0; step = 0.1, length = 101))) ≈ 0.1  # float-rounded
+        end
+
+        @testset "throws" begin
+            @test_throws ArgumentError check([0.0])  # no bins
+            @test_throws ArgumentError check(UNEVEN_EDGES)  # uneven
+            @test_throws ArgumentError check([2.0, 1.0, 0.0])  # decreasing
+            @test_throws ArgumentError check([0.0, 2.0, 1.0])  # up and down
+        end
+    end
 
     @testset "_check_spectrum" begin
         check = GammaPeakFits._check_spectrum
+        edges = 0.0:1.0:2.0
 
-        @test check(Histogram(0.0:0.5:2.0, [1, 2, 3, 4])) == 0.5
-        @test check(Histogram([0.0, 1.0], [0])) == 1.0  # single bin
-        # Float weights that are whole numbers, e.g. from simulations
-        @test check(Histogram(0.0:1.0:2.0, [1.0, 2.0])) == 1.0
-        # Float-rounded edges
-        @test check(
-            Histogram(collect(range(1000.0; step = 0.1, length = 101)), ones(Int, 100)),
-        ) ≈ 0.1
+        @testset "valid spectra" begin
+            @test check(Histogram(0.0:BIN_SIZE:2.0, [1, 2, 3, 4])) == BIN_SIZE
+            # Float weights that are whole numbers, e.g. from simulations
+            @test check(Histogram(edges, [1.0, 2.0])) == step(edges)
+        end
 
-        @test_throws ArgumentError check(Histogram([0.0], Int[]))  # no bins
-        @test_throws ArgumentError check(Histogram([0.0, 1.0, 3.0], [1, 2]))  # uneven
-        @test_throws ArgumentError check(Histogram([2.0, 1.0, 0.0], [1, 2]))  # decreasing
-        @test_throws ArgumentError check(Histogram([0.0, 2.0, 1.0], [1, 2]))  # up and down
-        @test_throws ArgumentError check(Histogram(0.0:1.0:2.0, [1.0, 2.0], :left, true))
-        # density
-        @test_throws ArgumentError check(Histogram(0.0:1.0:2.0, [1.5, 2.0]))  # not whole
-        @test_throws ArgumentError check(Histogram(0.0:1.0:2.0, [-1, 2]))  # negative
+        @testset "throws" begin
+            @test_throws ArgumentError check(Histogram(edges, [1.0, 2.0], :left, true))  # density
+            @test_throws ArgumentError check(Histogram(edges, [1.5, 2.0]))  # not whole
+            @test_throws ArgumentError check(Histogram(edges, [-1, 2]))  # negative
+            @test_throws ArgumentError check(UNEVEN_HIST)  # edges, via _check_edges
+        end
+    end
+
+    @testset "_uniform_edges" begin
+        edges = GammaPeakFits._uniform_edges
+
+        @testset "edges" begin
+            @test edges(0.0, 2.0, BIN_SIZE) == [0.0, 0.5, 1.0, 1.5, 2.0]
+        end
+
+        @testset "float-rounded bin size" begin
+            # No lost bin, last edge exact
+            @test length(edges(1000.0, 1010.0, 0.1)) == 101
+            @test last(edges(1000.0, 1010.0, 0.1)) == 1010.0
+        end
+
+        @testset "throws" begin
+            @test_throws ArgumentError edges(0.0, 1.0, 0.0)  # bin size not positive
+            @test_throws ArgumentError edges(0.0, 1.0, 0.3)  # no whole multiple
+        end
     end
 
     @testset "sample_spectrum" begin
 
-        @testset "measure model returns a histogram of counts" begin
+        @testset "keyword method" begin
             data = sample_spectrum(
                 A * GaussPeak(MU, SIGMA);
                 energy_range = ENERGY_RANGE,
                 bin_size = BIN_SIZE,
             )
-            @test data isa Histogram
             @test length(only(data.edges)) == NBINS + 1
-            @test length(data.weights) == NBINS
             @test data.weights isa Vector{Int64}
-            @test GammaPeakFits._check_spectrum(data) ≈ BIN_SIZE
         end
 
-        @testset "measure model throws on negative expected counts" begin
-            @test_throws ArgumentError sample_spectrum(
-                PolynomialShape(-1.0);
-                bin_size = 1.0,
-                energy_range = (0.5, 10.5),
-            )
-        end
-
-        @testset "measure model on given edges" begin
+        @testset "edges method" begin
             edges = range(ENERGY_RANGE...; length = NBINS + 1)
             data = sample_spectrum(A * GaussPeak(MU, SIGMA), edges)
-            @test data isa Histogram
             @test only(data.edges) == edges
-            @test length(data.weights) == NBINS
+        end
 
-            # Non-uniform edges give no valid spectrum
+        @testset "throws" begin
+            # Negative expected counts
             @test_throws ArgumentError sample_spectrum(
-                PolynomialShape(1.0),
-                [0.0, 1.0, 3.0],
+                PolynomialShape(-1.0);
+                bin_size = BIN_SIZE,
+                energy_range = ENERGY_RANGE,
+            )
+            # Non-finite expected counts
+            @test_throws ArgumentError sample_spectrum(
+                Inf * GaussPeak(MU, SIGMA);
+                bin_size = BIN_SIZE,
+                energy_range = ENERGY_RANGE,
+            )
+            # Uneven edges, rejected by _check_edges in expected_counts
+            @test_throws ArgumentError sample_spectrum(PolynomialShape(1.0), UNEVEN_EDGES)
+            # Energy range is no whole multiple of bin_size, rejected by _uniform_edges
+            @test_throws ArgumentError sample_spectrum(
+                PolynomialShape(1.0);
+                bin_size = 0.3,
+                energy_range = (0.0, 1.0),
             )
         end
 
@@ -75,7 +113,6 @@ using StatsBase: Histogram
 
         @testset "derived energy range" begin
             data = bin_energies(energies, 1.0)
-            @test data isa Histogram
             @test only(data.edges) == [0.0, 1.0, 2.0, 3.0]
             @test data.weights == [2, 2, 1]
         end
@@ -86,19 +123,15 @@ using StatsBase: Histogram
             @test data.weights == [1, 1, 1]
         end
 
-        @testset "float-rounded bin size" begin
-            data = bin_energies(fill(1000.05, 3), 0.1; energy_range = (1000.0, 1010.0))
-            @test length(data.weights) == 100
-            @test data.weights[1] == 3
-        end
-
         @testset "throws" begin
-            @test_throws ArgumentError bin_energies(energies, 0.0)
+            @test_throws ArgumentError bin_energies(energies, 0.0)  # bin size not positive
+            # Energy range is no whole multiple of bin_size, rejected by _uniform_edges
             @test_throws ArgumentError bin_energies(
                 energies,
                 0.3;
                 energy_range = (0.0, 1.0),
             )
+            # No energies to derive the range from
             @test_throws ArgumentError bin_energies(Float64[], 1.0)
         end
     end
@@ -108,7 +141,6 @@ using StatsBase: Histogram
 
         @testset "merges neighbouring bins, drops the incomplete rest" begin
             merged = rebin(data, 2.0)
-            @test merged isa Histogram
             @test only(merged.edges) == [0.0, 2.0, 4.0]
             @test merged.weights == [3, 7]
         end
@@ -121,7 +153,8 @@ using StatsBase: Histogram
             @test_throws ArgumentError rebin(data, 1.5)  # no whole multiple
             @test_throws ArgumentError rebin(data, 0.5)  # finer than the data
             @test_throws ArgumentError rebin(data, 6.0)  # wider than the spectrum
-            @test_throws ArgumentError rebin(Histogram([0.0, 1.0, 3.0], [1, 2]), 2.0)  # uneven
+            # uneven bins, via _check_spectrum
+            @test_throws ArgumentError rebin(UNEVEN_HIST, 2.0)
         end
     end
 

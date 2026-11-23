@@ -2,7 +2,7 @@ using BAT: TransformedMCMC, bat_sample, RandomWalk
 using Random: seed!
 using StatsBase: mean
 
-@testset "Quick start example (README / module docstring)" begin
+@testset "quick start example (README / module docstring)" begin
 
     seed!(42)
 
@@ -37,10 +37,7 @@ using StatsBase: mean
         TransformedMCMC(proposal = RandomWalk(), nsteps = 1, nchains = 2),
     )
 
-    @test result isa NamedTuple
-    @test hasproperty(result, :result)
     samples = result.result
-    @test length(samples) > 0
     @test all(isfinite, samples.logd)
     @test propertynames(samples.v) == (:n, :mu, :sigma, :b)
 

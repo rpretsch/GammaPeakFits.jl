@@ -1,17 +1,46 @@
 """
+    _check_edges(edges::AbstractVector{<:Real}) -> Real
+
+Check that `edges` are valid bin edges: at least two entries, strictly increasing and
+evenly spaced. The spacing is compared with `≈`, so that rounded float edges are accepted.
+
+# Arguments
+- `edges::AbstractVector{<:Real}`: bin edges in keV
+
+# Throws
+- An `ArgumentError` if `edges` has fewer than two entries
+- An `ArgumentError` if `edges` is not strictly increasing
+- An `ArgumentError` if the edges are not evenly spaced
+
+# Returns
+- The bin width in keV (in the number type of the edges), the mean spacing of the edges
+"""
+function _check_edges(edges::AbstractVector{<:Real})
+
+    length(edges) >= 2 || throw(ArgumentError("Bin edges need at least two entries"))
+
+    bin_sizes = diff(edges)
+    all(>(0), bin_sizes) || throw(ArgumentError("Bin edges must be strictly increasing"))
+
+    bin_size = mean(bin_sizes)
+    all(≈(bin_size), bin_sizes) || throw(ArgumentError("Bin edges are not evenly spaced"))
+
+    return bin_size
+
+end
+
+"""
     _check_spectrum(hist::Histogram{<:Real,1}) -> Real
 
-Check that `hist` is a binned spectrum the fit functions can use: at least one bin, uniform 
-bins, counts per bin (no density) that are non-negative whole numbers. The bin spacing is 
-compared with `≈`, so that rounded float edges are accepted.
+Check that `hist` is a binned spectrum the fit functions can use: valid bin edges (see
+[`_check_edges`](@ref)) and counts per bin (no density) that are non-negative whole
+numbers.
 
 # Arguments
 - `hist::Histogram{<:Real,1}`: one-dimensional histogram of counts per bin
 
 # Throws
-- An `ArgumentError` if `hist` has no bins
-- An `ArgumentError` if the edges are not increasing
-- An `ArgumentError` if the bins are not evenly spaced
+- The `ArgumentError`s of [`_check_edges`](@ref)
 - An `ArgumentError` if `hist` is a density
 - An `ArgumentError` if a weight is no non-negative whole number
 
@@ -20,14 +49,7 @@ compared with `≈`, so that rounded float edges are accepted.
 """
 function _check_spectrum(hist::Histogram{<:Real,1})
 
-    edges = only(hist.edges)
-    length(edges) >= 2 || throw(ArgumentError("`hist` has no bins"))
-
-    bin_sizes = diff(edges)
-    bin_size = mean(bin_sizes)
-    bin_size > 0 || throw(ArgumentError("The edges of `hist` are not increasing"))
-    all(≈(bin_size), bin_sizes) ||
-        throw(ArgumentError("The bins of `hist` are not evenly spaced"))
+    bin_size = _check_edges(only(hist.edges))
 
     hist.isdensity && throw(ArgumentError("`hist` is a density, counts per bin are needed"))
 

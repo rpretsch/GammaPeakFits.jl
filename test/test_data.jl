@@ -24,6 +24,7 @@ using StatsBase: Histogram
         @test_throws ArgumentError check(Histogram([0.0], Int[]))  # no bins
         @test_throws ArgumentError check(Histogram([0.0, 1.0, 3.0], [1, 2]))  # uneven
         @test_throws ArgumentError check(Histogram([2.0, 1.0, 0.0], [1, 2]))  # decreasing
+        @test_throws ArgumentError check(Histogram([0.0, 2.0, 1.0], [1, 2]))  # up and down
         @test_throws ArgumentError check(Histogram(0.0:1.0:2.0, [1.0, 2.0], :left, true))
         # density
         @test_throws ArgumentError check(Histogram(0.0:1.0:2.0, [1.5, 2.0]))  # not whole

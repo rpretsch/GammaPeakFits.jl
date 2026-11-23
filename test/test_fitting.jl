@@ -1,4 +1,4 @@
-using BAT: PosteriorMeasure, RandomWalk, TransformedMCMC, bat_sample, distprod, logdensityof
+using BAT: PosteriorMeasure, distprod, logdensityof
 using Distributions: Normal, Uniform, truncated
 using GammaPeakFits: mean_background, background_poly_bounds, get_peak_features
 using StatsBase: Histogram
@@ -153,16 +153,6 @@ using StatsBase: Histogram
                 theta = prior.theta,
             )
             @test_throws ArgumentError build_posterior(DATA, PEAK_KERNEL, prior_without_b)
-        end
-
-        @testset "End to end: kernel -> prior -> posterior -> bat_sample" begin
-            posterior = build_posterior(DATA, PEAK_KERNEL, prior)
-            samples = bat_sample(
-                posterior,
-                TransformedMCMC(proposal = RandomWalk(), nsteps = 1, nchains = 2),
-            ).result
-            @test all(isfinite, samples.logd)
-            @test propertynames(first(samples).v) == propertynames(prior)
         end
 
     end

@@ -22,6 +22,43 @@ using StatsBase: Histogram
     BACKGROUND_KERNEL =
         @pf PolynomialShape($b, $b1, $b2; x0 = MU) + $h * GaussianStep(MU, SIGMA)
 
+    @testset "default blocks" begin
+
+        @testset "peak_priors" begin
+            priors = peak_priors(DATA; mu = MU, sigma = SIGMA)
+            _, peak_area, _ = get_peak_features(DATA; mu = MU, sigma = SIGMA)
+
+            @test keys(priors) == (:n, :alpha, :mu, :sigma, :theta)
+            @test priors.n == Uniform(0, 3 * peak_area)
+            @test priors.alpha == Uniform(0, 1)
+            @test priors.mu == Normal(MU, 0.6)
+            @test priors.sigma == truncated(Normal(SIGMA, 0.6), eps(), Inf)
+            @test priors.theta == Uniform(eps(), 5 * SIGMA)
+        end
+
+        @testset "background_priors" begin
+            half_range = (WINDOW + BIN_SIZE) / 2  # DATA covers MU ± (WINDOW + BIN_SIZE) / 2
+
+            # Without a peak: level over all bins
+            priors = background_priors(DATA)
+            level = mean_background(DATA.weights, BIN_SIZE)
+            lin_bound, quad_bound = background_poly_bounds(level, half_range)
+            @test keys(priors) == (:b, :b1, :b2, :h)
+            @test priors.b == Uniform(0, 2 * level)
+            @test priors.b1 == Uniform(-lin_bound, lin_bound)
+            @test priors.b2 == Uniform(-quad_bound, quad_bound)
+            @test priors.h == Uniform(0, 4 * level)
+
+            # With a peak: level outside mu ± 3 sigma
+            priors = background_priors(DATA; mu = MU, sigma = SIGMA)
+            level = last(get_peak_features(DATA; mu = MU, sigma = SIGMA))
+            @test priors.b == Uniform(0, 2 * level)
+
+            @test_throws ArgumentError background_priors(DATA; mu = MU)
+        end
+
+    end
+
     @testset "build_prior for @pf kernels" begin
 
         @testset "Names in kernel order with data-driven defaults" begin

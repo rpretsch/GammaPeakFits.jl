@@ -130,6 +130,8 @@ export expected_counts
 
 # Fitting
 export PriorPair
+export peak_priors
+export background_priors
 export build_prior
 export build_posterior
 

@@ -1,4 +1,126 @@
 """
+    peak_priors(hist::Histogram{<:Real,1}; mu::Real, sigma::Real) -> NamedTuple
+
+Data-driven default priors for the parameters of one peak, estimated from `hist` around
+the expected centroid `mu` and width `sigma`:
+
+| Name    | Default prior                               |
+| ------- | ------------------------------------------- |
+| `n`     | `Uniform(0, 3 * peak_area)`                 |
+| `alpha` | `Uniform(0, 1)`                             |
+| `mu`    | `Normal(mu, 0.6)`                           |
+| `sigma` | `truncated(Normal(sigma, 0.6), eps(), Inf)` |
+| `theta` | `Uniform(eps(), 5 * sigma)`                 |
+
+`peak_area` is `sqrt(2π) * sigma` times the highest count rate within `mu ± 3 sigma` above
+the mean background outside that region, both floored at one count per bin. Entries a
+model does not use (e.g. `alpha`, `theta` without a tail) are ignored by
+[`build_prior`](@ref); single entries are replaced with `merge`.
+
+# Arguments
+- `hist::Histogram{<:Real,1}`: spectrum of counts with uniform bins, e.g. from
+  [`cut_data`](@ref)
+
+# Keyword Arguments
+- `mu::Real`: expected peak centroid in keV
+- `sigma::Real`: expected peak width (standard deviation) in keV
+
+# Throws
+- An `ArgumentError` if `hist` has no bins, non-increasing or uneven bin edges, is a
+  density, or has weights that are no non-negative whole numbers
+- An `ArgumentError` if `sigma` is not positive
+- An `ArgumentError` if `mu ± 3 sigma` is not within the bin centers of `hist`, contains no
+  bin center, or contains all of them
+
+# Returns
+- A `NamedTuple` `(n, alpha, mu, sigma, theta)` of distributions
+"""
+function peak_priors(hist::Histogram{<:Real,1}; mu::Real, sigma::Real)
+
+    _, peak_area, _ = get_peak_features(hist; mu, sigma)
+
+    return (
+        n = Uniform(0, 3 * peak_area),
+        alpha = Uniform(0, 1),
+        mu = Normal(mu, 0.6),
+        sigma = truncated(Normal(sigma, 0.6), eps(), Inf),
+        theta = Uniform(eps(), 5 * sigma),
+    )
+
+end
+
+"""
+    background_priors(
+        hist::Histogram{<:Real,1};
+        mu::Union{Real,Nothing} = nothing,
+        sigma::Union{Real,Nothing} = nothing,
+    ) -> NamedTuple
+
+Data-driven default priors for the background parameters, from the mean background level
+`level` of `hist` (counts/keV) and the half-width `h` of its energy range:
+
+| Name | Default prior                    | Meaning                                  |
+| ---- | -------------------------------- | ---------------------------------------- |
+| `b`  | `Uniform(0, 2 * level)`          | constant term                            |
+| `b1` | `Uniform(-2 * level / h, ...)`   | linear term around the window center     |
+| `b2` | `Uniform(-2 * level / h^2, ...)` | quadratic term around the window center  |
+| `h`  | `Uniform(0, 4 * level)`          | Compton step height                      |
+
+With `mu` and `sigma`, the level is estimated outside the peak region `mu ± 3 sigma`,
+otherwise over all bins; it is floored at one count per bin. The `b1`/`b2` bounds let each
+term vary by up to twice the level across the range; they assume that the model expands
+the polynomial around the center of the range, e.g.
+`PolynomialShape(\$b, \$b1, \$b2; x0 = center)`.
+
+# Arguments
+- `hist::Histogram{<:Real,1}`: spectrum of counts with uniform bins, e.g. from
+  [`cut_data`](@ref)
+
+# Keyword Arguments
+- `mu::Union{Real,Nothing} = nothing`: centroid of a peak to exclude, in keV
+- `sigma::Union{Real,Nothing} = nothing`: width of a peak to exclude, in keV
+
+# Throws
+- An `ArgumentError` if only one of `mu` and `sigma` is given
+- An `ArgumentError` if `hist` has no bins, non-increasing or uneven bin edges, is a
+  density, or has weights that are no non-negative whole numbers
+- With `mu` and `sigma`: an `ArgumentError` if `sigma` is not positive, or if
+  `mu ± 3 sigma` is not within the bin centers of `hist`, contains no bin center, or
+  contains all of them
+
+# Returns
+- A `NamedTuple` `(b, b1, b2, h)` of distributions
+"""
+function background_priors(
+    hist::Histogram{<:Real,1};
+    mu::Union{Real,Nothing} = nothing,
+    sigma::Union{Real,Nothing} = nothing,
+)
+
+    isnothing(mu) == isnothing(sigma) || throw(
+        ArgumentError("Give both `mu` and `sigma` to exclude a peak region, or neither"),
+    )
+
+    bin_size = _check_spectrum(hist)
+    level = if isnothing(mu)
+        mean_background(hist.weights, bin_size)
+    else
+        last(get_peak_features(hist; mu, sigma))
+    end
+
+    edges = only(hist.edges)
+    lin_bound, quad_bound = background_poly_bounds(level, (last(edges) - first(edges)) / 2)
+
+    return (
+        b = Uniform(0, 2 * level),
+        b1 = Uniform(-lin_bound, lin_bound),
+        b2 = Uniform(-quad_bound, quad_bound),
+        h = Uniform(0, 4 * level),
+    )
+
+end
+
+"""
     build_prior(
         hist::Histogram{<:Real,1},
         model::PropertyFunction,

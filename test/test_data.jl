@@ -177,6 +177,41 @@ using StatsBase: Histogram
 
         end
 
+        @testset "measure model returns a histogram of counts" begin
+            data = sample_spectrum(
+                A * GaussPeak(MU, SIGMA);
+                energy_range = ENERGY_RANGE,
+                bin_size = BIN_SIZE,
+            )
+            @test data isa Histogram
+            @test length(only(data.edges)) == NBINS + 1
+            @test length(data.weights) == NBINS
+            @test data.weights isa Vector{Int64}
+            @test GammaPeakFits._check_spectrum(data) ≈ BIN_SIZE
+        end
+
+        @testset "measure model throws on negative expected counts" begin
+            @test_throws ArgumentError sample_spectrum(
+                PolynomialShape(-1.0);
+                bin_size = 1.0,
+                energy_range = (0.5, 10.5),
+            )
+        end
+
+        @testset "measure model on given edges" begin
+            edges = range(ENERGY_RANGE...; length = NBINS + 1)
+            data = sample_spectrum(A * GaussPeak(MU, SIGMA), edges)
+            @test data isa Histogram
+            @test only(data.edges) == edges
+            @test length(data.weights) == NBINS
+
+            # Non-uniform edges give no valid spectrum
+            @test_throws ArgumentError sample_spectrum(
+                PolynomialShape(1.0),
+                [0.0, 1.0, 3.0],
+            )
+        end
+
     end
 
     @testset "bin_energies" begin

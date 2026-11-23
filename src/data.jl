@@ -329,3 +329,65 @@ function sample_spectrum(
     return Histogram(bin_edges, weights)
 
 end
+
+"""
+    sample_spectrum(model::AbstractMeasure, edges::AbstractVector{<:Real}) -> Histogram
+    sample_spectrum(
+        model::AbstractMeasure;
+        energy_range::Tuple{Real,Real},
+        bin_size::Real,
+    ) -> Histogram
+
+Draw a synthetic spectrum from a measure model: Poisson-distributed counts around the
+expected counts per bin from [`expected_counts`](@ref).
+
+The `edges` method samples on given bin edges, e.g. `only(hist.edges)` to reproduce the
+binning of a measured spectrum. The bins must be uniform, so that the result is a valid
+spectrum for the fit functions (see [`_check_spectrum`](@ref)). The keyword method builds
+uniform edges from `bin_size` and `energy_range`.
+
+# Arguments
+- `model::AbstractMeasure`: spectral model, e.g.
+  `n * GaussPeak(mu, sigma) + PolynomialShape(b)`
+- `edges::AbstractVector{<:Real}`: uniform, increasing bin edges in keV
+
+# Keyword Arguments
+- `energy_range::Tuple{Real,Real}`: lower edge of the first and upper edge of the last bin
+  in keV
+- `bin_size::Real`: bin width in keV
+
+# Throws
+- The `ArgumentError`s of [`expected_counts`](@ref) and [`_check_spectrum`](@ref)
+  (`edges` method)
+- The `ArgumentError`s of [`_uniform_edges`](@ref) (keyword method)
+- An `ArgumentError` if the model produces negative or non-finite expected counts
+
+# Returns
+- A `Histogram` with the sampled counts per bin
+"""
+function sample_spectrum(model::AbstractMeasure, edges::AbstractVector{<:Real})
+
+    counts = expected_counts(model, edges)
+
+    any(x -> !isfinite(x) || x < 0, counts) && throw(
+        ArgumentError(
+            "Model produced negative or non-finite expected counts; check parameters.",
+        ),
+    )
+
+    hist = Histogram(edges, rand.(Poisson.(counts)))
+    _check_spectrum(hist)  # enforces uniform bins, as the result is a spectrum
+
+    return hist
+
+end
+
+function sample_spectrum(
+    model::AbstractMeasure;
+    bin_size::Real,
+    energy_range::Tuple{Real,Real},
+)
+
+    return sample_spectrum(model, _uniform_edges(energy_range..., bin_size))
+
+end

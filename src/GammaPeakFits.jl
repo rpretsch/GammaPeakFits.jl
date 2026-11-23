@@ -1,92 +1,65 @@
 """
-Module for Bayesian fitting of gamma-ray peaks in a pre-binned energy spectrum.
+Bayesian fitting of gamma-ray peaks in binned energy spectra.
 
-Provides parametric models for gamma-peak shapes (Gaussian core, Compton edge, ex-Gaussian 
-tails) and polynomial backgrounds, along with utilities to construct `BAT.jl` priors and 
-posteriors.
+Data are one-dimensional `StatsBase.Histogram`s of counts with uniform bins. Models are
+`@pf` kernels `params -> measure`, e.g. combined from the re-exported LegendSpecFits
+shapes with `+` and `*`; the likelihood is LegendSpecFits' binned Poisson likelihood,
+sampled with `BAT.jl`.
 
 # Exports
 
-## Types
-- Presence markers: [`AbstractComponent`](@ref), [`Enabled`](@ref), [`Disabled`](@ref)
-- Integration methods: [`AbstractIntegrationMethod`](@ref), [`Analytical`](@ref),
-  [`Numerical`](@ref), [`Midpoint`](@ref)
-- Component parameters: [`GaussianParams`](@ref), [`ComptonParams`](@ref),
-  [`AbstractExGaussianParams`](@ref), [`LowETailParams`](@ref),
-  [`HighETailParams`](@ref), [`QuadPolyParams`](@ref), [`LinPolyParams`](@ref),
-  [`ConstPolyParams`](@ref)
-- Containers: [`PeakParams`](@ref), [`BackgroundParams`](@ref), [`ModelParams`](@ref)
-- Data: [`SpectrumData`](@ref)
-- Configuration: [`FitConfigs`](@ref)
-
 ## Data
-- [`bin_energies`](@ref), [`rebin`](@ref), [`sample_spectrum`](@ref)
+- [`bin_energies`](@ref), [`rebin`](@ref), [`cut_data`](@ref), [`sample_spectrum`](@ref)
 
-## Model evaluation
-- [`full_model`](@ref)
+## Models
+- Re-exported: `GaussPeak`, `LowETailPeak`, `HighETailPeak`, `GaussianStep`,
+  `PolynomialShape` (LegendSpecFits) and `@pf` (PropertyFunctions)
+- [`expected_counts`](@ref)
 
 ## Fitting
-- [`PriorPair`](@ref), [`poisson_ll`](@ref), [`build_prior`](@ref), 
+- [`peak_priors`](@ref), [`background_priors`](@ref), [`build_prior`](@ref),
   [`build_posterior`](@ref)
-
-## Utils
-- [`cut_data`](@ref)
 
 # Quick start
 
 ```julia
 using GammaPeakFits
 
-# Configurations
-configs = FitConfigs(
-              mu = 2048.0,  # keV
-              sigma = 5.0,  # keV
-          )
+# Expected peak
+mu = 2048.0     # keV
+sigma = 5.0     # keV
 
-# Generate data
-A = 1000.0              # counts
-C_const = 100.0         # counts/keV
+# Generate data, or use a measured spectrum, e.g. `bin_energies(energies, 0.5)`
+peak_counts = 1000.0          # counts
+background = 100.0            # counts/keV
 energy_range = (0.0, 4096.0)  # keV, outer bin edges
-bin_size = 0.5          # keV
+bin_size = 0.5                # keV
 
-gaussian_params = GaussianParams(A = A, mu = configs.mu, sigma = configs.sigma)
-peak_params = PeakParams(gaussian = gaussian_params)
-constPoly_params = ConstPolyParams(C = C_const)
-background_params = BackgroundParams(constPoly = constPoly_params)
-generation_modelParams = ModelParams(peak = peak_params, background = background_params)
-data = sample_spectrum(generation_modelParams, bin_size; energy_range)
-
-# or use existing data instead
-# data = SpectrumData(
-#            loaded_binCenters,  # keV
-#            loaded_weights,     # counts/bin
-#        )
+truth = peak_counts * GaussPeak(mu, sigma) + PolynomialShape(background)
+data = sample_spectrum(truth; bin_size, energy_range)
 
 # cut appropriate fit window
-fit_data = cut_data(data, configs)
+fit_data = cut_data(data; center = mu, width = 10 * sigma)
 
-# Specify which components to include for fitting
-peak_params = PeakParams(gaussian = Enabled())
-background_params = BackgroundParams(constPoly = Enabled())
-fit_modelParams = ModelParams(peak = peak_params, background = background_params)
+# Model kernel: parameters -> spectral model
+model = @pf \$n * GaussPeak(\$mu, \$sigma) + PolynomialShape(\$b)
 
-# Build the prior
-prior = build_prior(fit_data, fit_modelParams, configs)
-
-# Build the posterior
-posterior = build_posterior(fit_data, prior, configs)
+# Data-driven default priors, the prior takes the entries the model uses
+defaults = merge(peak_priors(fit_data; mu, sigma), background_priors(fit_data; mu, sigma))
+prior = build_prior(model, defaults)
+posterior = build_posterior(fit_data, model, prior)
 
 # Sample with BAT.jl
-# using BAT: bat_sample
+# using BAT: bat_sample, TransformedMCMC, RandomWalk
 # using StatsBase: mean
 #
-# result = bat_sample(
-#              posterior, 
-#              TransformedMCMC(proposal=RandomWalk(), nsteps=10^5, nchains=4)
-#          ).result
+# samples = bat_sample(
+#               posterior,
+#               TransformedMCMC(proposal = RandomWalk(), nsteps = 10^5, nchains = 4),
+#           ).result
 #
-# mean_result = mean(result)
-# mean_params = ModelParams(mean_result)
+# # Expected counts of the fitted model, e.g. for plotting
+# fitted = expected_counts(model(mean(samples)), fit_data)
 ```
 """
 module GammaPeakFits

@@ -131,6 +131,7 @@ compared with `≈`, so that rounded float edges are accepted.
 
 # Throws
 - An `ArgumentError` if `hist` has no bins
+- An `ArgumentError` if the edges are not increasing
 - An `ArgumentError` if the bins are not evenly spaced
 - An `ArgumentError` if `hist` is a density
 - An `ArgumentError` if a weight is no non-negative whole number
@@ -145,6 +146,7 @@ function _check_spectrum(hist::Histogram{<:Real,1})
 
     bin_sizes = diff(edges)
     bin_size = mean(bin_sizes)
+    bin_size > 0 || throw(ArgumentError("The edges of `hist` are not increasing"))
     all(≈(bin_size), bin_sizes) ||
         throw(ArgumentError("The bins of `hist` are not evenly spaced"))
 

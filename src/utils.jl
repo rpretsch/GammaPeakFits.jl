@@ -1,33 +1,31 @@
 """
-    cut_data(hist::Histogram{<:Real,1}, configs::FitConfigs) -> Histogram
+    cut_data(hist::Histogram{<:Real,1}; center::Real, width::Real) -> Histogram
 
-Slice a spectrum to the fit window centered on a peak.
-
-Only bins that lie entirely within
-`[configs.mu - configs.window_size/2, configs.mu + configs.window_size/2]` are retained.
+Slice a spectrum to a fit window, e.g. around a peak. Only bins that lie entirely within
+`[center - width/2, center + width/2]` are retained.
 
 # Arguments
-- `hist::Histogram{<:Real,1}`: binned spectrum, see [`_check_spectrum`](@ref)
-- `configs::FitConfigs`: fitting configuration providing the centroid `mu` and the full
-  window width `window_size`
+- `hist::Histogram{<:Real,1}`: spectrum of counts with uniform bins
+
+# Keyword Arguments
+- `center::Real`: center of the fit window in keV, e.g. the expected peak centroid
+- `width::Real`: full width of the fit window in keV
 
 # Throws
-- The `ArgumentError`s of [`_check_spectrum`](@ref)
+- An `ArgumentError` if `hist` has no bins, non-increasing or uneven bin edges, is a
+  density, or has weights that are no non-negative whole numbers
 - An `ArgumentError` if the window contains no complete bin
 
 # Returns
-- A new `Histogram` containing only the bins in the selected window
-
-# See also
-- [`FitConfigs`](@ref) for the configuration options
+- A new `Histogram` containing only the bins in the window
 """
-function cut_data(hist::Histogram{<:Real,1}, configs::FitConfigs)
+function cut_data(hist::Histogram{<:Real,1}; center::Real, width::Real)
 
     _check_spectrum(hist)
 
     edges = only(hist.edges)
-    lower = configs.mu - configs.window_size / 2
-    upper = configs.mu + configs.window_size / 2
+    lower = center - width / 2
+    upper = center + width / 2
     mask_edges = lower .<= edges .<= upper
     mask_bins = mask_edges[1:(end-1)] .& mask_edges[2:end]
 

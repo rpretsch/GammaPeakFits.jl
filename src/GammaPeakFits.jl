@@ -108,8 +108,6 @@ using ValueShapes: NamedTupleDist
 
 # Spectrum check, binning and synthetic spectra
 include("data.jl")
-# FitConfigs and PriorPair
-include("configs.jl")
 # Expected counts of measure models
 include("models.jl")
 # Prior and posterior construction for @pf model kernels
@@ -122,14 +120,10 @@ export bin_energies
 export rebin
 export sample_spectrum
 
-# Configuration struct
-export FitConfigs
-
 # Model evaluation
 export expected_counts
 
 # Fitting
-export PriorPair
 export peak_priors
 export background_priors
 export build_prior

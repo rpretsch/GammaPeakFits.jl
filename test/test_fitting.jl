@@ -15,12 +15,14 @@ using StatsBase: Histogram
         bin_size = BIN_SIZE,
         energy_range = (MU - WINDOW / 2 - BIN_SIZE / 2, MU + WINDOW / 2 + BIN_SIZE / 2),
     )
-    CONFIGS = FitConfigs(mu = MU, sigma = SIGMA)
     PEAK_KERNEL = @pf $n * (
         (1 - $alpha) * GaussPeak($mu, $sigma) + $alpha * LowETailPeak($mu, $sigma, $theta)
     ) + PolynomialShape($b)
-    BACKGROUND_KERNEL =
-        @pf PolynomialShape($b, $b1, $b2; x0 = MU) + $h * GaussianStep(MU, SIGMA)
+    NESTED_KERNEL = @pf $peak.n * GaussPeak($peak.mu, $peak.sigma) + PolynomialShape($bkg.b)
+    DEFAULTS = (
+        peak = peak_priors(DATA; mu = MU, sigma = SIGMA),
+        bkg = background_priors(DATA; mu = MU, sigma = SIGMA),
+    )
 
     @testset "default blocks" begin
 
@@ -57,78 +59,54 @@ using StatsBase: Histogram
             @test_throws ArgumentError background_priors(DATA; mu = MU)
         end
 
-    end
-
-    @testset "build_prior for @pf kernels" begin
-
-        @testset "Names in kernel order with data-driven defaults" begin
-            prior = build_prior(DATA, PEAK_KERNEL, CONFIGS)
-            _, peak_area, background = get_peak_features(DATA; mu = MU, sigma = SIGMA)
-
-            @test propertynames(prior) == (:n, :alpha, :mu, :sigma, :theta, :b)
-            @test prior.n == Uniform(0, 3 * peak_area)
-            @test prior.alpha == Uniform(0, 1)
-            @test prior.mu == Normal(MU, 0.6)
-            @test prior.sigma == truncated(Normal(SIGMA, 0.6), eps(), Inf)
-            @test prior.theta == Uniform(eps(), 5 * SIGMA)
-            @test prior.b == Uniform(0, 2 * background)
-        end
-
-        @testset "Background-only kernel estimates over the whole range" begin
-            prior = build_prior(DATA, BACKGROUND_KERNEL, CONFIGS)
-            background = mean_background(DATA.weights, BIN_SIZE)
-            lin_bound, quad_bound = background_poly_bounds(background, WINDOW / 2)
-
-            @test propertynames(prior) == (:b, :b1, :b2, :h)
-            @test prior.b == Uniform(0, 2 * background)
-            @test prior.b1 == Uniform(-lin_bound, lin_bound)
-            @test prior.b2 == Uniform(-quad_bound, quad_bound)
-            @test prior.h == Uniform(0, 4 * background)
-        end
-
         @testset "Sanity floors yield valid prior bounds" begin
-            configs = FitConfigs(mu = 3.0, sigma = 0.5)
             EDGES = 0.5:1.0:5.5  # bin centers 1.0:5.0
 
             @testset "Zero background counts" begin
                 data = Histogram(EDGES, [0, 0, 10, 0, 0])
-                prior = build_prior(data, PEAK_KERNEL, configs)
-                @test prior.n.b > 0
+                @test peak_priors(data; mu = 3.0, sigma = 0.5).n.b > 0
                 # Mean background is floored at one count per bin:
-                @test prior.b.b ≈ 2.0
+                @test background_priors(data; mu = 3.0, sigma = 0.5).b.b ≈ 2.0
             end
 
             @testset "No peak above background" begin
                 data = Histogram(EDGES, [4, 4, 0, 0, 4])
-                prior = build_prior(data, PEAK_KERNEL, configs)
-                @test prior.n.b > 0
-                @test prior.b.b > 0
+                @test peak_priors(data; mu = 3.0, sigma = 0.5).n.b > 0
+                @test background_priors(data; mu = 3.0, sigma = 0.5).b.b > 0
             end
         end
 
-        @testset "configs.priors overrides a default" begin
-            override = truncated(Normal(A, 10), 0, Inf)
-            configs = FitConfigs(mu = MU, sigma = SIGMA, priors = [:n => override])
-            prior = build_prior(DATA, PEAK_KERNEL, configs)
-            @test prior.n == override
-            @test prior.alpha == Uniform(0, 1)
+    end
+
+    @testset "build_prior from default blocks" begin
+
+        @testset "Flat kernel takes the used entries" begin
+            prior = build_prior(PEAK_KERNEL, merge(DEFAULTS.peak, DEFAULTS.bkg))
+            @test propertynames(prior) == (:n, :alpha, :mu, :sigma, :theta, :b)
+            @test prior.n == DEFAULTS.peak.n
+            @test prior.b == DEFAULTS.bkg.b
+        end
+
+        @testset "Override via merge" begin
+            defaults = merge(DEFAULTS.peak, DEFAULTS.bkg, (n = Uniform(0, A),))
+            @test build_prior(PEAK_KERNEL, defaults).n == Uniform(0, A)
+        end
+
+        @testset "Nested kernel gives a nested prior" begin
+            prior = build_prior(NESTED_KERNEL, DEFAULTS)
+            @test propertynames(prior) == (:peak, :bkg)
+            @test propertynames(prior.peak) == (:n, :mu, :sigma)
+            @test propertynames(prior.bkg) == (:b,)
+            @test prior.peak.n == DEFAULTS.peak.n
         end
 
         @testset "throws" begin
-            # Name without a default
+            # Missing entry
+            @test_throws ArgumentError build_prior(NESTED_KERNEL, (peak = DEFAULTS.peak,))
+            # Group entry is no NamedTuple
             @test_throws ArgumentError build_prior(
-                DATA,
-                @pf($foo * GaussPeak(MU, SIGMA)),
-                CONFIGS,
-            )
-            # Override for a name not in the kernel
-            configs = FitConfigs(mu = MU, sigma = SIGMA, priors = [:h => Uniform(0, 1)])
-            @test_throws ArgumentError build_prior(DATA, PEAK_KERNEL, configs)
-            # Nested name
-            @test_throws ArgumentError build_prior(
-                DATA,
-                @pf($p.n * GaussPeak(MU, SIGMA)),
-                CONFIGS,
+                NESTED_KERNEL,
+                (peak = DEFAULTS.peak, bkg = Uniform(0, 1)),
             )
         end
 
@@ -136,7 +114,7 @@ using StatsBase: Histogram
 
     @testset "build_posterior for @pf kernels" begin
 
-        prior = build_prior(DATA, PEAK_KERNEL, CONFIGS)
+        prior = build_prior(PEAK_KERNEL, merge(DEFAULTS.peak, DEFAULTS.bkg))
 
         @testset "Posterior of the kernel and the prior" begin
             posterior = build_posterior(DATA, PEAK_KERNEL, prior)
@@ -153,6 +131,20 @@ using StatsBase: Histogram
                 theta = prior.theta,
             )
             @test_throws ArgumentError build_posterior(DATA, PEAK_KERNEL, prior_without_b)
+        end
+
+        @testset "Nested kernel and prior" begin
+            nested_prior = build_prior(NESTED_KERNEL, DEFAULTS)
+            posterior = build_posterior(DATA, NESTED_KERNEL, nested_prior)
+            @test isfinite(logdensityof(posterior, rand(nested_prior)))
+        end
+
+        @testset "Throws when a nested group does not match the kernel" begin
+            nested_prior = build_prior(NESTED_KERNEL, DEFAULTS)
+            peak_without_sigma =
+                distprod(n = nested_prior.peak.n, mu = nested_prior.peak.mu)
+            mismatched = distprod(peak = peak_without_sigma, bkg = nested_prior.bkg)
+            @test_throws ArgumentError build_posterior(DATA, NESTED_KERNEL, mismatched)
         end
 
     end

@@ -10,16 +10,13 @@ using GammaPeakFits: get_peak_features, mean_background, background_poly_bounds
 
     @testset "cut_data" begin
 
-        cut = cut_data(DATA, FitConfigs(mu = MU, sigma = 0.5, window_size = 4.0))
+        cut = cut_data(DATA; center = MU, width = 4.0)
         @test only(cut.edges) == [3.5, 4.5, 5.5, 6.5]
         @test cut.weights == [4, 5, 6]
         @test cut isa Histogram
 
         # Window outside the data contains no complete bin
-        @test_throws ArgumentError cut_data(
-            DATA,
-            FitConfigs(mu = 50.0, sigma = 0.5, window_size = 4.0),
-        )
+        @test_throws ArgumentError cut_data(DATA; center = 50.0, width = 4.0)
 
     end
 

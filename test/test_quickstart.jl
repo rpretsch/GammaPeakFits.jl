@@ -6,11 +6,9 @@ using StatsBase: mean
 
     seed!(42)
 
-    # Configurations
-    configs = FitConfigs(
-        mu = 2048.0,   # keV
-        sigma = 5.0,   # keV
-    )
+    # Expected peak
+    mu = 2048.0     # keV
+    sigma = 5.0     # keV
 
     # Generate data
     peak_counts = 1000.0          # counts
@@ -18,17 +16,19 @@ using StatsBase: mean
     energy_range = (0.0, 4096.0)  # keV, outer bin edges
     bin_size = 0.5                # keV
 
-    truth = peak_counts * GaussPeak(configs.mu, configs.sigma) + PolynomialShape(background)
+    truth = peak_counts * GaussPeak(mu, sigma) + PolynomialShape(background)
     data = sample_spectrum(truth; bin_size, energy_range)
 
     # cut appropriate fit window
-    fit_data = cut_data(data, configs)
+    fit_data = cut_data(data; center = mu, width = 10 * sigma)
 
     # Model kernel: parameters -> spectral model
     model = @pf $n * GaussPeak($mu, $sigma) + PolynomialShape($b)
 
-    # Build the prior / posterior
-    prior = build_prior(fit_data, model, configs)
+    # Data-driven default priors, the prior takes the entries the model uses
+    defaults =
+        merge(peak_priors(fit_data; mu, sigma), background_priors(fit_data; mu, sigma))
+    prior = build_prior(model, defaults)
     posterior = build_posterior(fit_data, model, prior)
 
     # Sample with BAT.jl

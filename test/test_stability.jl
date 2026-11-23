@@ -37,8 +37,11 @@ using GammaPeakFits: _check_spectrum
     end
 
     @testset "build_posterior" begin
-        configs = FitConfigs(mu = MU, sigma = SIGMA)
-        pf_prior = build_prior(HIST, PF_KERNEL, configs)
+        defaults = merge(
+            peak_priors(HIST; mu = MU, sigma = SIGMA),
+            background_priors(HIST; mu = MU, sigma = SIGMA),
+        )
+        pf_prior = build_prior(PF_KERNEL, defaults)
         @test @inferred(build_posterior(HIST, PF_KERNEL, pf_prior)) isa PosteriorMeasure
     end
 

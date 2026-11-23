@@ -121,114 +121,64 @@ function background_priors(
 end
 
 """
-    build_prior(
-        hist::Histogram{<:Real,1},
-        model::PropertyFunction,
-        configs::FitConfigs
-    ) -> NamedTupleDist
+    build_prior(model::PropertyFunction, defaults::NamedTuple) -> NamedTupleDist
 
-Construct a prior over the parameters of a `@pf` model kernel, e.g.
-`@pf \$n * GaussPeak(\$mu, \$sigma) + PolynomialShape(\$b)`.
+Construct the prior over the parameters of a `@pf` model kernel from a, possibly nested,
+`NamedTuple` of default priors, e.g. from [`peak_priors`](@ref) and
+[`background_priors`](@ref).
 
-The parameter names are read from the kernel. Known names get a weakly informative,
-data-driven default (see Details), `configs.priors` overrides any of them. The prior
-follows the order in which the names first appear in the kernel.
+Each parameter path of `model` takes the matching entry of `defaults`: `\$n` takes
+`defaults.n`, `\$peak.n` takes `defaults.peak.n`; groups become nested priors. The prior
+follows the order in which the names first appear in the kernel. Entries the model does
+not use are ignored; single entries are replaced with `merge` beforehand.
 
-Peak features are estimated only if the kernel has a peak amplitude `n`; otherwise the
-background level is estimated over the whole data range, so no peak region needs to be
-contained in the data.
+# Example
+
+    model = @pf \$peak.n * GaussPeak(\$peak.mu, \$peak.sigma) + PolynomialShape(\$bkg.b)
+    defaults = (
+        peak = merge(peak_priors(hist; mu = 2614.5, sigma = 1.2), (n = Uniform(0, 1e5),)),
+        bkg = background_priors(hist; mu = 2614.5, sigma = 1.2),
+    )
+    prior = build_prior(model, defaults)
 
 # Arguments
-- `hist::Histogram{<:Real,1}`: binned spectrum, see [`_check_spectrum`](@ref)
 - `model::PropertyFunction`: model kernel `params -> measure`, built with `@pf`
-- `configs::FitConfigs`: fitting configuration
-
-# Returns
-- A `NamedTupleDist` over the parameters of `model`
+- `defaults::NamedTuple`: distributions per parameter name, `NamedTuple`s per group
 
 # Throws
-- The `ArgumentError`s of [`_check_spectrum`](@ref) and, with `n`, of
-  [`get_peak_features`](@ref)
-- An `ArgumentError` if a parameter is nested (`\$a.b`), which is not supported yet
-- An `ArgumentError` if a parameter has neither a default nor an entry in `configs.priors`
-- An `ArgumentError` if `configs.priors` has an entry for a name not in the kernel
+- An `ArgumentError` if a parameter path of `model` has no entry in `defaults`
+- An `ArgumentError` if the entry of a parameter group is not a `NamedTuple`
 
-# Details
-
-| Name    | Default prior                                       |
-| ------- | --------------------------------------------------- |
-| `n`     | `Uniform(0, 3 * peak_area)`                         |
-| `alpha` | `Uniform(0, 1)`                                     |
-| `mu`    | `Normal(configs.mu, 0.6)`                           |
-| `sigma` | `truncated(Normal(configs.sigma, 0.6), eps(), Inf)` |
-| `theta` | `Uniform(eps(), 5 * configs.sigma)`                 |
-| `b`     | `Uniform(0, 2 * mean_background)`                   |
-| `b1`    | `Uniform(-lin_bound, lin_bound)`                    |
-| `b2`    | `Uniform(-quad_bound, quad_bound)`                  |
-| `h`     | `Uniform(0, 4 * mean_background)`                   |
-
-`peak_area` and `mean_background` come from [`get_peak_features`](@ref) /
-[`mean_background`](@ref), `lin_bound` and `quad_bound` from
-[`background_poly_bounds`](@ref). These bounds assume that the kernel expands the
-polynomial background around the window center, e.g.
-`PolynomialShape(\$b, \$b1, \$b2; x0 = configs.mu)`.
+# Returns
+- A `NamedTupleDist` over the parameters of `model`, nested like its parameter groups
 """
-function build_prior(
-    hist::Histogram{<:Real,1},
-    model::PropertyFunction,
-    configs::FitConfigs,
-)
+function build_prior(model::PropertyFunction, defaults::NamedTuple)
+    paths = map(_property_path, input_property_paths(model))
+    return _select_priors(paths, defaults)
+end
 
-    bin_size = _check_spectrum(hist)
-    names = map(_parameter_name, input_property_paths(model))
-    overrides = Dict(configs.priors)
+# Property path of a kernel input as a tuple of names, `$peak.n` -> `(:peak, :n)`:
+_property_path(::PPath{path}) where {path} = path
 
-    unused = setdiff(keys(overrides), names)
-    isempty(unused) || throw(
-        ArgumentError(
-            "`configs.priors` has entries for names not in the model: $(collect(unused))",
-        ),
-    )
-
-    if :n in names
-        _, peak_area, background =
-            get_peak_features(hist; mu = configs.mu, sigma = configs.sigma)
-    else
-        peak_area = NaN  # not used without a peak amplitude `n`
-        background = mean_background(hist.weights, bin_size)
-    end
-    lin_bound, quad_bound =
-        background_poly_bounds(background, max(configs.window_size / 2, bin_size))
-
+# Prior for the kernel `paths` from `defaults`; `group` is the path of the current group
+# in `defaults`, only for the error messages of the recursion:
+function _select_priors(paths, defaults::NamedTuple; group::Tuple = ())
+    names = unique(map(first, paths))
     priors = map(names) do name
-        haskey(overrides, name) ? overrides[name] :
-        _default_prior(name, configs, peak_area, background, lin_bound, quad_bound)
+        path = (group..., name)
+        haskey(defaults, name) ||
+            throw(ArgumentError("No prior for `$(join(path, '.'))` in `defaults`"))
+        entry = defaults[name]
+        rests = [Base.tail(p) for p in paths if first(p) === name]
+        any(isempty, rests) && return entry  # the kernel uses the entry as a whole
+        entry isa NamedTuple || throw(
+            ArgumentError(
+                "The entry for the group `$(join(path, '.'))` must be a `NamedTuple`, got $(typeof(entry))",
+            ),
+        )
+        return _select_priors(rests, entry; group = path)
     end
-
-    return distprod(; NamedTuple{names}(priors)...)
-
-end
-
-# Flat parameter name of a kernel input path, `$n` -> `:n`:
-function _parameter_name(::PPath{path}) where {path}
-    length(path) == 1 || throw(
-        ArgumentError("Nested model parameter `$(join(path, '.'))` is not supported yet"),
-    )
-    return only(path)
-end
-
-# Default prior of a known parameter name, see `build_prior`:
-function _default_prior(name::Symbol, configs, peak_area, background, lin_bound, quad_bound)
-    name === :n && return Uniform(0, 3 * peak_area)
-    name === :alpha && return Uniform(0, 1)
-    name === :mu && return Normal(configs.mu, 0.6)
-    name === :sigma && return truncated(Normal(configs.sigma, 0.6), eps(), Inf)
-    name === :theta && return Uniform(eps(), 5 * configs.sigma)
-    name === :b && return Uniform(0, 2 * background)
-    name === :b1 && return Uniform(-lin_bound, lin_bound)
-    name === :b2 && return Uniform(-quad_bound, quad_bound)
-    name === :h && return Uniform(0, 4 * background)
-    throw(ArgumentError("No default prior for `$name`, supply one via `configs.priors`"))
+    return distprod(; NamedTuple{Tuple(names)}(priors)...)
 end
 
 """
@@ -249,9 +199,8 @@ Poisson likelihood of `hist` (LegendSpecFits' `binned_poisson_likelihood`) and `
 
 # Throws
 - The `ArgumentError`s of [`_check_spectrum`](@ref)
-- An `ArgumentError` if a parameter of `model` is nested (`\$a.b`), which is not
-  supported yet
-- An `ArgumentError` if the names of `prior` differ from the parameters of `model`
+- An `ArgumentError` if the names of `prior` differ from the parameters of `model`, on any
+  level of its parameter groups
 
 # Returns
 - A `PosteriorMeasure` of the likelihood and `prior`
@@ -263,14 +212,31 @@ function build_posterior(
 )
 
     _check_spectrum(hist)
-
-    names = map(_parameter_name, input_property_paths(model))
-    issetequal(names, propertynames(prior)) || throw(
-        ArgumentError(
-            "The prior's parameters $(propertynames(prior)) differ from the model's $names",
-        ),
-    )
+    _check_prior(prior, map(_property_path, input_property_paths(model)))
 
     return PosteriorMeasure(binned_poisson_likelihood(model, hist), prior)
 
+end
+
+# Check that `prior` has exactly the parameters of the kernel `paths`, on every level;
+# `group` is the path of the current group, only for the error messages of the recursion:
+function _check_prior(prior::NamedTupleDist, paths; group::Tuple = ())
+    names = Tuple(unique(map(first, paths)))
+    level = isempty(group) ? "" : " in `$(join(group, '.'))`"
+    issetequal(names, propertynames(prior)) || throw(
+        ArgumentError(
+            "The prior's parameters $(propertynames(prior))$level differ from the model's $names",
+        ),
+    )
+    for name in names
+        rests = [Base.tail(p) for p in paths if first(p) === name]
+        any(isempty, rests) && continue
+        group_prior = getproperty(prior, name)
+        group_prior isa NamedTupleDist || throw(
+            ArgumentError(
+                "The prior of the group `$(join((group..., name), '.'))` must be nested",
+            ),
+        )
+        _check_prior(group_prior, rests; group = (group..., name))
+    end
 end

@@ -95,7 +95,13 @@ using BAT
 using DensityInterface: logfuncdensity
 using Distributions
 import LegendSpecFits
-using LegendSpecFits: GaussPeak, LowETailPeak, HighETailPeak, GaussianStep, PolynomialShape
+using LegendSpecFits:
+    GaussPeak,
+    LowETailPeak,
+    HighETailPeak,
+    GaussianStep,
+    PolynomialShape,
+    binned_poisson_likelihood
 using MeasureBase: AbstractMeasure
 using PropertyFunctions: @pf, PPath, PropertyFunction, input_property_paths
 using QuadGK: quadgk

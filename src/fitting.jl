@@ -251,7 +251,11 @@ function build_prior(hist::Histogram{<:Real,1}, model::ModelParams, configs::Fit
 end
 
 """
-    build_prior(hist::Histogram{<:Real,1}, model::PropertyFunction, configs::FitConfigs)
+    build_prior(
+        hist::Histogram{<:Real,1},
+        model::PropertyFunction,
+        configs::FitConfigs
+    ) -> NamedTupleDist
 
 Construct a prior over the parameters of a `@pf` model kernel, e.g.
 `@pf \$n * GaussPeak(\$mu, \$sigma) + PolynomialShape(\$b)`.
@@ -388,4 +392,48 @@ function build_posterior(
     end
 
     return PosteriorMeasure(logfuncdensity(_log_likelihood), priors)
+end
+
+"""
+    build_posterior(
+        hist::Histogram{<:Real,1},
+        model::PropertyFunction,
+        prior::NamedTupleDist
+    ) -> PosteriorMeasure
+
+Construct the posterior of a `@pf` model kernel for an observed spectrum: the binned
+Poisson likelihood of `hist` (LegendSpecFits' `binned_poisson_likelihood`) and `prior`.
+
+# Arguments
+- `hist::Histogram{<:Real,1}`: observed spectrum, see [`_check_spectrum`](@ref)
+- `model::PropertyFunction`: model kernel `params -> measure`, built with `@pf`
+- `prior::NamedTupleDist`: prior over the parameters of `model`, e.g. from
+  [`build_prior`](@ref)
+
+# Throws
+- The `ArgumentError`s of [`_check_spectrum`](@ref)
+- An `ArgumentError` if a parameter of `model` is nested (`\$a.b`), which is not
+  supported yet
+- An `ArgumentError` if the names of `prior` differ from the parameters of `model`
+
+# Returns
+- A `PosteriorMeasure` of the likelihood and `prior`
+"""
+function build_posterior(
+    hist::Histogram{<:Real,1},
+    model::PropertyFunction,
+    prior::NamedTupleDist,
+)
+
+    _check_spectrum(hist)
+
+    names = map(_parameter_name, input_property_paths(model))
+    issetequal(names, propertynames(prior)) || throw(
+        ArgumentError(
+            "The prior's parameters $(propertynames(prior)) differ from the model's $names",
+        ),
+    )
+
+    return PosteriorMeasure(binned_poisson_likelihood(model, hist), prior)
+
 end

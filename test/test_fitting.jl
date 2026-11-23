@@ -1,4 +1,5 @@
-using BAT: PosteriorMeasure
+using BAT:
+    PosteriorMeasure, RandomWalk, TransformedMCMC, bat_sample, distprod, logdensityof
 using Distributions: Normal, Poisson, Uniform, logpdf, truncated
 using GammaPeakFits: mean_background, background_poly_bounds, get_peak_features
 using StatsBase: Histogram
@@ -464,6 +465,40 @@ using StatsBase: Histogram
             param_values = (mu = MU, linPoly_C = C_LIN)
             @test posterior.likelihood._log_f(param_values) == -Inf
 
+        end
+
+    end
+
+    @testset "build_posterior for @pf kernels" begin
+
+        prior = build_prior(DATA, PEAK_KERNEL, CONFIGS)
+
+        @testset "Posterior of the kernel and the prior" begin
+            posterior = build_posterior(DATA, PEAK_KERNEL, prior)
+            @test posterior isa PosteriorMeasure
+            @test isfinite(logdensityof(posterior, rand(prior)))
+        end
+
+        @testset "Throws when the prior does not match the kernel" begin
+            prior_without_b = distprod(
+                n = prior.n,
+                alpha = prior.alpha,
+                mu = prior.mu,
+                sigma = prior.sigma,
+                theta = prior.theta,
+            )
+            @test_throws ArgumentError build_posterior(DATA, PEAK_KERNEL, prior_without_b)
+        end
+
+        @testset "End to end: kernel -> prior -> posterior -> bat_sample" begin
+            posterior = build_posterior(DATA, PEAK_KERNEL, prior)
+            samples =
+                bat_sample(
+                    posterior,
+                    TransformedMCMC(proposal = RandomWalk(), nsteps = 1, nchains = 2),
+                ).result
+            @test all(isfinite, samples.logd)
+            @test propertynames(first(samples).v) == propertynames(prior)
         end
 
     end

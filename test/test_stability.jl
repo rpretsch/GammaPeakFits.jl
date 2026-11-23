@@ -35,6 +35,7 @@ using GammaPeakFits:
     BIN_SIZE = 1.0
     WINDOW = 100.0
     ENERGY_RANGE = (MU - WINDOW / 2 - BIN_SIZE / 2, MU + WINDOW / 2 + BIN_SIZE / 2)
+    PF_KERNEL = @pf $n * GaussPeak($mu, $sigma) + PolynomialShape($b)
 
     MODEL = ModelParams(
         peak = PeakParams(gaussian = GaussianParams(A = A, mu = MU, sigma = SIGMA)),
@@ -173,6 +174,9 @@ using GammaPeakFits:
         configs = FitConfigs(mu = MU, sigma = SIGMA)
         prior = build_prior(HIST, model_params, configs)
         @test @inferred(build_posterior(HIST, prior, configs)) isa PosteriorMeasure
+
+        pf_prior = build_prior(HIST, PF_KERNEL, configs)
+        @test @inferred(build_posterior(HIST, PF_KERNEL, pf_prior)) isa PosteriorMeasure
     end
 
 end

@@ -1,6 +1,7 @@
 using BAT: PosteriorMeasure
 using Distributions: Normal, Poisson, Uniform, logpdf, truncated
 using GammaPeakFits: mean_background, background_poly_bounds
+using StatsBase: Histogram
 
 @testset "fitting" begin
 
@@ -8,14 +9,16 @@ using GammaPeakFits: mean_background, background_poly_bounds
     MU = 2048.0
     SIGMA = 10.0
     WINDOW = 100.0
-    model = ModelParams(
+    BIN_SIZE = 1.0
+    MODEL = ModelParams(
         peak = PeakParams(gaussian = GaussianParams(A = A, mu = MU, sigma = SIGMA)),
     )
     DATA = sample_spectrum(
-        model,
-        1.0;
-        energy_range = (MU - WINDOW / 2 - 0.5, MU + WINDOW / 2 + 0.5),
+        MODEL,
+        BIN_SIZE;
+        energy_range = (MU - WINDOW / 2 - BIN_SIZE / 2, MU + WINDOW / 2 + BIN_SIZE / 2),
     )
+    SPECTRUM = SpectrumData(DATA)
     C_CONST = 100.0
     C_LIN = 10.0
     CONFIGS = FitConfigs(mu = MU, sigma = SIGMA, integration_method = Midpoint())
@@ -61,7 +64,7 @@ using GammaPeakFits: mean_background, background_poly_bounds
             model_params = ModelParams(
                 peak = PeakParams(gaussian = GaussianParams(A = A, mu = MU, sigma = SIGMA)),
             )
-            ll = poisson_ll(DATA, model_params, CONFIGS)
+            ll = poisson_ll(SPECTRUM, model_params, CONFIGS)
             @test isfinite(ll)
 
         end
@@ -71,7 +74,7 @@ using GammaPeakFits: mean_background, background_poly_bounds
             model_params = ModelParams(
                 background = BackgroundParams(linPoly = LinPolyParams(C = C_LIN, mu = MU)),
             )
-            @test isinf(poisson_ll(DATA, model_params, CONFIGS))
+            @test isinf(poisson_ll(SPECTRUM, model_params, CONFIGS))
 
         end
 
@@ -83,7 +86,7 @@ using GammaPeakFits: mean_background, background_poly_bounds
                 ),
             )
             ll = poisson_ll(
-                DATA,
+                SPECTRUM,
                 model_params,
                 FitConfigs(mu = MU, sigma = 0.1, integration_method = Midpoint()),
             )
@@ -98,17 +101,17 @@ using GammaPeakFits: mean_background, background_poly_bounds
             )
 
             ll_analytical = poisson_ll(
-                DATA,
+                SPECTRUM,
                 model_params,
                 FitConfigs(mu = MU, sigma = SIGMA, integration_method = Analytical()),
             )
             ll_numerical = poisson_ll(
-                DATA,
+                SPECTRUM,
                 model_params,
                 FitConfigs(mu = MU, sigma = SIGMA, integration_method = Numerical()),
             )
             ll_midpoint = poisson_ll(
-                DATA,
+                SPECTRUM,
                 model_params,
                 FitConfigs(mu = MU, sigma = SIGMA, integration_method = Midpoint()),
             )
@@ -222,8 +225,8 @@ using GammaPeakFits: mean_background, background_poly_bounds
             prior = build_prior(DATA, model_params, CONFIGS)
 
             # Background-only model: the level is estimated over the whole data range
-            background = mean_background(DATA.weights, DATA.bin_size)
-            lin_bound, quad_bound = background_poly_bounds(background, DATA, CONFIGS)
+            background = mean_background(DATA.weights, BIN_SIZE)
+            lin_bound, quad_bound = background_poly_bounds(background, BIN_SIZE, CONFIGS)
 
             @test prior.linPoly_C isa Uniform
             @test prior.linPoly_C.a == - lin_bound
@@ -261,15 +264,11 @@ using GammaPeakFits: mean_background, background_poly_bounds
                 background = BackgroundParams(constPoly = Enabled()),
             )
             configs = FitConfigs(mu = 3.0, sigma = 0.5)
+            EDGES = 0.5:1.0:5.5  # bin centers 1.0:5.0
 
             @testset "Zero background counts" begin
 
-                data = SpectrumData(
-                    bin_centers = [1.0, 2.0, 3.0, 4.0, 5.0],
-                    bin_edges = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5],
-                    weights = [0, 0, 10, 0, 0],
-                    bin_size = 1.0,
-                )
+                data = Histogram(EDGES, [0, 0, 10, 0, 0])
                 prior = build_prior(data, model_params, configs)
 
                 @test prior.gaussian_A isa Uniform
@@ -282,12 +281,7 @@ using GammaPeakFits: mean_background, background_poly_bounds
 
             @testset "No peak above background" begin
 
-                data = SpectrumData(
-                    bin_centers = [1.0, 2.0, 3.0, 4.0, 5.0],
-                    bin_edges = [0.5, 1.5, 2.5, 3.5, 4.5, 5.5],
-                    weights = [4, 4, 0, 0, 4],
-                    bin_size = 1.0,
-                )
+                data = Histogram(EDGES, [4, 4, 0, 0, 4])
                 prior = build_prior(data, model_params, configs)
 
                 @test prior.gaussian_A isa Uniform
@@ -344,7 +338,7 @@ using GammaPeakFits: mean_background, background_poly_bounds
 
             param_values = (mu = MU, sigma = SIGMA, gaussian_A = A, constPoly_C = C_CONST)
             expected = poisson_ll(
-                DATA,
+                SPECTRUM,
                 ModelParams(
                     peak = PeakParams(
                         gaussian = GaussianParams(A = A, mu = MU, sigma = SIGMA),
@@ -367,7 +361,7 @@ using GammaPeakFits: mean_background, background_poly_bounds
 
             param_values = (mu = MU, sigma = SIGMA, gaussian_A = A)
             expected = poisson_ll(
-                DATA,
+                SPECTRUM,
                 ModelParams(
                     peak = PeakParams(
                         gaussian = GaussianParams(A = A, mu = MU, sigma = SIGMA),
@@ -390,7 +384,7 @@ using GammaPeakFits: mean_background, background_poly_bounds
 
             param_values = (constPoly_C = C_CONST,)
             expected = poisson_ll(
-                DATA,
+                SPECTRUM,
                 ModelParams(
                     background = BackgroundParams(constPoly = ConstPolyParams(C = C_CONST)),
                 ),

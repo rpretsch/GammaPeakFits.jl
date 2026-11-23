@@ -196,7 +196,7 @@ end
         energies::AbstractVector{<:Real},
         bin_size::Real;
         energy_range::Union{Tuple{Real,Real},Nothing} = nothing,
-    ) -> SpectrumData
+    ) -> Histogram
 
 Histogram single energies, e.g. of detector hits, into bins of `bin_size`.
 
@@ -215,60 +215,67 @@ Histogram single energies, e.g. of detector hits, into bins of `bin_size`.
 - An `ArgumentError` if `energies` is empty and no `energy_range` is given
 
 # Returns
-- A `SpectrumData` object with the counts per bin
+- A `Histogram` with the counts per bin
 """
 function bin_energies(
     energies::AbstractVector{<:Real},
     bin_size::Real;
     energy_range::Union{Tuple{Real,Real},Nothing} = nothing,
 )
+
     bin_size > 0 || throw(ArgumentError("`bin_size` must be positive, got $bin_size"))
 
     if isnothing(energy_range)
+
         isempty(energies) && throw(
             ArgumentError("No energies to derive the range from, supply `energy_range`"),
         )
+
         first_bin = floor(Int, minimum(energies) / bin_size)
         last_bin = floor(Int, maximum(energies) / bin_size)
         bin_edges = collect(Float64, (first_bin:(last_bin+1)) .* bin_size)
+
     else
         bin_edges = _uniform_edges(energy_range..., bin_size)
     end
 
-    return SpectrumData(fit(Histogram, energies, bin_edges); bin_size = Float64(bin_size))
+    return fit(Histogram, energies, bin_edges)
+
 end
 
 """
-    rebin(data::SpectrumData, bin_size::Real) -> SpectrumData
+    rebin(hist::Histogram{<:Real,1}, bin_size::Real) -> Histogram
 
-Merge neighbouring bins of `data` into bins of `bin_size`; an incomplete group of bins at
+Merge neighbouring bins of `hist` into bins of `bin_size`; an incomplete group of bins at 
 the upper end is dropped.
 
 # Arguments
-- `data::SpectrumData`: binned spectrum
-- `bin_size::Real`: new bin width in keV, a whole multiple of `data.bin_size`
+- `hist::Histogram{<:Real,1}`: binned spectrum, see [`_check_spectrum`](@ref)
+- `bin_size::Real`: new bin width in keV, a whole multiple of the bin width of `hist`
 
 # Throws
-- An `ArgumentError` if `bin_size` is no whole multiple of `data.bin_size`
+- The `ArgumentError`s of [`_check_spectrum`](@ref)
+- An `ArgumentError` if `bin_size` is no whole multiple of the bin width of `hist`
 - An `ArgumentError` if `bin_size` is wider than the whole spectrum
 
 # Returns
-- A `SpectrumData` object with the counts per new bin
+- A `Histogram` with the counts per new bin
 """
-function rebin(data::SpectrumData, bin_size::Real)
-    factor = round(Int, bin_size / data.bin_size)
-    factor >= 1 && factor * data.bin_size ≈ bin_size || throw(
-        ArgumentError("`bin_size` $bin_size is no whole multiple of $(data.bin_size)"),
-    )
-    nbins = length(data.weights) ÷ factor
-    nbins >= 1 || throw(ArgumentError("`bin_size` $bin_size is wider than the spectrum"))
-    weights = vec(sum(reshape(data.weights[1:(nbins*factor)], factor, nbins); dims = 1))
+function rebin(hist::Histogram{<:Real,1}, bin_size::Real)
 
-    return SpectrumData(
-        data.bin_edges[1:factor:(nbins*factor+1)],
-        weights;
-        bin_size = Float64(bin_size),
-    )
+    old_bin_size = _check_spectrum(hist)
+
+    factor = round(Int, bin_size / old_bin_size)
+    factor >= 1 && factor * old_bin_size ≈ bin_size ||
+        throw(ArgumentError("`bin_size` $bin_size is no whole multiple of $old_bin_size"))
+
+    nbins = length(hist.weights) ÷ factor
+    nbins >= 1 || throw(ArgumentError("`bin_size` $bin_size is wider than the spectrum"))
+
+    weights = vec(sum(reshape(hist.weights[1:(nbins*factor)], factor, nbins); dims = 1))
+
+    return Histogram(only(hist.edges)[1:factor:(nbins*factor+1)], weights, hist.closed)
+
 end
 
 """
@@ -276,9 +283,9 @@ end
         params::ModelParams,
         bin_size::Real;
         energy_range::Tuple{Real,Real},
-    ) -> SpectrumData
+    ) -> Histogram
 
-Draw a synthetic spectrum from a model: Poisson-distributed counts around the expected
+Draw a synthetic spectrum from a model: Poisson-distributed counts around the expected 
 counts per bin, the model at the bin center times `bin_size`.
 
 # Arguments
@@ -290,12 +297,11 @@ counts per bin, the model at the bin center times `bin_size`.
   in keV
 
 # Throws
-- An `ArgumentError` if `bin_size` is not positive or `energy_range` is not a whole
-  multiple of `bin_size` wide
+- The `ArgumentError`s of [`_uniform_edges`](@ref)
 - An `ArgumentError` if the model produces negative or non-finite expected counts
 
 # Returns
-- A `SpectrumData` object with the sampled counts per bin
+- A `Histogram` with the sampled counts per bin
 
 # See also
 - [`full_model`](@ref) for the used model
@@ -305,14 +311,19 @@ function sample_spectrum(
     bin_size::Real;
     energy_range::Tuple{Real,Real},
 )
+
     bin_edges = _uniform_edges(energy_range..., bin_size)
-    bin_centers = (bin_edges[1:(end-1)] .+ bin_edges[2:end]) ./ 2
+    bin_centers = midpoints(bin_edges)
     expected_counts = full_model(bin_centers, params) .* bin_size
+
     any(x -> !isfinite(x) || x < 0, expected_counts) && throw(
         ArgumentError(
             "Model produced negative or non-finite expected counts; check parameters.",
         ),
     )
+
     weights = rand.(Poisson.(expected_counts))
-    return SpectrumData(bin_edges, weights; bin_size = Float64(bin_size))
+
+    return Histogram(bin_edges, weights)
+
 end

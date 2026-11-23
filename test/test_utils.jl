@@ -1,17 +1,25 @@
-using StatsBase: mean
+using StatsBase: Histogram, mean
 using GammaPeakFits: get_peak_features, is_present, mean_background, background_poly_bounds
 
 @testset "utils" begin
 
-    DATA = SpectrumData(collect(1.0:10.0), collect(1:10))
+    MU = 5.0
+    BIN_SIZE = 1.0
+    DATA = Histogram(0.5:BIN_SIZE:10.5, collect(1:10))  # bin centers 1.0:10.0
+    COARSE_EDGES = 0.0:2.0:6.0  # bin centers 1.0, 3.0, 5.0, bin width 2.0
 
     @testset "cut_data" begin
 
-        cut = cut_data(DATA, FitConfigs(mu = 5.0, sigma = 0.5, window_size = 4.0))
-        @test cut.bin_centers == [4.0, 5.0, 6.0]
+        cut = cut_data(DATA, FitConfigs(mu = MU, sigma = 0.5, window_size = 4.0))
+        @test only(cut.edges) == [3.5, 4.5, 5.5, 6.5]
         @test cut.weights == [4, 5, 6]
-        @test cut.bin_size == 1.0
-        @test cut isa SpectrumData
+        @test cut isa Histogram
+
+        # Window outside the data contains no complete bin
+        @test_throws ArgumentError cut_data(
+            DATA,
+            FitConfigs(mu = 50.0, sigma = 0.5, window_size = 4.0),
+        )
 
     end
 
@@ -33,8 +41,8 @@ using GammaPeakFits: get_peak_features, is_present, mean_background, background_
     @testset "background_poly_bounds" begin
 
         # window_size = 4 => h = 2; b = 4 counts/keV
-        configs = FitConfigs(mu = 5.0, sigma = 0.4)
-        lin_bound, quad_bound = background_poly_bounds(4.0, DATA, configs)
+        configs = FitConfigs(mu = MU, sigma = 0.4)
+        lin_bound, quad_bound = background_poly_bounds(4.0, BIN_SIZE, configs)
         @test lin_bound == 2 * 4.0 / 2
         @test quad_bound == 2 * 4.0 / 2^2
 
@@ -54,7 +62,7 @@ using GammaPeakFits: get_peak_features, is_present, mean_background, background_
         end
 
         @testset "Converts counts/bin to counts/keV via bin_size" begin
-            data = SpectrumData([1.0, 3.0, 5.0], [10, 100, 30])
+            data = Histogram(COARSE_EDGES, [10, 100, 30])
             configs = FitConfigs(mu = 3.0, sigma = 0.5)
             height, area, background = get_peak_features(data, configs)
             @test height == (100.0 - mean([10.0, 30.0])) / 2.0
@@ -63,7 +71,7 @@ using GammaPeakFits: get_peak_features, is_present, mean_background, background_
         end
 
         @testset "Sanity floors keep estimates positive" begin
-            data = SpectrumData([1.0, 3.0, 5.0], [10, 20, 30])
+            data = Histogram(COARSE_EDGES, [10, 20, 30])
             configs = FitConfigs(mu = 3.0, sigma = 0.5)
             height, area, background = get_peak_features(data, configs)
             @test height == 1.0 / 2.0
@@ -82,19 +90,19 @@ using GammaPeakFits: get_peak_features, is_present, mean_background, background_
         end
 
         @testset "Throws when peak region not contained in data" begin
-            data = SpectrumData([1.0, 3.0, 5.0], [10, 20, 30])
+            data = Histogram(COARSE_EDGES, [10, 20, 30])
             configs = FitConfigs(mu = 2.0, sigma = 1.0)
             @test_throws ArgumentError get_peak_features(data, configs)
         end
 
         @testset "Throws when peak region contains no bin centers" begin
-            data = SpectrumData([1.0, 3.0, 5.0], [10, 20, 30])
+            data = Histogram(COARSE_EDGES, [10, 20, 30])
             configs = FitConfigs(mu = 2.0, sigma = 0.1)
             @test_throws ArgumentError get_peak_features(data, configs)
         end
 
         @testset "Throws when only peak region is contained in data" begin
-            data = SpectrumData([1.0, 3.0, 5.0], [10, 20, 30])
+            data = Histogram(COARSE_EDGES, [10, 20, 30])
             # `mu +- 3 * sigma` covers [1, 5] exactly, the data range
             configs = FitConfigs(mu = 3.0, sigma = 2 / 3)
             @test_throws ArgumentError get_peak_features(data, configs)

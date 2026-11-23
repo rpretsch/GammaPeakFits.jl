@@ -32,18 +32,19 @@ using GammaPeakFits:
     C_QUAD = 1.0
     C_LIN = 10.0
     C_CONST = 100.0
-    BIN_SIZE = 0.5
+    BIN_SIZE = 1.0
     WINDOW = 100.0
 
-    model = ModelParams(
+    MODEL = ModelParams(
         peak = PeakParams(gaussian = GaussianParams(A = A, mu = MU, sigma = SIGMA)),
     )
-    data = sample_spectrum(
-        model,
-        1.0;
-        energy_range = (MU - WINDOW / 2 - 0.5, MU + WINDOW / 2 + 0.5),
+    HIST = sample_spectrum(
+        MODEL,
+        BIN_SIZE;
+        energy_range = (MU - WINDOW / 2 - BIN_SIZE / 2, MU + WINDOW / 2 + BIN_SIZE / 2),
     )
-    X_ARRAY = data.bin_centers
+    SPECTRUM = SpectrumData(HIST)
+    X_ARRAY = SPECTRUM.bin_centers
 
     gaussian_params = GaussianParams(A = A, mu = MU, sigma = SIGMA)
     compton_params = ComptonParams(h = H, mu = MU, sigma = SIGMA)
@@ -66,7 +67,7 @@ using GammaPeakFits:
     model_params = ModelParams(peak = peak_params, background = background_params)
 
     @testset "data checks" begin
-        @test @inferred(_check_spectrum(Histogram(0.0:0.5:2.0, [1, 2, 3, 4]))) isa Real
+        @test @inferred(_check_spectrum(HIST)) isa Real
     end
 
     @testset "component models (scalar/vector)" begin
@@ -107,33 +108,34 @@ using GammaPeakFits:
     end
 
     @testset "analytical component integrals" begin
-        @test @inferred(gaussian_integral(data, gaussian_params)) isa Vector{Float64}
-        @test @inferred(compton_integral(data, compton_params)) isa Vector{Float64}
-        @test @inferred(exGaussian_integral(data, lowEnergyTail_params)) isa Vector{Float64}
-        @test @inferred(exGaussian_integral(data, highEnergyTail_params)) isa
+        @test @inferred(gaussian_integral(SPECTRUM, gaussian_params)) isa Vector{Float64}
+        @test @inferred(compton_integral(SPECTRUM, compton_params)) isa Vector{Float64}
+        @test @inferred(exGaussian_integral(SPECTRUM, lowEnergyTail_params)) isa
               Vector{Float64}
-        @test @inferred(quadPoly_integral(data, quadPoly_params)) isa Vector{Float64}
-        @test @inferred(linPoly_integral(data, linPoly_params)) isa Vector{Float64}
-        @test @inferred(constPoly_integral(data, constPoly_params)) isa Vector{Float64}
+        @test @inferred(exGaussian_integral(SPECTRUM, highEnergyTail_params)) isa
+              Vector{Float64}
+        @test @inferred(quadPoly_integral(SPECTRUM, quadPoly_params)) isa Vector{Float64}
+        @test @inferred(linPoly_integral(SPECTRUM, linPoly_params)) isa Vector{Float64}
+        @test @inferred(constPoly_integral(SPECTRUM, constPoly_params)) isa Vector{Float64}
     end
 
     @testset "combined integrals" begin
-        @test @inferred(midpoint_integral(data, model_params)) isa Vector{Float64}
-        @test @inferred(analytical_integral(data, model_params)) isa Vector{Float64}
-        @test @inferred(numerical_integral(data, model_params)) isa Vector{Float64}
+        @test @inferred(midpoint_integral(SPECTRUM, model_params)) isa Vector{Float64}
+        @test @inferred(analytical_integral(SPECTRUM, model_params)) isa Vector{Float64}
+        @test @inferred(numerical_integral(SPECTRUM, model_params)) isa Vector{Float64}
     end
 
     @testset "disabled integrals" begin
-        @test @inferred(analytical_integral(data, ModelParams())) isa Vector{Float64}
-        @test @inferred(midpoint_integral(data, ModelParams())) isa Vector{Float64}
-        @test @inferred(numerical_integral(data, ModelParams())) isa Vector{Float64}
+        @test @inferred(analytical_integral(SPECTRUM, ModelParams())) isa Vector{Float64}
+        @test @inferred(midpoint_integral(SPECTRUM, ModelParams())) isa Vector{Float64}
+        @test @inferred(numerical_integral(SPECTRUM, ModelParams())) isa Vector{Float64}
     end
 
     @testset "poisson_ll" begin
         for integration_method in (Analytical(), Numerical(), Midpoint())
             configs =
                 FitConfigs(mu = MU, sigma = SIGMA, integration_method = integration_method)
-            @test @inferred(poisson_ll(data, model_params, configs)) isa Float64
+            @test @inferred(poisson_ll(SPECTRUM, model_params, configs)) isa Float64
         end
     end
 
@@ -153,13 +155,14 @@ using GammaPeakFits:
             constPoly_C = C_CONST,
         )
         @test @inferred(ModelParams(param_values)) isa ModelParams
-        @test @inferred(poisson_ll(data, ModelParams(param_values), configs)) isa Float64
+        @test @inferred(poisson_ll(SPECTRUM, ModelParams(param_values), configs)) isa
+              Float64
     end
 
     @testset "build_posterior" begin
         configs = FitConfigs(mu = MU, sigma = SIGMA)
-        prior = build_prior(data, model_params, configs)
-        @test @inferred(build_posterior(data, prior, configs)) isa PosteriorMeasure
+        prior = build_prior(HIST, model_params, configs)
+        @test @inferred(build_posterior(HIST, prior, configs)) isa PosteriorMeasure
     end
 
 end

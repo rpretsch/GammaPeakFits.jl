@@ -1,41 +1,45 @@
 """
-    cut_data(data::SpectrumData, configs::FitConfigs)
+    cut_data(hist::Histogram{<:Real,1}, configs::FitConfigs) -> Histogram
 
 Slice a spectrum to the fit window centered on a peak.
 
-Only bins that lie entirely within 
+Only bins that lie entirely within
 `[configs.mu - configs.window_size/2, configs.mu + configs.window_size/2]` are retained.
 
 # Arguments
-- `data::SpectrumData`: binned spectrum data
-- `configs::FitConfigs`: fitting configuration providing the centroid `mu` and the full 
+- `hist::Histogram{<:Real,1}`: binned spectrum, see [`_check_spectrum`](@ref)
+- `configs::FitConfigs`: fitting configuration providing the centroid `mu` and the full
   window width `window_size`
 
+# Throws
+- The `ArgumentError`s of [`_check_spectrum`](@ref)
+- An `ArgumentError` if the window contains no complete bin
+
 # Returns
-- A new `SpectrumData` containing only the bins in the selected window
+- A new `Histogram` containing only the bins in the selected window
 
 # See also
 - [`FitConfigs`](@ref) for the configuration options
-- [`SpectrumData`](@ref) for the data struct
 """
-function cut_data(data::SpectrumData, configs::FitConfigs)
+function cut_data(hist::Histogram{<:Real,1}, configs::FitConfigs)
 
-    mu = configs.mu
-    window_size = configs.window_size
+    _check_spectrum(hist)
 
-    mask_edges = (mu - window_size/2) .<= data.bin_edges .<= (mu + window_size/2)
-    mask_centers = mask_edges[1:(end-1)] .& mask_edges[2:end]
+    edges = only(hist.edges)
+    lower = configs.mu - configs.window_size / 2
+    upper = configs.mu + configs.window_size / 2
+    mask_edges = lower .<= edges .<= upper
+    mask_bins = mask_edges[1:(end-1)] .& mask_edges[2:end]
 
-    return SpectrumData(
-        bin_centers = data.bin_centers[mask_centers],
-        bin_edges = data.bin_edges[mask_edges],
-        weights = data.weights[mask_centers],
-        bin_size = data.bin_size,
-    )
+    any(mask_bins) ||
+        throw(ArgumentError("The fit window [$lower, $upper] keV contains no complete bin"))
+
+    return Histogram(edges[mask_edges], hist.weights[mask_bins], hist.closed)
+
 end
 
 """
-    mean_background(weights::Vector{Int}, bin_size::Float64)
+    mean_background(weights::AbstractVector{<:Real}, bin_size::Real) -> Real
 
 Estimate the mean background level in counts/keV from observed per-bin counts.
 
@@ -44,8 +48,8 @@ in [`build_prior`](@ref) stay valid, regardless of whether `weights` covers the 
 range or only the bins outside a peak region.
 
 # Arguments
-- `weights::Vector{Int}`: observed counts per bin
-- `bin_size::Float64`: width of one bin in keV
+- `weights::AbstractVector{<:Real}`: observed counts per bin
+- `bin_size::Real`: width of one bin in keV
 
 # Returns
 - The mean background in counts/keV
@@ -54,11 +58,14 @@ range or only the bins outside a peak region.
 - [`get_peak_features`](@ref) for peak-feature estimation
 - [`build_prior`](@ref) for the prior that consumes the estimate
 """
-mean_background(weights::Vector{Int}, bin_size::Float64) =
-    max(mean(weights), 1.0) / bin_size
+function mean_background(weights::AbstractVector{<:Real}, bin_size::Real)
+
+    return max(mean(weights), 1.0) / bin_size
+
+end
 
 """
-    background_poly_bounds(mean_background::Real, data::SpectrumData, configs::FitConfigs)
+    background_poly_bounds(mean_background::Real, bin_size::Real, configs::FitConfigs)
 
 Compute symmetric prior bounds for the linear and quadratic background coefficients.
 
@@ -80,7 +87,7 @@ that each term can vary by up to twice the background level across the window, g
 
 # Arguments
 - `mean_background::Real`: estimated mean background level in counts/keV
-- `data::SpectrumData`: binned spectrum data
+- `bin_size::Real`: bin width in keV, the lower limit of `h`
 - `configs::FitConfigs`: fitting configuration providing `mu` and `window_size`
 
 # Returns
@@ -90,29 +97,28 @@ that each term can vary by up to twice the background level across the window, g
 - [`mean_background`](@ref) for the background-level estimate
 - [`build_prior`](@ref) which consumes these bounds
 """
-function background_poly_bounds(
-    mean_background::Real,
-    data::SpectrumData,
-    configs::FitConfigs,
-)
+function background_poly_bounds(mean_background::Real, bin_size::Real, configs::FitConfigs)
+
     half_window = configs.window_size / 2
-    half_window = max(half_window, data.bin_size)
+    half_window = max(half_window, bin_size)
 
     lin_bound = 2 * mean_background / half_window
     quad_bound = 2 * mean_background / half_window^2
 
     return lin_bound, quad_bound
+
 end
 
 """
-    get_peak_features(data::SpectrumData, configs::FitConfigs)
+    get_peak_features(hist::Histogram{<:Real,1}, configs::FitConfigs)
 
 Estimate the peak height and area from observed count data.
 
-Bins within `+-3 * configs.sigma` of the centroid `configs.mu` are identified as the peak 
-region. First, the mean background is calculated from the bins outside peak region. Then 
-the height is taken as the maximum observed count in the peak area minus the mean 
-background. The peak area is estimated as `sqrt(2 * pi) * configs.sigma * peak_height`.
+Bins with their centers within `+-3 * configs.sigma` of the centroid `configs.mu` are
+identified as the peak region. First, the mean background is calculated from the bins
+outside peak region. Then the height is taken as the maximum observed count in the peak
+area minus the mean background. The peak area is estimated as
+`sqrt(2 * pi) * configs.sigma * peak_height`.
 
 Poisson data can produce zero background counts or no peak above the background, so 
 `peak_height` and `mean_background` are floored at one count per bin; `peak_area` is 
@@ -120,8 +126,8 @@ derived from the floored height. This keeps the `Uniform` prior bounds construct
 [`build_prior`](@ref) valid.
 
 # Arguments
-- `data::SpectrumData`: binned spectrum data
-- `configs::FitConfigs`: fitting configuration providing the centroid `mu` and the width 
+- `hist::Histogram{<:Real,1}`: binned spectrum, see [`_check_spectrum`](@ref)
+- `configs::FitConfigs`: fitting configuration providing the centroid `mu` and the width
   `sigma` (`sigma > 0`)
 
 # Returns
@@ -130,19 +136,23 @@ derived from the floored height. This keeps the `Uniform` prior bounds construct
   (counts/keV, counts, counts/keV)
 
 # Throws
+- The `ArgumentError`s of [`_check_spectrum`](@ref)
 - An `ArgumentError` if `sigma` is not positive
-- An `ArgumentError` if `mu +- 3 * sigma` is not contained within the range of 
-  `data.bin_centers`
+- An `ArgumentError` if `mu +- 3 * sigma` is not contained within the range of the bin
+  centers
 - An `ArgumentError` if the peak region contains no bin centers
-- An `ArgumentError` if only the peak region is contained within the range of 
-  `data.bin_centers`
+- An `ArgumentError` if only the peak region is contained within the range of the bin
+  centers
 
 # See also
 - [`FitConfigs`](@ref) for the configuration options
-- [`SpectrumData`](@ref) for the data struct
 - [`build_prior`](@ref) which uses these estimates for prior construction
 """
-function get_peak_features(data::SpectrumData, configs::FitConfigs)
+function get_peak_features(hist::Histogram{<:Real,1}, configs::FitConfigs)
+
+    bin_size = _check_spectrum(hist)
+    bin_centers = midpoints(only(hist.edges))
+    weights = hist.weights
 
     mu = configs.mu
     sigma = configs.sigma
@@ -151,8 +161,8 @@ function get_peak_features(data::SpectrumData, configs::FitConfigs)
 
     lower_peak_limit = mu - 3 * sigma
     upper_peak_limit = mu + 3 * sigma
-    data_min = minimum(data.bin_centers)
-    data_max = maximum(data.bin_centers)
+    data_min = minimum(bin_centers)
+    data_max = maximum(bin_centers)
     if lower_peak_limit < data_min || upper_peak_limit > data_max
         throw(
             ArgumentError(
@@ -161,8 +171,8 @@ function get_peak_features(data::SpectrumData, configs::FitConfigs)
         )
     end
 
-    peak_mask = lower_peak_limit .<= data.bin_centers .<= upper_peak_limit
-    peak_weights = data.weights[peak_mask]                  # counts/bin
+    peak_mask = lower_peak_limit .<= bin_centers .<= upper_peak_limit
+    peak_weights = weights[peak_mask]                                   # counts/bin
 
     if isempty(peak_weights)
         throw(
@@ -172,7 +182,7 @@ function get_peak_features(data::SpectrumData, configs::FitConfigs)
         )
     end
 
-    if length(peak_weights) >= length(data.weights)
+    if length(peak_weights) >= length(weights)
         throw(
             ArgumentError(
                 "Data range [$data_min, $data_max] keV contains only the peak region [$lower_peak_limit, $upper_peak_limit] keV. Need more data for background estimation.",
@@ -180,16 +190,15 @@ function get_peak_features(data::SpectrumData, configs::FitConfigs)
         )
     end
 
-    background_weights = data.weights[.!peak_mask]                          # counts/bin
-    mean_background_val = mean_background(background_weights, data.bin_size)   # counts/keV
-    peak_height = max(
-        maximum(peak_weights) / data.bin_size - mean_background_val,
-        1.0 / data.bin_size,
-    )
+    background_weights = weights[.!peak_mask]                           # counts/bin
+    mean_background_val = mean_background(background_weights, bin_size) # counts/keV
+    peak_height =
+        max(maximum(peak_weights) / bin_size - mean_background_val, 1.0 / bin_size)
     # counts/keV
-    peak_area = sqrt(2 * pi) * sigma * peak_height                          # counts
+    peak_area = sqrt(2 * pi) * sigma * peak_height                      # counts
 
     return peak_height, peak_area, mean_background_val
+
 end
 
 """

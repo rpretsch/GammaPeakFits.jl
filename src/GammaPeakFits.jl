@@ -99,7 +99,7 @@ using MeasureBase: AbstractMeasure
 using PropertyFunctions: @pf
 using QuadGK: quadgk
 using SpecialFunctions: erf, erfc, logerfcx
-using StatsBase: Histogram, fit, mean
+using StatsBase: Histogram, fit, mean, midpoints
 using ValueShapes: NamedTupleDist
 
 # Component/container parameter structs and Enabled/Disabled presence markers

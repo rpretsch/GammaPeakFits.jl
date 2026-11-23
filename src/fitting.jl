@@ -62,7 +62,7 @@ _expected_counts(::Midpoint, data::SpectrumData, params::ModelParams) =
     midpoint_integral(data, params)
 
 """
-    build_prior(data::SpectrumData, params::ModelParams, configs::FitConfigs)
+    build_prior(hist::Histogram{<:Real,1}, params::ModelParams, configs::FitConfigs)
 
 Construct a prior distribution over the model parameters for Bayesian fitting.
 
@@ -77,7 +77,7 @@ background-only models the background level is estimated over the whole data ran
 peak region needs to be contained in the data.
 
 # Arguments
-- `data::SpectrumData`: binned spectrum data
+- `hist::Histogram{<:Real,1}`: binned spectrum
 - `model::ModelParams`: model specification indicating which components are enabled
 - `configs::FitConfigs`: fitting configuration
 
@@ -129,7 +129,8 @@ Custom priors in `configs.priors` overwrite these defaults for the specified sym
   specification
 - [`poisson_ll`](@ref) for the likelihood that uses these priors
 """
-function build_prior(data::SpectrumData, model::ModelParams, configs::FitConfigs)
+function build_prior(hist::Histogram{<:Real,1}, model::ModelParams, configs::FitConfigs)
+
     peak_model = model.peak
     background_model = model.background
 
@@ -175,10 +176,12 @@ function build_prior(data::SpectrumData, model::ModelParams, configs::FitConfigs
             ),
         )
 
+    bin_size = _check_spectrum(hist)
+
     if has_peak_component
-        _, peak_area, mean_background_val = get_peak_features(data, configs)
+        _, peak_area, mean_background_val = get_peak_features(hist, configs)
     else
-        mean_background_val = mean_background(data.weights, data.bin_size)
+        mean_background_val = mean_background(hist.weights, bin_size)
     end
 
     default_priors = PriorPair[]
@@ -215,7 +218,8 @@ function build_prior(data::SpectrumData, model::ModelParams, configs::FitConfigs
 
     if is_present(background_model)
 
-        lin_bound, quad_bound = background_poly_bounds(mean_background_val, data, configs)
+        lin_bound, quad_bound =
+            background_poly_bounds(mean_background_val, bin_size, configs)
 
         is_present(background_model.quadPoly) &&
             push!(default_priors, :quadPoly_C => Uniform(-quad_bound, quad_bound))
@@ -247,12 +251,12 @@ function build_prior(data::SpectrumData, model::ModelParams, configs::FitConfigs
 end
 
 """
-    build_posterior(data::SpectrumData, priors::NamedTupleDist, configs::FitConfigs)
+    build_posterior(hist::Histogram{<:Real,1}, priors::NamedTupleDist, configs::FitConfigs)
 
 Construct a posterior measure from observed data and a prior distribution.
 
 # Arguments
-- `data::SpectrumData`: the observed spectrum data
+- `hist::Histogram{<:Real,1}`: the observed spectrum, see [`_check_spectrum`](@ref)
 - `priors`: the prior distribution (result of [`build_prior`](@ref))
 - `configs::FitConfigs`: Fitting configurations
 
@@ -264,7 +268,14 @@ Construct a posterior measure from observed data and a prior distribution.
 - [`poisson_ll`](@ref) for the likelihood function
 - [`ModelParams`](@ref) for the model parameter structure
 """
-function build_posterior(data::SpectrumData, priors::NamedTupleDist, configs::FitConfigs)
+function build_posterior(
+    hist::Histogram{<:Real,1},
+    priors::NamedTupleDist,
+    configs::FitConfigs,
+)
+
+    data = SpectrumData(hist)
+    # input of the old likelihood, until the model layer is replaced
 
     function _log_likelihood(params::NamedTuple)
         model_params = ModelParams(params)

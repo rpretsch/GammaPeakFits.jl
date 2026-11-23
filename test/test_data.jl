@@ -5,6 +5,9 @@ using StatsBase: Histogram
     MU = 2048.0
     SIGMA = 10.0
     A = 1000.0
+    BIN_SIZE = 0.5
+    ENERGY_RANGE = (0.0, 4096.0)  # keV, outer bin edges
+    NBINS = round(Int, (ENERGY_RANGE[2] - ENERGY_RANGE[1]) / BIN_SIZE)
 
     @testset "_check_spectrum" begin
         check = GammaPeakFits._check_spectrum
@@ -45,50 +48,6 @@ using StatsBase: Histogram
             @test data.bin_size == 1.0
             @test length(data.bin_edges) == (length(data.bin_centers) + 1)
             @test data isa SpectrumData
-
-        end
-
-        @testset "sample_spectrum" begin
-
-            gaussian_params = GaussianParams(A = A, mu = MU, sigma = SIGMA)
-            model_params = ModelParams(peak = PeakParams(gaussian = gaussian_params))
-
-            data = sample_spectrum(model_params, 0.5; energy_range = (0.0, 4096.0))
-            @test data.bin_centers isa Vector{Float64}
-            @test length(data.bin_centers) == 8192
-            @test length(data.bin_edges) == 8193
-            @test length(data.weights) == 8192
-            @test data.weights isa Vector{Int64}
-            @test data.bin_size == 0.5
-            @test data isa SpectrumData
-
-        end
-
-        @testset "sample_spectrum throws on negative expected counts" begin
-
-            model_params = ModelParams(
-                background = BackgroundParams(linPoly = LinPolyParams(C = -1.0, mu = 0.0)),
-            )
-            @test_throws ArgumentError sample_spectrum(
-                model_params,
-                1.0;
-                energy_range = (0.5, 10.5),
-            )
-
-        end
-
-        @testset "sample_spectrum throws on non-finite expected counts" begin
-
-            model_params = ModelParams(
-                peak = PeakParams(
-                    gaussian = GaussianParams(A = 1.0e308, mu = MU, sigma = 0.1),
-                ),
-            )
-            @test_throws ArgumentError sample_spectrum(
-                model_params,
-                1.0;
-                energy_range = (2039.5, 2050.5),
-            )
 
         end
 
@@ -171,60 +130,107 @@ using StatsBase: Histogram
             )
         end
 
-        @testset "bin_energies" begin
-            energies = [0.2, 0.7, 1.1, 1.9, 2.5]
+    end
 
-            @testset "derived energy range" begin
-                data = bin_energies(energies, 1.0)
-                @test data.bin_edges == [0.0, 1.0, 2.0, 3.0]
-                @test data.weights == [2, 2, 1]
-                @test data.bin_size == 1.0
-            end
+    @testset "sample_spectrum" begin
 
-            @testset "explicit energy range drops energies outside" begin
-                data = bin_energies(energies, 0.5; energy_range = (0.5, 2.0))
-                @test data.bin_edges == [0.5, 1.0, 1.5, 2.0]
-                @test data.weights == [1, 1, 1]
-            end
+        @testset "returns a histogram of counts" begin
 
-            @testset "float-rounded bin size" begin
-                data = bin_energies(fill(1000.05, 3), 0.1; energy_range = (1000.0, 1010.0))
-                @test length(data.weights) == 100
-                @test data.weights[1] == 3
-            end
+            gaussian_params = GaussianParams(A = A, mu = MU, sigma = SIGMA)
+            model_params = ModelParams(peak = PeakParams(gaussian = gaussian_params))
 
-            @testset "throws" begin
-                @test_throws ArgumentError bin_energies(energies, 0.0)
-                @test_throws ArgumentError bin_energies(
-                    energies,
-                    0.3;
-                    energy_range = (0.0, 1.0),
-                )
-                @test_throws ArgumentError bin_energies(Float64[], 1.0)
-            end
+            data = sample_spectrum(model_params, BIN_SIZE; energy_range = ENERGY_RANGE)
+            @test data isa Histogram
+            @test length(only(data.edges)) == NBINS + 1
+            @test length(data.weights) == NBINS
+            @test data.weights isa Vector{Int64}
+            @test GammaPeakFits._check_spectrum(data) ≈ BIN_SIZE
+
         end
 
-        @testset "rebin" begin
-            data = SpectrumData(collect(0.0:1.0:5.0), [1, 2, 3, 4, 5])
+        @testset "throws on negative expected counts" begin
 
-            @testset "merges neighbouring bins, drops the incomplete rest" begin
-                merged = rebin(data, 2.0)
-                @test merged.bin_edges == [0.0, 2.0, 4.0]
-                @test merged.weights == [3, 7]
-                @test merged.bin_size == 2.0
-            end
+            model_params = ModelParams(
+                background = BackgroundParams(linPoly = LinPolyParams(C = -1.0, mu = 0.0)),
+            )
+            @test_throws ArgumentError sample_spectrum(
+                model_params,
+                1.0;
+                energy_range = (0.5, 10.5),
+            )
 
-            @testset "same bin size keeps the spectrum" begin
-                @test rebin(data, 1.0).weights == data.weights
-            end
-
-            @testset "throws" begin
-                @test_throws ArgumentError rebin(data, 1.5)  # no whole multiple
-                @test_throws ArgumentError rebin(data, 0.5)  # finer than the data
-                @test_throws ArgumentError rebin(data, 6.0)  # wider than the spectrum
-            end
         end
 
+        @testset "throws on non-finite expected counts" begin
+
+            model_params = ModelParams(
+                peak = PeakParams(
+                    gaussian = GaussianParams(A = 1.0e308, mu = MU, sigma = 0.1),
+                ),
+            )
+            @test_throws ArgumentError sample_spectrum(
+                model_params,
+                1.0;
+                energy_range = (2039.5, 2050.5),
+            )
+
+        end
+
+    end
+
+    @testset "bin_energies" begin
+        energies = [0.2, 0.7, 1.1, 1.9, 2.5]
+
+        @testset "derived energy range" begin
+            data = bin_energies(energies, 1.0)
+            @test data isa Histogram
+            @test only(data.edges) == [0.0, 1.0, 2.0, 3.0]
+            @test data.weights == [2, 2, 1]
+        end
+
+        @testset "explicit energy range drops energies outside" begin
+            data = bin_energies(energies, 0.5; energy_range = (0.5, 2.0))
+            @test only(data.edges) == [0.5, 1.0, 1.5, 2.0]
+            @test data.weights == [1, 1, 1]
+        end
+
+        @testset "float-rounded bin size" begin
+            data = bin_energies(fill(1000.05, 3), 0.1; energy_range = (1000.0, 1010.0))
+            @test length(data.weights) == 100
+            @test data.weights[1] == 3
+        end
+
+        @testset "throws" begin
+            @test_throws ArgumentError bin_energies(energies, 0.0)
+            @test_throws ArgumentError bin_energies(
+                energies,
+                0.3;
+                energy_range = (0.0, 1.0),
+            )
+            @test_throws ArgumentError bin_energies(Float64[], 1.0)
+        end
+    end
+
+    @testset "rebin" begin
+        data = Histogram(0.0:1.0:5.0, [1, 2, 3, 4, 5])
+
+        @testset "merges neighbouring bins, drops the incomplete rest" begin
+            merged = rebin(data, 2.0)
+            @test merged isa Histogram
+            @test only(merged.edges) == [0.0, 2.0, 4.0]
+            @test merged.weights == [3, 7]
+        end
+
+        @testset "same bin size keeps the spectrum" begin
+            @test rebin(data, 1.0).weights == data.weights
+        end
+
+        @testset "throws" begin
+            @test_throws ArgumentError rebin(data, 1.5)  # no whole multiple
+            @test_throws ArgumentError rebin(data, 0.5)  # finer than the data
+            @test_throws ArgumentError rebin(data, 6.0)  # wider than the spectrum
+            @test_throws ArgumentError rebin(Histogram([0.0, 1.0, 3.0], [1, 2]), 2.0)  # uneven
+        end
     end
 
 end

@@ -1,6 +1,6 @@
 using BAT: PosteriorMeasure, distprod, logdensityof
 using Distributions: Normal, Uniform, truncated
-using GammaPeakFits: mean_background, background_poly_bounds, get_peak_features
+using GammaPeakFits: _mean_background, _background_poly_bounds, _get_peak_features
 using StatsBase: Histogram
 
 @testset "fitting" begin
@@ -28,7 +28,7 @@ using StatsBase: Histogram
 
         @testset "peak_priors" begin
             priors = peak_priors(DATA; mu = MU, sigma = SIGMA)
-            _, peak_area, _ = get_peak_features(DATA; mu = MU, sigma = SIGMA)
+            _, peak_area, _ = _get_peak_features(DATA; mu = MU, sigma = SIGMA)
 
             @test keys(priors) == (:n, :alpha, :mu, :sigma, :theta)
             @test priors.n == Uniform(0, 3 * peak_area)
@@ -43,8 +43,8 @@ using StatsBase: Histogram
 
             # Without a peak: level over all bins
             priors = background_priors(DATA)
-            level = mean_background(DATA.weights, BIN_SIZE)
-            lin_bound, quad_bound = background_poly_bounds(level, half_range)
+            level = _mean_background(DATA.weights, BIN_SIZE)
+            lin_bound, quad_bound = _background_poly_bounds(level, half_range)
             @test keys(priors) == (:b, :b1, :b2, :h)
             @test priors.b == Uniform(0, 2 * level)
             @test priors.b1 == Uniform(-lin_bound, lin_bound)
@@ -53,7 +53,7 @@ using StatsBase: Histogram
 
             # With a peak: level outside mu ± 3 sigma
             priors = background_priors(DATA; mu = MU, sigma = SIGMA)
-            level = last(get_peak_features(DATA; mu = MU, sigma = SIGMA))
+            level = last(_get_peak_features(DATA; mu = MU, sigma = SIGMA))
             @test priors.b == Uniform(0, 2 * level)
 
             @test_throws ArgumentError background_priors(DATA; mu = MU)

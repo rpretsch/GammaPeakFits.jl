@@ -62,7 +62,7 @@ function _check_spectrum(hist::Histogram{<:Real,1})
 end
 
 """
-    _uniform_edges(lower::Real, upper::Real, bin_size::Real)
+    _uniform_edges(lower::Real, upper::Real, bin_size::Real) -> Vector{Float64}
 
 Return the edges of uniform bins of `bin_size` from `lower` to `upper`. The edges are
 computed from integer bin indices as `lower + i * bin_size`, so that rounding neither
@@ -114,7 +114,7 @@ Histogram single energies, e.g. of detector hits, into bins of `bin_size`.
 
 # Throws
 - An `ArgumentError` if `bin_size` is not positive
-- An `ArgumentError` if `energy_range` is not a whole multiple of `bin_size` wide
+- The `ArgumentError`s of [`_uniform_edges`](@ref) (with `energy_range`)
 - An `ArgumentError` if `energies` is empty and no `energy_range` is given
 
 # Returns
@@ -194,7 +194,7 @@ expected counts per bin from [`expected_counts`](@ref).
 
 The `edges` method samples on given bin edges, e.g. `only(hist.edges)` to reproduce the
 binning of a measured spectrum. The bins must be uniform, so that the result is a valid
-spectrum for the fit functions (see [`_check_spectrum`](@ref)). The keyword method builds
+spectrum for the fit functions (see [`_check_edges`](@ref)). The keyword method builds
 uniform edges from `bin_size` and `energy_range`.
 
 # Arguments
@@ -208,8 +208,7 @@ uniform edges from `bin_size` and `energy_range`.
 - `bin_size::Real`: bin width in keV
 
 # Throws
-- The `ArgumentError`s of [`expected_counts`](@ref) and [`_check_spectrum`](@ref)
-  (`edges` method)
+- The `ArgumentError`s of [`_check_edges`](@ref) (`edges` method)
 - The `ArgumentError`s of [`_uniform_edges`](@ref) (keyword method)
 - An `ArgumentError` if the model produces negative or non-finite expected counts
 
@@ -226,10 +225,7 @@ function sample_spectrum(model::AbstractMeasure, edges::AbstractVector{<:Real})
         ),
     )
 
-    hist = Histogram(edges, rand.(Poisson.(counts)))
-    _check_spectrum(hist)  # enforces uniform bins, as the result is a spectrum
-
-    return hist
+    return Histogram(edges, rand.(Poisson.(counts)))
 
 end
 

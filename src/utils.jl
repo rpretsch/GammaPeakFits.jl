@@ -5,15 +5,14 @@ Slice a spectrum to a fit window, e.g. around a peak. Only bins that lie entirel
 `[center - width/2, center + width/2]` are retained.
 
 # Arguments
-- `hist::Histogram{<:Real,1}`: spectrum of counts with uniform bins
+- `hist::Histogram{<:Real,1}`: binned spectrum, see [`_check_spectrum`](@ref)
 
 # Keyword Arguments
 - `center::Real`: center of the fit window in keV, e.g. the expected peak centroid
 - `width::Real`: full width of the fit window in keV
 
 # Throws
-- An `ArgumentError` if `hist` has no bins, non-increasing or uneven bin edges, is a
-  density, or has weights that are no non-negative whole numbers
+- The `ArgumentError`s of [`_check_spectrum`](@ref)
 - An `ArgumentError` if the window contains no complete bin
 
 # Returns
@@ -36,34 +35,16 @@ function cut_data(hist::Histogram{<:Real,1}; center::Real, width::Real)
 
 end
 
-"""
-    mean_background(weights::AbstractVector{<:Real}, bin_size::Real) -> Real
-
-Estimate the mean background level in counts/keV from observed per-bin counts.
-
-The estimate is floored at one count per bin so that the `Uniform` prior bounds constructed 
-in [`build_prior`](@ref) stay valid, regardless of whether `weights` covers the full data 
-range or only the bins outside a peak region.
-
-# Arguments
-- `weights::AbstractVector{<:Real}`: observed counts per bin
-- `bin_size::Real`: width of one bin in keV
-
-# Returns
-- The mean background in counts/keV
-
-# See also
-- [`get_peak_features`](@ref) for peak-feature estimation
-- [`build_prior`](@ref) for the prior that consumes the estimate
-"""
-function mean_background(weights::AbstractVector{<:Real}, bin_size::Real)
+# Mean background level in counts/keV from per-bin counts, floored at one count per bin so
+# that the `Uniform` bounds of the default priors stay valid:
+function _mean_background(weights::AbstractVector{<:Real}, bin_size::Real)
 
     return max(mean(weights), 1.0) / bin_size
 
 end
 
 """
-    background_poly_bounds(mean_background::Real, half_window::Real)
+    _background_poly_bounds(mean_background::Real, half_window::Real) -> Tuple{Real,Real}
 
 Compute symmetric prior bounds for the linear and quadratic background coefficients.
 
@@ -89,12 +70,8 @@ that each term can vary by up to twice the background level across the window, g
 
 # Returns
 - A `Tuple` `(lin_bound, quad_bound)` with the positive bounds for `C_l` and `C_q`
-
-# See also
-- [`mean_background`](@ref) for the background-level estimate
-- [`build_prior`](@ref) which consumes these bounds
 """
-function background_poly_bounds(mean_background::Real, half_window::Real)
+function _background_poly_bounds(mean_background::Real, half_window::Real)
 
     lin_bound = 2 * mean_background / half_window
     quad_bound = 2 * mean_background / half_window^2
@@ -104,20 +81,19 @@ function background_poly_bounds(mean_background::Real, half_window::Real)
 end
 
 """
-    get_peak_features(hist::Histogram{<:Real,1}; mu::Real, sigma::Real)
+    _get_peak_features(hist::Histogram{<:Real,1}; mu::Real, sigma::Real) -> Tuple{Real,Real,Real}
 
 Estimate the peak height and area from observed count data.
 
-Bins with their centers within `+-3 * sigma` of the centroid `mu` are
-identified as the peak region. First, the mean background is calculated from the bins
-outside peak region. Then the height is taken as the maximum observed count in the peak
-area minus the mean background. The peak area is estimated as
-`sqrt(2 * pi) * sigma * peak_height`.
+Bins with their centers within `+-3 * sigma` of the centroid `mu` are identified as the
+peak region. First, the mean background is calculated from the bins outside peak region.
+Then the height is taken as the maximum observed count in the peak area minus the mean
+background. The peak area is estimated as `sqrt(2 * pi) * sigma * peak_height`.
 
 Poisson data can produce zero background counts or no peak above the background, so 
 `peak_height` and `mean_background` are floored at one count per bin; `peak_area` is 
-derived from the floored height. This keeps the `Uniform` prior bounds constructed in 
-[`build_prior`](@ref) valid.
+derived from the floored height. This keeps the `Uniform` bounds of [`peak_priors`](@ref)
+and [`background_priors`](@ref) valid.
 
 # Arguments
 - `hist::Histogram{<:Real,1}`: binned spectrum, see [`_check_spectrum`](@ref)
@@ -139,11 +115,8 @@ derived from the floored height. This keeps the `Uniform` prior bounds construct
 - An `ArgumentError` if the peak region contains no bin centers
 - An `ArgumentError` if only the peak region is contained within the range of the bin
   centers
-
-# See also
-- [`build_prior`](@ref) which uses these estimates for prior construction
 """
-function get_peak_features(hist::Histogram{<:Real,1}; mu::Real, sigma::Real)
+function _get_peak_features(hist::Histogram{<:Real,1}; mu::Real, sigma::Real)
 
     bin_size = _check_spectrum(hist)
     bin_centers = midpoints(only(hist.edges))
@@ -183,7 +156,7 @@ function get_peak_features(hist::Histogram{<:Real,1}; mu::Real, sigma::Real)
     end
 
     background_weights = weights[.!peak_mask]                           # counts/bin
-    mean_background_val = mean_background(background_weights, bin_size) # counts/keV
+    mean_background_val = _mean_background(background_weights, bin_size) # counts/keV
     peak_height =
         max(maximum(peak_weights) / bin_size - mean_background_val, 1.0 / bin_size)
     # counts/keV

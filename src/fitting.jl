@@ -12,13 +12,11 @@ the expected centroid `mu` and width `sigma`:
 | `sigma` | `truncated(Normal(sigma, 0.6), eps(), Inf)` |
 | `theta` | `Uniform(eps(), 5 * sigma)`                 |
 
-`peak_area` is `sqrt(2π) * sigma` times the highest count rate within `mu ± 3 sigma` above
-the mean background outside that region, both floored at one count per bin. Entries a
-model does not use (e.g. `alpha`, `theta` without a tail) are ignored by
+`peak_area` is estimated by [`_get_peak_features`](@ref). Entries a model does not use (e.g. `alpha`, `theta` without a tail) are ignored by
 [`build_prior`](@ref); single entries are replaced with `merge`.
 
 # Arguments
-- `hist::Histogram{<:Real,1}`: spectrum of counts with uniform bins, e.g. from
+- `hist::Histogram{<:Real,1}`: binned spectrum, see [`_check_spectrum`](@ref), e.g. from
   [`cut_data`](@ref)
 
 # Keyword Arguments
@@ -26,18 +24,14 @@ model does not use (e.g. `alpha`, `theta` without a tail) are ignored by
 - `sigma::Real`: expected peak width (standard deviation) in keV
 
 # Throws
-- An `ArgumentError` if `hist` has no bins, non-increasing or uneven bin edges, is a
-  density, or has weights that are no non-negative whole numbers
-- An `ArgumentError` if `sigma` is not positive
-- An `ArgumentError` if `mu ± 3 sigma` is not within the bin centers of `hist`, contains no
-  bin center, or contains all of them
+- The `ArgumentError`s of [`_get_peak_features`](@ref)
 
 # Returns
 - A `NamedTuple` `(n, alpha, mu, sigma, theta)` of distributions
 """
 function peak_priors(hist::Histogram{<:Real,1}; mu::Real, sigma::Real)
 
-    _, peak_area, _ = get_peak_features(hist; mu, sigma)
+    _, peak_area, _ = _get_peak_features(hist; mu, sigma)
 
     return (
         n = Uniform(0, 3 * peak_area),
@@ -66,14 +60,14 @@ Data-driven default priors for the background parameters, from the mean backgrou
 | `b2` | `Uniform(-2 * level / h^2, ...)` | quadratic term around the window center  |
 | `h`  | `Uniform(0, 4 * level)`          | Compton step height                      |
 
-With `mu` and `sigma`, the level is estimated outside the peak region `mu ± 3 sigma`,
-otherwise over all bins; it is floored at one count per bin. The `b1`/`b2` bounds let each
-term vary by up to twice the level across the range; they assume that the model expands
-the polynomial around the center of the range, e.g.
+With `mu` and `sigma`, the level is estimated outside the peak region by
+[`_get_peak_features`](@ref), otherwise over all bins, floored at one count per bin. The
+`b1`/`b2` bounds are those of [`_background_poly_bounds`](@ref); they assume that the
+model expands the polynomial around the center of the range, e.g.
 `PolynomialShape(\$b, \$b1, \$b2; x0 = center)`.
 
 # Arguments
-- `hist::Histogram{<:Real,1}`: spectrum of counts with uniform bins, e.g. from
+- `hist::Histogram{<:Real,1}`: binned spectrum, see [`_check_spectrum`](@ref), e.g. from
   [`cut_data`](@ref)
 
 # Keyword Arguments
@@ -82,11 +76,8 @@ the polynomial around the center of the range, e.g.
 
 # Throws
 - An `ArgumentError` if only one of `mu` and `sigma` is given
-- An `ArgumentError` if `hist` has no bins, non-increasing or uneven bin edges, is a
-  density, or has weights that are no non-negative whole numbers
-- With `mu` and `sigma`: an `ArgumentError` if `sigma` is not positive, or if
-  `mu ± 3 sigma` is not within the bin centers of `hist`, contains no bin center, or
-  contains all of them
+- The `ArgumentError`s of [`_check_spectrum`](@ref)
+- With `mu` and `sigma`: the `ArgumentError`s of [`_get_peak_features`](@ref)
 
 # Returns
 - A `NamedTuple` `(b, b1, b2, h)` of distributions
@@ -103,13 +94,13 @@ function background_priors(
 
     bin_size = _check_spectrum(hist)
     level = if isnothing(mu)
-        mean_background(hist.weights, bin_size)
+        _mean_background(hist.weights, bin_size)
     else
-        last(get_peak_features(hist; mu, sigma))
+        last(_get_peak_features(hist; mu, sigma))
     end
 
     edges = only(hist.edges)
-    lin_bound, quad_bound = background_poly_bounds(level, (last(edges) - first(edges)) / 2)
+    lin_bound, quad_bound = _background_poly_bounds(level, (last(edges) - first(edges)) / 2)
 
     return (
         b = Uniform(0, 2 * level),

@@ -92,7 +92,6 @@ posterior = build_posterior(fit_data, prior, configs)
 module GammaPeakFits
 
 using BAT
-using DensityInterface: logfuncdensity
 using Distributions
 import LegendSpecFits
 using LegendSpecFits:
@@ -104,54 +103,21 @@ using LegendSpecFits:
     binned_poisson_likelihood
 using MeasureBase: AbstractMeasure
 using PropertyFunctions: @pf, PPath, PropertyFunction, input_property_paths
-using QuadGK: quadgk
-using SpecialFunctions: erf, erfc, logerfcx
 using StatsBase: Histogram, fit, mean, midpoints
 using ValueShapes: NamedTupleDist
 
-# Component/container parameter structs and Enabled/Disabled presence markers
-include("params.jl")
-# SpectrumData container, marker-based and synthetic-data constructors
+# Spectrum check, binning and synthetic spectra
 include("data.jl")
-# FitConfigs, and AbstractIntegrationMethod subtypes
+# FitConfigs and PriorPair
 include("configs.jl")
-# Component model evaluation (gaussian, compton, ...) and combined models
+# Expected counts of measure models
 include("models.jl")
-# Poisson log-likelihood, prior and posterior construction
+# Prior and posterior construction for @pf model kernels
 include("fitting.jl")
-# Analytical, numerical (quadgk) and midpoint bin integrals
-include("integrals.jl")
-# Data slicing (cut_data), peak-feature estimation, is_present
+# Data slicing (cut_data), peak-feature estimation
 include("utils.jl")
 
-# Types - presence markers
-export AbstractComponent
-export Enabled
-export Disabled
-
-# Types - Integration methods
-export AbstractIntegrationMethod
-export Analytical
-export Numerical
-export Midpoint
-
-# Parameter structs - components
-export GaussianParams
-export ComptonParams
-export AbstractExGaussianParams
-export LowETailParams
-export HighETailParams
-export QuadPolyParams
-export LinPolyParams
-export ConstPolyParams
-
-# Parameter structs - containers
-export PeakParams
-export BackgroundParams
-export ModelParams
-
-# Data structs
-export SpectrumData
+# Data
 export bin_energies
 export rebin
 export sample_spectrum
@@ -160,14 +126,10 @@ export sample_spectrum
 export FitConfigs
 
 # Model evaluation
-export full_model
-
-# Model evaluation - measures
 export expected_counts
 
 # Fitting
 export PriorPair
-export poisson_ll
 export build_prior
 export build_posterior
 

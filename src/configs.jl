@@ -1,51 +1,7 @@
 """
-    AbstractIntegrationMethod
-
-Abstract supertype for the integration methods used to compute the expected bin counts in 
-[`poisson_ll`](@ref).
-
-Concrete subtypes are dispatched on by [`_expected_counts`](@ref) to select how the model 
-is integrated over each energy bin.
-
-# See also
-- [`Analytical`](@ref), [`Numerical`](@ref), [`Midpoint`](@ref)
-"""
-abstract type AbstractIntegrationMethod end
-
-"""
-    Analytical
-
-Integrate the model analytically over each energy bin.
-
-# See also
-- [`AbstractIntegrationMethod`](@ref), [`Numerical`](@ref), [`Midpoint`](@ref)
-"""
-struct Analytical <: AbstractIntegrationMethod end
-
-"""
-    Numerical
-
-Integrate the model numerically over each energy bin with `QuadGK.quadgk`.
-
-# See also
-- [`AbstractIntegrationMethod`](@ref), [`Analytical`](@ref), [`Midpoint`](@ref)
-"""
-struct Numerical <: AbstractIntegrationMethod end
-
-"""
-    Midpoint
-
-Integrate the model via the midpoint rule over each energy bin.
-
-# See also
-- [`AbstractIntegrationMethod`](@ref), [`Analytical`](@ref), [`Numerical`](@ref)
-"""
-struct Midpoint <: AbstractIntegrationMethod end
-
-"""
     PriorPair
 
-Shorthand for `Pair{Symbol,<:Distribution}`, used for the custom priors in 
+Shorthand for `Pair{Symbol,<:Distribution}`, used for the custom priors in
 [`FitConfigs`](@ref).
 
 # See also
@@ -59,29 +15,24 @@ const PriorPair = Pair{Symbol,<:Distribution}
 
 Configuration options for the fitting process.
 
-`mu` and `sigma` are required and have no default values. All remaining fields default to 
-reasonable values. The configuration acts as the single source of truth for the fit window, 
+`mu` and `sigma` are required and have no default values. All remaining fields default to
+reasonable values. The configuration acts as the single source of truth for the fit window,
 the prior centers, and the prior overrides.
 
 # Fields
 - `mu::Float64`: expected centroid position of the peak in keV
 - `sigma::Float64`: expected standard deviation of the Gaussian core in keV
-- `window_size::Float64`: full width of the fit window in keV, centered on `mu`. Should be 
+- `window_size::Float64`: full width of the fit window in keV, centered on `mu`. Should be
   large enough to contain the `mu +- 3 * sigma` peak region. Default: `10 * sigma`
-- `integration_method::AbstractIntegrationMethod`: the integration method used to compute 
-  expected bin counts. Either `Analytical()`, `Numerical()`, or `Midpoint()`. 
-  Default: `Analytical()`
-- `priors::Vector{PriorPair}`: custom priors that overwrite the defaults built by 
+- `priors::Vector{PriorPair}`: custom priors that overwrite the defaults built by
   [`build_prior`](@ref) for the specified symbols. Default: `PriorPair[]`
 
 # See also
-- [`AbstractIntegrationMethod`](@ref) for the available integration methods
 - [`build_prior`](@ref) for the prior construction that consumes these options
 """
 Base.@kwdef struct FitConfigs
     mu::Float64
     sigma::Float64
     window_size::Float64 = 10 * sigma
-    integration_method::AbstractIntegrationMethod = Analytical()
     priors::Vector{PriorPair} = PriorPair[]
 end

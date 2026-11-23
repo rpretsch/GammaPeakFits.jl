@@ -200,25 +200,3 @@ function get_peak_features(hist::Histogram{<:Real,1}, configs::FitConfigs)
     return peak_height, peak_area, mean_background_val
 
 end
-
-"""
-    is_present(component::AbstractComponent)
-
-Return `true` if `component` is part of the model (a concrete parameter struct, `Enabled`,
-or a container) and `false` if it is `Disabled`.
-
-Used for spec-time decisions such as which priors to build in [`build_prior`](@ref).
-
-# Arguments
-- `component::AbstractComponent`: the component (or container) to test
-
-# Returns
-- `true` if `component` is present (`Enabled`, a concrete parameter struct, or a container)
-- `false` if `component` is `Disabled`
-
-# See also
-- [`AbstractComponent`](@ref), [`Enabled`](@ref), [`Disabled`](@ref) for the component  
-  management
-"""
-is_present(::Disabled) = false
-is_present(::AbstractComponent) = true

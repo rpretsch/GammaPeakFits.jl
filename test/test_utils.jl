@@ -1,5 +1,5 @@
 using StatsBase: Histogram, mean
-using GammaPeakFits: get_peak_features, is_present, mean_background, background_poly_bounds
+using GammaPeakFits: get_peak_features, mean_background, background_poly_bounds
 
 @testset "utils" begin
 
@@ -20,13 +20,6 @@ using GammaPeakFits: get_peak_features, is_present, mean_background, background_
             DATA,
             FitConfigs(mu = 50.0, sigma = 0.5, window_size = 4.0),
         )
-
-    end
-
-    @testset "is_present" begin
-
-        @test !is_present(Disabled())
-        @test is_present(Enabled())
 
     end
 

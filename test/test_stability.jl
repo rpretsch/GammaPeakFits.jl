@@ -70,6 +70,10 @@ using GammaPeakFits:
         @test @inferred(_check_spectrum(HIST)) isa Real
     end
 
+    @testset "measure models" begin
+        @test @inferred(expected_counts(PolynomialShape(C_CONST), HIST)) isa Vector{Float64}
+    end
+
     @testset "component models (scalar/vector)" begin
         @test @inferred(gaussian(MU, gaussian_params)) isa Float64
         @test @inferred(gaussian(X_ARRAY, gaussian_params)) isa Vector{Float64}

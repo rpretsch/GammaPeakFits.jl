@@ -94,6 +94,7 @@ module GammaPeakFits
 using BAT
 using DensityInterface: logfuncdensity
 using Distributions
+import LegendSpecFits
 using LegendSpecFits: GaussPeak, LowETailPeak, HighETailPeak, GaussianStep, PolynomialShape
 using MeasureBase: AbstractMeasure
 using PropertyFunctions: @pf
@@ -154,6 +155,9 @@ export FitConfigs
 
 # Model evaluation
 export full_model
+
+# Model evaluation - measures
+export expected_counts
 
 # Fitting
 export PriorPair

@@ -69,12 +69,14 @@ function build_prior(
     )
 
     if :n in names
-        _, peak_area, background = get_peak_features(hist, configs)
+        _, peak_area, background =
+            get_peak_features(hist; mu = configs.mu, sigma = configs.sigma)
     else
         peak_area = NaN  # not used without a peak amplitude `n`
         background = mean_background(hist.weights, bin_size)
     end
-    lin_bound, quad_bound = background_poly_bounds(background, bin_size, configs)
+    lin_bound, quad_bound =
+        background_poly_bounds(background, max(configs.window_size / 2, bin_size))
 
     priors = map(names) do name
         haskey(overrides, name) ? overrides[name] :

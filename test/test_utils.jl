@@ -33,9 +33,8 @@ using GammaPeakFits: get_peak_features, mean_background, background_poly_bounds
 
     @testset "background_poly_bounds" begin
 
-        # window_size = 4 => h = 2; b = 4 counts/keV
-        configs = FitConfigs(mu = MU, sigma = 0.4)
-        lin_bound, quad_bound = background_poly_bounds(4.0, BIN_SIZE, configs)
+        # h = 2 keV; b = 4 counts/keV
+        lin_bound, quad_bound = background_poly_bounds(4.0, 2.0)
         @test lin_bound == 2 * 4.0 / 2
         @test quad_bound == 2 * 4.0 / 2^2
 
@@ -44,8 +43,7 @@ using GammaPeakFits: get_peak_features, mean_background, background_poly_bounds
     @testset "get_peak_features" begin
 
         @testset "Peak height and Peak area" begin
-            configs = FitConfigs(mu = 5.0, sigma = 1.0)
-            height, area, background = get_peak_features(DATA, configs)
+            height, area, background = get_peak_features(DATA; mu = 5.0, sigma = 1.0)
             @test height == 8.0 - mean([1.0, 9.0, 10.0])
             @test area == sqrt(2 * pi) * 1.0 * height / 1.0
             @test background == mean([1.0, 9.0, 10.0])
@@ -56,8 +54,7 @@ using GammaPeakFits: get_peak_features, mean_background, background_poly_bounds
 
         @testset "Converts counts/bin to counts/keV via bin_size" begin
             data = Histogram(COARSE_EDGES, [10, 100, 30])
-            configs = FitConfigs(mu = 3.0, sigma = 0.5)
-            height, area, background = get_peak_features(data, configs)
+            height, area, background = get_peak_features(data; mu = 3.0, sigma = 0.5)
             @test height == (100.0 - mean([10.0, 30.0])) / 2.0
             @test area == sqrt(2 * pi) * 0.5 * height
             @test background == mean([10.0, 30.0]) / 2.0
@@ -65,8 +62,7 @@ using GammaPeakFits: get_peak_features, mean_background, background_poly_bounds
 
         @testset "Sanity floors keep estimates positive" begin
             data = Histogram(COARSE_EDGES, [10, 20, 30])
-            configs = FitConfigs(mu = 3.0, sigma = 0.5)
-            height, area, background = get_peak_features(data, configs)
+            height, area, background = get_peak_features(data; mu = 3.0, sigma = 0.5)
             @test height == 1.0 / 2.0
             @test area == sqrt(2 * pi) * 0.5 * height
             @test background == mean([10.0, 30.0]) / 2.0
@@ -76,29 +72,24 @@ using GammaPeakFits: get_peak_features, mean_background, background_poly_bounds
         end
 
         @testset "Throws for non-positive sigma" begin
-            configs_zero = FitConfigs(mu = 5.0, sigma = 0.0)
-            configs_negative = FitConfigs(mu = 5.0, sigma = -1.0)
-            @test_throws ArgumentError get_peak_features(DATA, configs_zero)
-            @test_throws ArgumentError get_peak_features(DATA, configs_negative)
+            @test_throws ArgumentError get_peak_features(DATA; mu = 5.0, sigma = 0.0)
+            @test_throws ArgumentError get_peak_features(DATA; mu = 5.0, sigma = -1.0)
         end
 
         @testset "Throws when peak region not contained in data" begin
             data = Histogram(COARSE_EDGES, [10, 20, 30])
-            configs = FitConfigs(mu = 2.0, sigma = 1.0)
-            @test_throws ArgumentError get_peak_features(data, configs)
+            @test_throws ArgumentError get_peak_features(data; mu = 2.0, sigma = 1.0)
         end
 
         @testset "Throws when peak region contains no bin centers" begin
             data = Histogram(COARSE_EDGES, [10, 20, 30])
-            configs = FitConfigs(mu = 2.0, sigma = 0.1)
-            @test_throws ArgumentError get_peak_features(data, configs)
+            @test_throws ArgumentError get_peak_features(data; mu = 2.0, sigma = 0.1)
         end
 
         @testset "Throws when only peak region is contained in data" begin
             data = Histogram(COARSE_EDGES, [10, 20, 30])
             # `mu +- 3 * sigma` covers [1, 5] exactly, the data range
-            configs = FitConfigs(mu = 3.0, sigma = 2 / 3)
-            @test_throws ArgumentError get_peak_features(data, configs)
+            @test_throws ArgumentError get_peak_features(data; mu = 3.0, sigma = 2 / 3)
         end
 
     end

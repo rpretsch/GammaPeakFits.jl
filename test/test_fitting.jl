@@ -26,7 +26,7 @@ using StatsBase: Histogram
 
         @testset "Names in kernel order with data-driven defaults" begin
             prior = build_prior(DATA, PEAK_KERNEL, CONFIGS)
-            _, peak_area, background = get_peak_features(DATA, CONFIGS)
+            _, peak_area, background = get_peak_features(DATA; mu = MU, sigma = SIGMA)
 
             @test propertynames(prior) == (:n, :alpha, :mu, :sigma, :theta, :b)
             @test prior.n == Uniform(0, 3 * peak_area)
@@ -40,7 +40,7 @@ using StatsBase: Histogram
         @testset "Background-only kernel estimates over the whole range" begin
             prior = build_prior(DATA, BACKGROUND_KERNEL, CONFIGS)
             background = mean_background(DATA.weights, BIN_SIZE)
-            lin_bound, quad_bound = background_poly_bounds(background, BIN_SIZE, CONFIGS)
+            lin_bound, quad_bound = background_poly_bounds(background, WINDOW / 2)
 
             @test propertynames(prior) == (:b, :b1, :b2, :h)
             @test prior.b == Uniform(0, 2 * background)

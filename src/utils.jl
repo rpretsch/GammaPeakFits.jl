@@ -81,14 +81,69 @@ function _background_poly_bounds(mean_background::Real, half_window::Real)
 end
 
 """
+    _peak_mask(bin_centers::AbstractVector{<:Real}; mu::Real, sigma::Real) -> BitVector
+
+Select the peak region of a spectrum: the bins whose centers lie within `mu ± 3 sigma`.
+The region must lie within the range of the bin centers, contain at least one bin center,
+and leave at least one bin outside for the background estimate.
+
+# Arguments
+- `bin_centers::AbstractVector{<:Real}`: bin centers in keV
+
+# Keyword Arguments
+- `mu::Real`: expected peak centroid in keV
+- `sigma::Real`: expected peak width (standard deviation) in keV
+
+# Throws
+- An `ArgumentError` if `sigma` is not positive
+- An `ArgumentError` if `mu ± 3 sigma` is not within the range of the bin centers
+- An `ArgumentError` if the peak region contains no bin center
+- An `ArgumentError` if the peak region contains all bin centers
+
+# Returns
+- A `BitVector` that is `true` for the bins in the peak region
+"""
+function _peak_mask(bin_centers::AbstractVector{<:Real}; mu::Real, sigma::Real)
+
+    sigma > 0 || throw(ArgumentError("`sigma` must be positive, got $sigma"))
+
+    lower = mu - 3 * sigma
+    upper = mu + 3 * sigma
+    data_min, data_max = extrema(bin_centers)
+    data_min <= lower && upper <= data_max || throw(
+        ArgumentError(
+            "Peak region [$lower, $upper] keV is not fully contained in the data range " *
+            "[$data_min, $data_max] keV",
+        ),
+    )
+
+    mask = lower .<= bin_centers .<= upper
+    any(mask) || throw(
+        ArgumentError(
+            "Peak region [$lower, $upper] keV contains no bin centers, use a larger " *
+            "`sigma` or finer bins",
+        ),
+    )
+    all(mask) && throw(
+        ArgumentError(
+            "Data range [$data_min, $data_max] keV contains only the peak region " *
+            "[$lower, $upper] keV, need bins outside for the background",
+        ),
+    )
+
+    return mask
+
+end
+
+"""
     _get_peak_features(hist::Histogram{<:Real,1}; mu::Real, sigma::Real) -> Tuple{Real,Real,Real}
 
 Estimate the peak height and area from observed count data.
 
-Bins with their centers within `+-3 * sigma` of the centroid `mu` are identified as the
-peak region. First, the mean background is calculated from the bins outside peak region.
-Then the height is taken as the maximum observed count in the peak area minus the mean
-background. The peak area is estimated as `sqrt(2 * pi) * sigma * peak_height`.
+The peak region is selected by [`_peak_mask`](@ref). First, the mean background is
+calculated from the bins outside peak region. Then the height is taken as the maximum
+observed count in the peak area minus the mean background. The peak area is estimated as
+`sqrt(2 * pi) * sigma * peak_height`.
 
 Poisson data can produce zero background counts or no peak above the background, so 
 `peak_height` and `mean_background` are floored at one count per bin; `peak_area` is 
@@ -100,7 +155,7 @@ and [`background_priors`](@ref) valid.
 
 # Keyword Arguments
 - `mu::Real`: expected peak centroid in keV
-- `sigma::Real`: expected peak width (standard deviation) in keV, `sigma > 0`
+- `sigma::Real`: expected peak width (standard deviation) in keV
 
 # Returns
 - A tuple `(peak_height, peak_area, mean_background)` containing the estimated height and 
@@ -108,52 +163,14 @@ and [`background_priors`](@ref) valid.
   (counts/keV, counts, counts/keV)
 
 # Throws
-- The `ArgumentError`s of [`_check_spectrum`](@ref)
-- An `ArgumentError` if `sigma` is not positive
-- An `ArgumentError` if `mu +- 3 * sigma` is not contained within the range of the bin
-  centers
-- An `ArgumentError` if the peak region contains no bin centers
-- An `ArgumentError` if only the peak region is contained within the range of the bin
-  centers
+- The `ArgumentError`s of [`_check_spectrum`](@ref) and [`_peak_mask`](@ref)
 """
 function _get_peak_features(hist::Histogram{<:Real,1}; mu::Real, sigma::Real)
 
     bin_size = _check_spectrum(hist)
-    bin_centers = midpoints(only(hist.edges))
     weights = hist.weights
-
-    sigma > 0 || throw(ArgumentError("`sigma` must be positive, got $sigma"))
-
-    lower_peak_limit = mu - 3 * sigma
-    upper_peak_limit = mu + 3 * sigma
-    data_min = minimum(bin_centers)
-    data_max = maximum(bin_centers)
-    if lower_peak_limit < data_min || upper_peak_limit > data_max
-        throw(
-            ArgumentError(
-                "Peak region [$lower_peak_limit, $upper_peak_limit] keV is not fully contained in the data range [$data_min, $data_max] keV.",
-            ),
-        )
-    end
-
-    peak_mask = lower_peak_limit .<= bin_centers .<= upper_peak_limit
+    peak_mask = _peak_mask(midpoints(only(hist.edges)); mu, sigma)
     peak_weights = weights[peak_mask]                                   # counts/bin
-
-    if isempty(peak_weights)
-        throw(
-            ArgumentError(
-                "Peak region [$lower_peak_limit, $upper_peak_limit] keV contains no bin centers. Use a larger `sigma` or supply data with finer bins.",
-            ),
-        )
-    end
-
-    if length(peak_weights) >= length(weights)
-        throw(
-            ArgumentError(
-                "Data range [$data_min, $data_max] keV contains only the peak region [$lower_peak_limit, $upper_peak_limit] keV. Need more data for background estimation.",
-            ),
-        )
-    end
 
     background_weights = weights[.!peak_mask]                           # counts/bin
     mean_background_val = _mean_background(background_weights, bin_size) # counts/keV

@@ -97,7 +97,7 @@ using Distributions
 import LegendSpecFits
 using LegendSpecFits: GaussPeak, LowETailPeak, HighETailPeak, GaussianStep, PolynomialShape
 using MeasureBase: AbstractMeasure
-using PropertyFunctions: @pf
+using PropertyFunctions: @pf, PPath, PropertyFunction, input_property_paths
 using QuadGK: quadgk
 using SpecialFunctions: erf, erfc, logerfcx
 using StatsBase: Histogram, fit, mean, midpoints

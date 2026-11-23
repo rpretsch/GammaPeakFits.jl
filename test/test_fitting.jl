@@ -1,6 +1,6 @@
 using BAT: PosteriorMeasure
 using Distributions: Normal, Poisson, Uniform, logpdf, truncated
-using GammaPeakFits: mean_background, background_poly_bounds
+using GammaPeakFits: mean_background, background_poly_bounds, get_peak_features
 using StatsBase: Histogram
 
 @testset "fitting" begin
@@ -22,6 +22,11 @@ using StatsBase: Histogram
     C_CONST = 100.0
     C_LIN = 10.0
     CONFIGS = FitConfigs(mu = MU, sigma = SIGMA, integration_method = Midpoint())
+    PEAK_KERNEL = @pf $n * (
+        (1 - $alpha) * GaussPeak($mu, $sigma) + $alpha * LowETailPeak($mu, $sigma, $theta)
+    ) + PolynomialShape($b)
+    BACKGROUND_KERNEL =
+        @pf PolynomialShape($b, $b1, $b2; x0 = MU) + $h * GaussianStep(MU, SIGMA)
 
     @testset "poisson_ll" begin
 
@@ -319,6 +324,61 @@ using StatsBase: Histogram
             model_params = ModelParams(peak = PeakParams(gaussian = Enabled()))
             @test_throws ArgumentError build_prior(DATA, model_params, configs)
 
+        end
+
+    end
+
+    @testset "build_prior for @pf kernels" begin
+
+        @testset "Names in kernel order with data-driven defaults" begin
+            prior = build_prior(DATA, PEAK_KERNEL, CONFIGS)
+            _, peak_area, background = get_peak_features(DATA, CONFIGS)
+
+            @test propertynames(prior) == (:n, :alpha, :mu, :sigma, :theta, :b)
+            @test prior.n == Uniform(0, 3 * peak_area)
+            @test prior.alpha == Uniform(0, 1)
+            @test prior.mu == Normal(MU, 0.6)
+            @test prior.sigma == truncated(Normal(SIGMA, 0.6), eps(), Inf)
+            @test prior.theta == Uniform(eps(), 5 * SIGMA)
+            @test prior.b == Uniform(0, 2 * background)
+        end
+
+        @testset "Background-only kernel estimates over the whole range" begin
+            prior = build_prior(DATA, BACKGROUND_KERNEL, CONFIGS)
+            background = mean_background(DATA.weights, BIN_SIZE)
+            lin_bound, quad_bound = background_poly_bounds(background, BIN_SIZE, CONFIGS)
+
+            @test propertynames(prior) == (:b, :b1, :b2, :h)
+            @test prior.b == Uniform(0, 2 * background)
+            @test prior.b1 == Uniform(-lin_bound, lin_bound)
+            @test prior.b2 == Uniform(-quad_bound, quad_bound)
+            @test prior.h == Uniform(0, 4 * background)
+        end
+
+        @testset "configs.priors overrides a default" begin
+            override = truncated(Normal(A, 10), 0, Inf)
+            configs = FitConfigs(mu = MU, sigma = SIGMA, priors = [:n => override])
+            prior = build_prior(DATA, PEAK_KERNEL, configs)
+            @test prior.n == override
+            @test prior.alpha == Uniform(0, 1)
+        end
+
+        @testset "throws" begin
+            # Name without a default
+            @test_throws ArgumentError build_prior(
+                DATA,
+                @pf($foo * GaussPeak(MU, SIGMA)),
+                CONFIGS,
+            )
+            # Override for a name not in the kernel
+            configs = FitConfigs(mu = MU, sigma = SIGMA, priors = [:h => Uniform(0, 1)])
+            @test_throws ArgumentError build_prior(DATA, PEAK_KERNEL, configs)
+            # Nested name
+            @test_throws ArgumentError build_prior(
+                DATA,
+                @pf($p.n * GaussPeak(MU, SIGMA)),
+                CONFIGS,
+            )
         end
 
     end

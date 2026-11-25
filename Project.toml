@@ -1,6 +1,6 @@
 name = "GammaPeakFits"
 uuid = "8b86ffcc-b0d2-4a89-8286-ff3cc002705d"
-version = "1.0.0-DEV"
+version = "0.1.0"
 authors = ["Rene Pretsch"]
 
 [deps]

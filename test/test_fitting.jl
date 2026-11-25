@@ -1,14 +1,15 @@
 using BAT: distprod, logdensityof
 using Distributions: Normal, Uniform, truncated
-using GammaPeakFits: _mean_background, _background_poly_bounds, _get_peak_features
-using StatsBase: Histogram
+using GammaPeakFits:
+    _mean_background, _background_poly_bounds, _background_mask, _get_peak_features
+using StatsBase: Histogram, midpoints
 
 @testset "fitting" begin
 
     A = 1000.0
     MU = 2048.0
     SIGMA = 10.0
-    WINDOW = 100.0
+    WINDOW = 200.0
     BIN_SIZE = 1.0
 
     DATA = sample_spectrum(
@@ -19,8 +20,9 @@ using StatsBase: Histogram
 
     PEAK_KERNEL = @pf $n * (
         (1 - $alpha) * GaussPeak($mu, $sigma) + $alpha * LowETailPeak($mu, $sigma, $theta)
-    ) + PolynomialShape($b)
-    NESTED_KERNEL = @pf $peak.n * GaussPeak($peak.mu, $peak.sigma) + PolynomialShape($bkg.b)
+    ) + PolynomialShape($b0)
+    NESTED_KERNEL =
+        @pf $peak.n * GaussPeak($peak.mu, $peak.sigma) + PolynomialShape($bkg.b0)
 
     DEFAULTS = (
         peak = peak_priors(DATA; mu = MU, sigma = SIGMA),
@@ -32,18 +34,36 @@ using StatsBase: Histogram
     @testset "default blocks" begin
 
         @testset "peak_priors" begin
-            priors = peak_priors(DATA; mu = MU, sigma = SIGMA)
-            _, peak_area, _ = _get_peak_features(DATA; mu = MU, sigma = SIGMA)
 
-            @test keys(priors) == (:n, :alpha, :mu, :sigma, :theta)
-            @test priors.n == Uniform(0, 3 * peak_area)
-            @test priors.alpha == Uniform(0, 1)
-            @test priors.mu == Normal(MU, 0.6)
-            @test priors.sigma == truncated(Normal(SIGMA, 0.6), eps(), Inf)
-            @test priors.theta == Uniform(eps(), 5 * SIGMA)
+            @testset "one peak" begin
+                priors = peak_priors(DATA; mu = MU, sigma = SIGMA)
+                _, peak_area, _ = _get_peak_features(DATA; mu = MU, sigma = SIGMA)
 
-            # sigma not positive, rejected by _get_peak_features
-            @test_throws ArgumentError peak_priors(DATA; mu = MU, sigma = 0.0)
+                @test keys(priors) == (:n, :alpha, :mu, :sigma, :theta)
+                @test priors.n == Uniform(0, 3 * peak_area)
+                @test priors.alpha == Uniform(0, 1)
+                @test priors.mu == Normal(MU, 0.6)
+                @test priors.sigma == truncated(Normal(SIGMA, 0.6), eps(), Inf)
+                @test priors.theta == Uniform(eps(), 5 * SIGMA)
+            end
+
+            @testset "selected one of several peaks" begin
+                mus = [MU - 40, MU]
+                sigma = 2.0
+                priors = peak_priors(DATA; mu = mus, sigma, peak_index = 2)
+                _, peak_area, _ = _get_peak_features(DATA; mu = mus, sigma, peak_index = 2)
+
+                @test priors.n == Uniform(0, 3 * peak_area)
+                @test priors.mu == Normal(MU, 0.6)
+                @test priors.sigma == truncated(Normal(sigma, 0.6), eps(), Inf)
+                @test priors.theta == Uniform(eps(), 5 * sigma)
+            end
+
+            @testset "throws" begin
+                # sigma not positive, rejected by _get_peak_features
+                @test_throws ArgumentError peak_priors(DATA; mu = MU, sigma = 0.0)
+            end
+
         end
 
         @testset "background_priors" begin
@@ -54,17 +74,20 @@ using StatsBase: Histogram
                 priors = background_priors(DATA)
                 level = _mean_background(DATA.weights, BIN_SIZE)
                 lin_bound, quad_bound = _background_poly_bounds(level, half_range)
-                @test keys(priors) == (:b, :b1, :b2, :h)
-                @test priors.b == Uniform(0, 2 * level)
+                @test keys(priors) == (:b0, :b1, :b2, :h)
+                @test priors.b0 == Uniform(0, 2 * level)
                 @test priors.b1 == Uniform(-lin_bound, lin_bound)
                 @test priors.b2 == Uniform(-quad_bound, quad_bound)
                 @test priors.h == Uniform(0, 4 * level)
             end
 
-            @testset "with a peak, level outside mu ± 3 sigma" begin
-                priors = background_priors(DATA; mu = MU, sigma = SIGMA)
-                level = last(_get_peak_features(DATA; mu = MU, sigma = SIGMA))
-                @test priors.b == Uniform(0, 2 * level)
+            @testset "with peaks, level outside mu ± 5 sigma of all of them" begin
+                mus = [MU, MU + 60]
+                priors = background_priors(DATA; mu = mus, sigma = SIGMA)
+                centers = midpoints(only(DATA.edges))
+                mask = _background_mask(centers; mu = mus, sigma = [SIGMA, SIGMA])
+                level = _mean_background(DATA.weights[mask], BIN_SIZE)
+                @test priors.b0 == Uniform(0, 2 * level)
             end
 
             @testset "throws" begin
@@ -72,6 +95,14 @@ using StatsBase: Histogram
                 @test_throws ArgumentError background_priors(DATA; mu = MU)
                 # Uneven bins without a peak, rejected by _check_spectrum
                 @test_throws ArgumentError background_priors(UNEVEN_HIST)
+                # Two widths for one peak, rejected by _peak_params
+                @test_throws ArgumentError background_priors(
+                    DATA;
+                    mu = MU,
+                    sigma = [SIGMA, SIGMA],
+                )
+                # mu ± 5 sigma covers all bins, rejected by _background_mask
+                @test_throws ArgumentError background_priors(DATA; mu = MU, sigma = 30.0)
             end
 
         end
@@ -82,9 +113,9 @@ using StatsBase: Histogram
 
         @testset "flat kernel takes the used entries" begin
             prior = build_prior(PEAK_KERNEL, merge(DEFAULTS.peak, DEFAULTS.bkg))
-            @test propertynames(prior) == (:n, :alpha, :mu, :sigma, :theta, :b)
+            @test propertynames(prior) == (:n, :alpha, :mu, :sigma, :theta, :b0)
             @test prior.n == DEFAULTS.peak.n
-            @test prior.b == DEFAULTS.bkg.b
+            @test prior.b0 == DEFAULTS.bkg.b0
         end
 
         @testset "override via merge" begin
@@ -96,7 +127,7 @@ using StatsBase: Histogram
             prior = build_prior(NESTED_KERNEL, DEFAULTS)
             @test propertynames(prior) == (:peak, :bkg)
             @test propertynames(prior.peak) == (:n, :mu, :sigma)
-            @test propertynames(prior.bkg) == (:b,)
+            @test propertynames(prior.bkg) == (:b0,)
             @test prior.peak.n == DEFAULTS.peak.n
         end
 
@@ -138,15 +169,15 @@ using StatsBase: Histogram
         @testset "throws" begin
             # Uneven bins, rejected by _check_spectrum
             @test_throws ArgumentError build_posterior(UNEVEN_HIST, PEAK_KERNEL, prior)
-            # Prior without `b` does not match the kernel
-            prior_without_b = distprod(
+            # Prior without `b0` does not match the kernel
+            prior_without_b0 = distprod(
                 n = prior.n,
                 alpha = prior.alpha,
                 mu = prior.mu,
                 sigma = prior.sigma,
                 theta = prior.theta,
             )
-            @test_throws ArgumentError build_posterior(DATA, PEAK_KERNEL, prior_without_b)
+            @test_throws ArgumentError build_posterior(DATA, PEAK_KERNEL, prior_without_b0)
             # Nested group `peak` without `sigma` does not match the kernel
             nested_prior = build_prior(NESTED_KERNEL, DEFAULTS)
             peak_without_sigma =

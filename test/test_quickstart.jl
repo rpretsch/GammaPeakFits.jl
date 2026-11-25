@@ -20,10 +20,10 @@ using StatsBase: mean
     data = sample_spectrum(truth; bin_size, energy_range)
 
     # cut appropriate fit window
-    fit_data = cut_data(data; center = mu, width = 10 * sigma)
+    fit_data = cut_data(data; center = mu, width = 20 * sigma)
 
     # Model kernel: parameters -> spectral model
-    model = @pf $n * GaussPeak($mu, $sigma) + PolynomialShape($b)
+    model = @pf $n * GaussPeak($mu, $sigma) + PolynomialShape($b0)
 
     # Data-driven default priors, the prior takes the entries the model uses
     defaults =
@@ -39,7 +39,7 @@ using StatsBase: mean
 
     samples = result.result
     @test all(isfinite, samples.logd)
-    @test propertynames(samples.v) == (:n, :mu, :sigma, :b)
+    @test propertynames(samples.v) == (:n, :mu, :sigma, :b0)
 
     # Expected counts of the fitted model, e.g. for plotting
     mean_params = mean(samples)

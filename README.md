@@ -81,7 +81,7 @@ with `+` and `*`:
 | `LowETailPeak(mu, sigma, theta)`  | ex-Gaussian peak with unit area, tail of scale `theta` to lower energies |
 | `HighETailPeak(mu, sigma, theta)` | same with the tail to higher energies                                    |
 | `GaussianStep(mu, sigma)`         | smoothed step of height 1 below `mu` (Compton edge)                      |
-| `PolynomialShape(b, b1, b2; x0)`  | `b + b1 (x - x0) + b2 (x - x0)^2`                                        |
+| `PolynomialShape(b0, b1, b2; x0)` | `b0 + b1 (x - x0) + b2 (x - x0)^2`                                       |
 
 Bin masses of these shapes are exact (differences of their cumulative
 functions); measures without one are integrated per bin with Simpson's rule,
@@ -90,9 +90,10 @@ which can miss peaks that are narrow compared to the bins.
 A peak with a low-energy tail on a linear background:
 
 ```julia
-model = @pf $n * ((1 - $alpha) * GaussPeak($mu, $sigma) +
-                  $alpha * LowETailPeak($mu, $sigma, $theta)) +
-            PolynomialShape($b, $b1; x0 = 2048.0)
+model = @pf $n * (
+                (1 - $alpha) * GaussPeak($mu, $sigma)
+                + $alpha * LowETailPeak($mu, $sigma, $theta)
+            ) + PolynomialShape($b0, $b1; x0 = 2048.0)
 ```
 
 `n` is the number of peak counts and `alpha` the tail fraction. Parameters can
@@ -112,16 +113,37 @@ e.g. for plotting a fit.
 | `mu`    | `Normal(mu, 0.6)`                            | `peak_priors`       |
 | `sigma` | `truncated(Normal(sigma, 0.6), eps(), Inf)`  | `peak_priors`       |
 | `theta` | `Uniform(eps(), 5 * sigma)`                  | `peak_priors`       |
-| `b`     | `Uniform(0, 2 * level)`                      | `background_priors` |
+| `b0`    | `Uniform(0, 2 * level)`                      | `background_priors` |
 | `b1`    | `Uniform(-2 * level / h, 2 * level / h)`     | `background_priors` |
 | `b2`    | `Uniform(-2 * level / h^2, 2 * level / h^2)` | `background_priors` |
 | `h`     | `Uniform(0, 4 * level)`                      | `background_priors` |
 
 `peak_area` is estimated from the highest count rate within `mu ± 3 sigma` above
-the mean background `level` (counts/keV) outside that region; both are floored
-at one count per bin. `h` is the half-width of the histogram's range, so the
-`b1`/`b2` bounds assume the polynomial is expanded around the window center
-(`x0`).
+the mean background `level` (counts/keV) outside `mu ± 5 sigma`; both are
+floored at one count per bin. The fit window needs at least one bin outside
+`mu ± 5 sigma` for the background. `h` is the half-width of the histogram's
+range, so the `b1`/`b2` bounds assume the polynomial is expanded around the
+window center (`x0`).
+
+With several peaks in the window, `mu` and `sigma` take all of them (one shared
+`sigma` or one per peak), and `peak_index` selects the peak of a `peak_priors`
+block. The background excludes `mu ± 5 sigma` of every peak, so also list peaks
+that lie in the window but are not fitted. Several peaks need grouped
+parameters, one group per peak, and `defaults` nested the same way:
+
+```julia
+model = @pf $peak1.n * GaussPeak($peak1.mu, $peak1.sigma) +
+            $peak2.n * GaussPeak($peak2.mu, $peak2.sigma) +
+            PolynomialShape($bkg.b0)
+
+mus = [2030.0, 2060.0]
+sigma = 1.0
+defaults = (
+    peak1 = peak_priors(fit_data; mu = mus, sigma, peak_index = 1),
+    peak2 = peak_priors(fit_data; mu = mus, sigma, peak_index = 2),
+    bkg = background_priors(fit_data; mu = mus, sigma),
+)
+```
 
 `build_prior(model, defaults)` takes the entry of `defaults` for each parameter
 of the kernel and ignores the rest; replace single entries with `merge`:
@@ -159,10 +181,10 @@ truth = peak_counts * GaussPeak(mu, sigma) + PolynomialShape(background)
 data = sample_spectrum(truth; bin_size, energy_range)
 
 # cut appropriate fit window
-fit_data = cut_data(data; center = mu, width = 10 * sigma)
+fit_data = cut_data(data; center = mu, width = 20 * sigma)
 
 # Model kernel: parameters -> spectral model
-model = @pf $n * GaussPeak($mu, $sigma) + PolynomialShape($b)
+model = @pf $n * GaussPeak($mu, $sigma) + PolynomialShape($b0)
 
 # Data-driven default priors, the prior takes the entries the model uses
 defaults = merge(peak_priors(fit_data; mu, sigma), background_priors(fit_data; mu, sigma))

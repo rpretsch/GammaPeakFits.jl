@@ -39,10 +39,10 @@ truth = peak_counts * GaussPeak(mu, sigma) + PolynomialShape(background)
 data = sample_spectrum(truth; bin_size, energy_range)
 
 # cut appropriate fit window
-fit_data = cut_data(data; center = mu, width = 10 * sigma)
+fit_data = cut_data(data; center = mu, width = 20 * sigma)
 
 # Model kernel: parameters -> spectral model
-model = @pf \$n * GaussPeak(\$mu, \$sigma) + PolynomialShape(\$b)
+model = @pf \$n * GaussPeak(\$mu, \$sigma) + PolynomialShape(\$b0)
 
 # Data-driven default priors, the prior takes the entries the model uses
 defaults = merge(peak_priors(fit_data; mu, sigma), background_priors(fit_data; mu, sigma))

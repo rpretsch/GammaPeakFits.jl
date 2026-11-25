@@ -81,11 +81,55 @@ function _background_poly_bounds(mean_background::Real, half_window::Real)
 end
 
 """
+    _peak_params(
+        mu::Union{Real,AbstractVector{<:Real}},
+        sigma::Union{Real,AbstractVector{<:Real}},
+    ) -> Tuple{Vector,Vector}
+
+The known peaks in a spectrum as two vectors of equal length, their expected centroids and
+widths (standard deviations) in keV. `mu` is one centroid or a vector of centroids; `sigma`
+is one width shared by all peaks or a vector with one width per peak. All known peaks in
+the window are given, also those that are not fitted, so that they are excluded from the
+background estimate (see [`_background_mask`](@ref)).
+
+# Arguments
+- `mu::Union{Real,AbstractVector{<:Real}}`: expected peak centroid(s) in keV
+- `sigma::Union{Real,AbstractVector{<:Real}}`: expected peak width(s) in keV
+
+# Throws
+- An `ArgumentError` if `mu` is empty
+- An `ArgumentError` if `sigma` is a vector of another length than `mu`
+- An `ArgumentError` if a `sigma` is not positive
+
+# Returns
+- A `Tuple` `(mus, sigmas)` of two vectors with one entry per peak
+"""
+function _peak_params(
+    mu::Union{Real,AbstractVector{<:Real}},
+    sigma::Union{Real,AbstractVector{<:Real}},
+)
+
+    mus = mu isa Real ? [float(mu)] : float.(mu)
+    sigmas = sigma isa Real ? fill(float(sigma), length(mus)) : float.(sigma)
+
+    isempty(mus) && throw(ArgumentError("`mu` must contain at least one peak"))
+    length(sigmas) == length(mus) || throw(
+        ArgumentError(
+            "`sigma` must be one width or one width per peak, got $(length(sigmas)) " *
+            "widths for $(length(mus)) peaks",
+        ),
+    )
+    all(>(0), sigmas) || throw(ArgumentError("`sigma` must be positive, got $sigma"))
+
+    return mus, sigmas
+
+end
+
+"""
     _peak_mask(bin_centers::AbstractVector{<:Real}; mu::Real, sigma::Real) -> BitVector
 
-Select the peak region of a spectrum: the bins whose centers lie within `mu ± 3 sigma`.
-The region must lie within the range of the bin centers, contain at least one bin center,
-and leave at least one bin outside for the background estimate.
+Select the peak region of one peak: the bins whose centers lie within `mu ± 3 sigma`. The
+region must contain at least one bin center.
 
 # Arguments
 - `bin_centers::AbstractVector{<:Real}`: bin centers in keV
@@ -95,39 +139,20 @@ and leave at least one bin outside for the background estimate.
 - `sigma::Real`: expected peak width (standard deviation) in keV
 
 # Throws
-- An `ArgumentError` if `sigma` is not positive
-- An `ArgumentError` if `mu ± 3 sigma` is not within the range of the bin centers
 - An `ArgumentError` if the peak region contains no bin center
-- An `ArgumentError` if the peak region contains all bin centers
 
 # Returns
 - A `BitVector` that is `true` for the bins in the peak region
 """
 function _peak_mask(bin_centers::AbstractVector{<:Real}; mu::Real, sigma::Real)
 
-    sigma > 0 || throw(ArgumentError("`sigma` must be positive, got $sigma"))
-
     lower = mu - 3 * sigma
     upper = mu + 3 * sigma
-    data_min, data_max = extrema(bin_centers)
-    data_min <= lower && upper <= data_max || throw(
-        ArgumentError(
-            "Peak region [$lower, $upper] keV is not fully contained in the data range " *
-            "[$data_min, $data_max] keV",
-        ),
-    )
-
     mask = lower .<= bin_centers .<= upper
     any(mask) || throw(
         ArgumentError(
             "Peak region [$lower, $upper] keV contains no bin centers, use a larger " *
             "`sigma` or finer bins",
-        ),
-    )
-    all(mask) && throw(
-        ArgumentError(
-            "Data range [$data_min, $data_max] keV contains only the peak region " *
-            "[$lower, $upper] keV, need bins outside for the background",
         ),
     )
 
@@ -136,48 +161,121 @@ function _peak_mask(bin_centers::AbstractVector{<:Real}; mu::Real, sigma::Real)
 end
 
 """
-    _get_peak_features(hist::Histogram{<:Real,1}; mu::Real, sigma::Real) -> Tuple{Real,Real,Real}
+    _background_mask(
+        bin_centers::AbstractVector{<:Real};
+        mu::AbstractVector{<:Real},
+        sigma::AbstractVector{<:Real},
+    ) -> BitVector
 
-Estimate the peak height and area from observed count data.
+Select the background region of a spectrum: the bins whose centers lie outside
+`mu ± 5 sigma` of every known peak (see [`_peak_params`](@ref)). Bins between `3 sigma`
+and `5 sigma` belong to neither the peak region ([`_peak_mask`](@ref)) nor the background,
+so that the peak tails do not raise the background estimate. At least one bin must remain.
 
-The peak region is selected by [`_peak_mask`](@ref). First, the mean background is
-calculated from the bins outside peak region. Then the height is taken as the maximum
-observed count in the peak area minus the mean background. The peak area is estimated as
-`sqrt(2 * pi) * sigma * peak_height`.
+# Arguments
+- `bin_centers::AbstractVector{<:Real}`: bin centers in keV
 
-Poisson data can produce zero background counts or no peak above the background, so 
-`peak_height` and `mean_background` are floored at one count per bin; `peak_area` is 
-derived from the floored height. This keeps the `Uniform` bounds of [`peak_priors`](@ref)
-and [`background_priors`](@ref) valid.
+# Keyword Arguments
+- `mu::AbstractVector{<:Real}`: expected centroids of all known peaks in keV
+- `sigma::AbstractVector{<:Real}`: expected widths of all known peaks in keV, one per peak
+
+# Throws
+- An `ArgumentError` if no bin center lies outside the excluded regions
+
+# Returns
+- A `BitVector` that is `true` for the bins in the background region
+"""
+function _background_mask(
+    bin_centers::AbstractVector{<:Real};
+    mu::AbstractVector{<:Real},
+    sigma::AbstractVector{<:Real},
+)
+
+    mask = trues(length(bin_centers))
+    for (m, s) in zip(mu, sigma)
+        mask .&= abs.(bin_centers .- m) .> 5 * s
+    end
+    any(mask) || throw(
+        ArgumentError(
+            "No bin lies outside `mu ± 5 sigma` of the peaks, use a wider window for " *
+            "the background",
+        ),
+    )
+
+    return mask
+
+end
+
+"""
+    _get_peak_features(
+        hist::Histogram{<:Real,1};
+        mu::Union{Real,AbstractVector{<:Real}},
+        sigma::Union{Real,AbstractVector{<:Real}},
+        peak_index::Integer = 1,
+    ) -> Tuple{Real,Real,Real}
+
+Estimate the height and area of one peak and the mean background from observed count data.
+
+`mu` and `sigma` describe all known peaks ([`_peak_params`](@ref)), `peak_index` selects
+the one to estimate. The mean background is taken over the background region of all peaks
+([`_background_mask`](@ref)); the height is the maximum count in the peak region of the
+selected peak ([`_peak_mask`](@ref)) minus the mean background, the area is
+`sqrt(2 * pi) * sigma * peak_height` with the sigma of the selected peak. A second peak
+within the peak region of the selected one is not separated: the maximum may then come from
+it.
+
+`peak_height` and `mean_background` are floored at one count per bin, because Poisson data
+can lack background counts or a peak above the background; this keeps the `Uniform` bounds
+of [`peak_priors`](@ref) and [`background_priors`](@ref) valid.
 
 # Arguments
 - `hist::Histogram{<:Real,1}`: binned spectrum, see [`_check_spectrum`](@ref)
 
 # Keyword Arguments
-- `mu::Real`: expected peak centroid in keV
-- `sigma::Real`: expected peak width (standard deviation) in keV
+- `mu::Union{Real,AbstractVector{<:Real}}`: expected centroid(s) of the known peaks in keV,
+  see [`_peak_params`](@ref)
+- `sigma::Union{Real,AbstractVector{<:Real}}`: expected width(s) of the known peaks in keV,
+  see [`_peak_params`](@ref)
+- `peak_index::Integer = 1`: index of the peak to estimate in `mu`
 
 # Returns
-- A tuple `(peak_height, peak_area, mean_background)` containing the estimated height and 
-  area of the peak, as well as the estimated mean background in 
+- A tuple `(peak_height, peak_area, mean_background)` containing the estimated height and
+  area of the selected peak, as well as the estimated mean background in
   (counts/keV, counts, counts/keV)
 
 # Throws
-- The `ArgumentError`s of [`_check_spectrum`](@ref) and [`_peak_mask`](@ref)
+- The `ArgumentError`s of [`_check_spectrum`](@ref), [`_peak_params`](@ref),
+  [`_peak_mask`](@ref) and [`_background_mask`](@ref)
+- An `ArgumentError` if `peak_index` is not an index of `mu`
 """
-function _get_peak_features(hist::Histogram{<:Real,1}; mu::Real, sigma::Real)
+function _get_peak_features(
+    hist::Histogram{<:Real,1};
+    mu::Union{Real,AbstractVector{<:Real}},
+    sigma::Union{Real,AbstractVector{<:Real}},
+    peak_index::Integer = 1,
+)
 
     bin_size = _check_spectrum(hist)
-    weights = hist.weights
-    peak_mask = _peak_mask(midpoints(only(hist.edges)); mu, sigma)
-    peak_weights = weights[peak_mask]                                   # counts/bin
+    mus, sigmas = _peak_params(mu, sigma)
+    peak_index in eachindex(mus) || throw(
+        ArgumentError(
+            "`peak_index` must be an index of `mu` ($(eachindex(mus))), got $peak_index",
+        ),
+    )
+    peak_mu, peak_sigma = mus[peak_index], sigmas[peak_index]
 
-    background_weights = weights[.!peak_mask]                           # counts/bin
-    mean_background_val = _mean_background(background_weights, bin_size) # counts/keV
+    weights = hist.weights
+    bin_centers = midpoints(only(hist.edges))
+    peak_mask = _peak_mask(bin_centers; mu = peak_mu, sigma = peak_sigma)
+    background_mask = _background_mask(bin_centers; mu = mus, sigma = sigmas)
+
+    peak_weights = weights[peak_mask]                                       # counts/bin
+    background_weights = weights[background_mask]                           # counts/bin
+    mean_background_val = _mean_background(background_weights, bin_size)    # counts/keV
     peak_height =
         max(maximum(peak_weights) / bin_size - mean_background_val, 1.0 / bin_size)
     # counts/keV
-    peak_area = sqrt(2 * pi) * sigma * peak_height                      # counts
+    peak_area = sqrt(2 * pi) * peak_sigma * peak_height                     # counts
 
     return peak_height, peak_area, mean_background_val
 

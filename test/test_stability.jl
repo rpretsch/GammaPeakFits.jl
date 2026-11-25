@@ -6,7 +6,9 @@ using GammaPeakFits:
     _uniform_edges,
     _mean_background,
     _background_poly_bounds,
+    _peak_params,
     _peak_mask,
+    _background_mask,
     _get_peak_features
 
 @testset "type stability" begin
@@ -16,9 +18,10 @@ using GammaPeakFits:
     A = 1000.0
     C_CONST = 100.0
     BIN_SIZE = 1.0
-    WINDOW = 100.0
+    WINDOW = 200.0
     ENERGY_RANGE = (MU - WINDOW / 2 - BIN_SIZE / 2, MU + WINDOW / 2 + BIN_SIZE / 2)
-    PF_KERNEL = @pf $n * GaussPeak($mu, $sigma) + PolynomialShape($b)
+    MUS = [MU, MU + WINDOW]  # second peak outside the window
+    PF_KERNEL = @pf $n * GaussPeak($mu, $sigma) + PolynomialShape($b0)
 
     HIST = sample_spectrum(
         A * GaussPeak(MU, SIGMA);
@@ -58,17 +61,32 @@ using GammaPeakFits:
     ) isa Histogram
     @test @inferred(sample_spectrum(PolynomialShape(C_CONST), EDGES)) isa Histogram
 
-    # _mean_background, _background_poly_bounds, _peak_mask, _get_peak_features
+    # _mean_background, _background_poly_bounds
     @test @inferred(_mean_background(HIST.weights, BIN_SIZE)) isa Real
     @test @inferred(_background_poly_bounds(C_CONST, WINDOW / 2)) isa Tuple{Real,Real}
+
+    # _peak_params, one and several peaks
+    @test @inferred(_peak_params(MU, SIGMA)) isa Tuple{Vector{Float64},Vector{Float64}}
+    @test @inferred(_peak_params(MUS, SIGMA)) isa Tuple{Vector{Float64},Vector{Float64}}
+
+    # _peak_mask, _background_mask
     @test @inferred(_peak_mask(midpoints(EDGES); mu = MU, sigma = SIGMA)) isa BitVector
+    @test @inferred(_background_mask(midpoints(EDGES); mu = [MU], sigma = [SIGMA])) isa
+          BitVector
+
+    # _get_peak_features, one and several peaks
     @test @inferred(_get_peak_features(HIST; mu = MU, sigma = SIGMA)) isa
           Tuple{Real,Real,Real}
+    @test @inferred(_get_peak_features(HIST; mu = MUS, sigma = SIGMA, peak_index = 1)) isa
+          Tuple{Real,Real,Real}
 
-    # peak_priors, background_priors without and with a peak
+    # peak_priors, background_priors without, with one and with several peaks
     @test @inferred(peak_priors(HIST; mu = MU, sigma = SIGMA)) isa NamedTuple
+    @test @inferred(peak_priors(HIST; mu = MUS, sigma = SIGMA, peak_index = 1)) isa
+          NamedTuple
     @test @inferred(background_priors(HIST)) isa NamedTuple
     @test @inferred(background_priors(HIST; mu = MU, sigma = SIGMA)) isa NamedTuple
+    @test @inferred(background_priors(HIST; mu = MUS, sigma = SIGMA)) isa NamedTuple
 
     # build_posterior (build_prior is not type-stable by design: the parameter names
     # are collected at runtime)

@@ -1,8 +1,13 @@
 """
-    peak_priors(hist::Histogram{<:Real,1}; mu::Real, sigma::Real) -> NamedTuple
+    peak_priors(
+        hist::Histogram{<:Real,1};
+        mu::Union{Real,AbstractVector{<:Real}},
+        sigma::Union{Real,AbstractVector{<:Real}},
+        peak_index::Integer = 1,
+    ) -> NamedTuple
 
-Data-driven default priors for the parameters of one peak, estimated from `hist` around
-the expected centroid `mu` and width `sigma`:
+Data-driven default priors for the parameters of one peak, estimated from `hist` around its
+expected centroid `mu` and width `sigma`:
 
 | Name    | Default prior                               |
 | ------- | ------------------------------------------- |
@@ -12,16 +17,23 @@ the expected centroid `mu` and width `sigma`:
 | `sigma` | `truncated(Normal(sigma, 0.6), eps(), Inf)` |
 | `theta` | `Uniform(eps(), 5 * sigma)`                 |
 
-`peak_area` is estimated by [`_get_peak_features`](@ref). Entries a model does not use (e.g. `alpha`, `theta` without a tail) are ignored by
-[`build_prior`](@ref); single entries are replaced with `merge`.
+With several peaks in the window, `mu` and `sigma` describe all of them
+([`_peak_params`](@ref)) and `peak_index` selects the one these priors are for; one block
+per fitted peak, e.g. `(peak1 = peak_priors(hist; mu, sigma, peak_index = 1), ...)`.
+`peak_area` is estimated by [`_get_peak_features`](@ref). Entries a model does not use
+(e.g. `alpha`, `theta` without a tail) are ignored by [`build_prior`](@ref); single entries
+can be replaced with `merge`.
 
 # Arguments
 - `hist::Histogram{<:Real,1}`: binned spectrum, see [`_check_spectrum`](@ref), e.g. from
   [`cut_data`](@ref)
 
 # Keyword Arguments
-- `mu::Real`: expected peak centroid in keV
-- `sigma::Real`: expected peak width (standard deviation) in keV
+- `mu::Union{Real,AbstractVector{<:Real}}`: expected centroid(s) of the known peaks in keV,
+  see [`_peak_params`](@ref)
+- `sigma::Union{Real,AbstractVector{<:Real}}`: expected width(s) of the known peaks in keV,
+  see [`_peak_params`](@ref)
+- `peak_index::Integer = 1`: index of the peak in `mu` these priors are for
 
 # Throws
 - The `ArgumentError`s of [`_get_peak_features`](@ref)
@@ -29,16 +41,23 @@ the expected centroid `mu` and width `sigma`:
 # Returns
 - A `NamedTuple` `(n, alpha, mu, sigma, theta)` of distributions
 """
-function peak_priors(hist::Histogram{<:Real,1}; mu::Real, sigma::Real)
+function peak_priors(
+    hist::Histogram{<:Real,1};
+    mu::Union{Real,AbstractVector{<:Real}},
+    sigma::Union{Real,AbstractVector{<:Real}},
+    peak_index::Integer = 1,
+)
 
-    _, peak_area, _ = _get_peak_features(hist; mu, sigma)
+    _, peak_area, _ = _get_peak_features(hist; mu, sigma, peak_index)
+    mus, sigmas = _peak_params(mu, sigma)
+    peak_mu, peak_sigma = mus[peak_index], sigmas[peak_index]
 
     return (
         n = Uniform(0, 3 * peak_area),
         alpha = Uniform(0, 1),
-        mu = Normal(mu, 0.6),
-        sigma = truncated(Normal(sigma, 0.6), eps(), Inf),
-        theta = Uniform(eps(), 5 * sigma),
+        mu = Normal(peak_mu, 0.6),
+        sigma = truncated(Normal(peak_sigma, 0.6), eps(), Inf),
+        theta = Uniform(eps(), 5 * peak_sigma),
     )
 
 end
@@ -46,8 +65,8 @@ end
 """
     background_priors(
         hist::Histogram{<:Real,1};
-        mu::Union{Real,Nothing} = nothing,
-        sigma::Union{Real,Nothing} = nothing,
+        mu::Union{Real,AbstractVector{<:Real},Nothing} = nothing,
+        sigma::Union{Real,AbstractVector{<:Real},Nothing} = nothing,
     ) -> NamedTuple
 
 Data-driven default priors for the background parameters, from the mean background level
@@ -55,55 +74,61 @@ Data-driven default priors for the background parameters, from the mean backgrou
 
 | Name | Default prior                    | Meaning                                  |
 | ---- | -------------------------------- | ---------------------------------------- |
-| `b`  | `Uniform(0, 2 * level)`          | constant term                            |
+| `b0` | `Uniform(0, 2 * level)`          | constant term                            |
 | `b1` | `Uniform(-2 * level / h, ...)`   | linear term around the window center     |
 | `b2` | `Uniform(-2 * level / h^2, ...)` | quadratic term around the window center  |
 | `h`  | `Uniform(0, 4 * level)`          | Compton step height                      |
 
-With `mu` and `sigma`, the level is estimated outside the peak region by
-[`_get_peak_features`](@ref), otherwise over all bins, floored at one count per bin. The
-`b1`/`b2` bounds are those of [`_background_poly_bounds`](@ref); they assume that the
-model expands the polynomial around the center of the range, e.g.
-`PolynomialShape(\$b, \$b1, \$b2; x0 = center)`.
+With `mu` and `sigma` (all known peaks, [`_peak_params`](@ref)), the level is taken over
+the background region of all peaks ([`_background_mask`](@ref)), otherwise over all bins;
+in both cases floored at one count per bin. The `b1`/`b2` bounds are those of
+[`_background_poly_bounds`](@ref); they assume that the model expands the polynomial around
+the center of the range, e.g. `PolynomialShape(\$b0, \$b1, \$b2; x0 = center)`.
 
 # Arguments
 - `hist::Histogram{<:Real,1}`: binned spectrum, see [`_check_spectrum`](@ref), e.g. from
   [`cut_data`](@ref)
 
 # Keyword Arguments
-- `mu::Union{Real,Nothing} = nothing`: centroid of a peak to exclude, in keV
-- `sigma::Union{Real,Nothing} = nothing`: width of a peak to exclude, in keV
+- `mu::Union{Real,AbstractVector{<:Real},Nothing} = nothing`: centroid(s) of the peaks to
+  exclude in keV, see [`_peak_params`](@ref)
+- `sigma::Union{Real,AbstractVector{<:Real},Nothing} = nothing`: width(s) of the peaks to
+  exclude in keV, see [`_peak_params`](@ref)
 
 # Throws
 - An `ArgumentError` if only one of `mu` and `sigma` is given
 - The `ArgumentError`s of [`_check_spectrum`](@ref)
-- With `mu` and `sigma`: the `ArgumentError`s of [`_get_peak_features`](@ref)
+- With `mu` and `sigma`: the `ArgumentError`s of [`_peak_params`](@ref) and
+  [`_background_mask`](@ref)
 
 # Returns
-- A `NamedTuple` `(b, b1, b2, h)` of distributions
+- A `NamedTuple` `(b0, b1, b2, h)` of distributions
 """
 function background_priors(
     hist::Histogram{<:Real,1};
-    mu::Union{Real,Nothing} = nothing,
-    sigma::Union{Real,Nothing} = nothing,
+    mu::Union{Real,AbstractVector{<:Real},Nothing} = nothing,
+    sigma::Union{Real,AbstractVector{<:Real},Nothing} = nothing,
 )
 
     isnothing(mu) == isnothing(sigma) || throw(
-        ArgumentError("Give both `mu` and `sigma` to exclude a peak region, or neither"),
+        ArgumentError("Give both `mu` and `sigma` to exclude peak regions, or neither"),
     )
 
     bin_size = _check_spectrum(hist)
     level = if isnothing(mu)
         _mean_background(hist.weights, bin_size)
     else
-        last(_get_peak_features(hist; mu, sigma))
+        mus, sigmas = _peak_params(mu, sigma)
+        bin_centers = midpoints(only(hist.edges))
+        background_mask = _background_mask(bin_centers; mu = mus, sigma = sigmas)
+        _mean_background(hist.weights[background_mask], bin_size)
     end
 
     edges = only(hist.edges)
     lin_bound, quad_bound = _background_poly_bounds(level, (last(edges) - first(edges)) / 2)
 
     return (
-        b = Uniform(0, 2 * level),
+        b0 = Uniform(0, 2 * level),
         b1 = Uniform(-lin_bound, lin_bound),
         b2 = Uniform(-quad_bound, quad_bound),
         h = Uniform(0, 4 * level),
@@ -125,7 +150,7 @@ not use are ignored; single entries are replaced with `merge` beforehand.
 
 # Example
 
-    model = @pf \$peak.n * GaussPeak(\$peak.mu, \$peak.sigma) + PolynomialShape(\$bkg.b)
+    model = @pf \$peak.n * GaussPeak(\$peak.mu, \$peak.sigma) + PolynomialShape(\$bkg.b0)
     defaults = (
         peak = merge(peak_priors(hist; mu = 2614.5, sigma = 1.2), (n = Uniform(0, 1e5),)),
         bkg = background_priors(hist; mu = 2614.5, sigma = 1.2),

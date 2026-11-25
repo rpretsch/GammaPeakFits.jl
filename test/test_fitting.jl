@@ -11,7 +11,11 @@ using GammaPeakFits: mean_background, background_poly_bounds
     model = ModelParams(
         peak = PeakParams(gaussian = GaussianParams(A = A, mu = MU, sigma = SIGMA)),
     )
-    DATA = SpectrumData((MU-WINDOW/2), (MU+WINDOW/2), 1.0, model)
+    DATA = sample_spectrum(
+        model,
+        1.0;
+        energy_range = (MU - WINDOW / 2 - 0.5, MU + WINDOW / 2 + 0.5),
+    )
     C_CONST = 100.0
     C_LIN = 10.0
     CONFIGS = FitConfigs(mu = MU, sigma = SIGMA, integration_method = Midpoint())

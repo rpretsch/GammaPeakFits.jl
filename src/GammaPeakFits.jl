@@ -19,6 +19,9 @@ posteriors.
 - Data: [`SpectrumData`](@ref)
 - Configuration: [`FitConfigs`](@ref)
 
+## Data
+- [`bin_energies`](@ref), [`rebin`](@ref), [`sample_spectrum`](@ref)
+
 ## Model evaluation
 - [`full_model`](@ref)
 
@@ -28,9 +31,6 @@ posteriors.
 
 ## Utils
 - [`cut_data`](@ref)
-
-## Plotting
-- [`plot_data`](@ref)
 
 # Quick start
 
@@ -46,8 +46,7 @@ configs = FitConfigs(
 # Generate data
 A = 1000.0              # counts
 C_const = 100.0         # counts/keV
-lower_limit = 1.0       # keV
-upper_limit = 4096.0    # keV
+energy_range = (0.0, 4096.0)  # keV, outer bin edges
 bin_size = 0.5          # keV
 
 gaussian_params = GaussianParams(A = A, mu = configs.mu, sigma = configs.sigma)
@@ -55,7 +54,7 @@ peak_params = PeakParams(gaussian = gaussian_params)
 constPoly_params = ConstPolyParams(C = C_const)
 background_params = BackgroundParams(constPoly = constPoly_params)
 generation_modelParams = ModelParams(peak = peak_params, background = background_params)
-data = SpectrumData(lower_limit, upper_limit, bin_size, generation_modelParams)
+data = sample_spectrum(generation_modelParams, bin_size; energy_range)
 
 # or use existing data instead
 # data = SpectrumData(
@@ -93,11 +92,11 @@ posterior = build_posterior(fit_data, prior, configs)
 module GammaPeakFits
 
 using BAT
-using CairoMakie
 using DensityInterface: logfuncdensity
 using Distributions
 using QuadGK: quadgk
 using SpecialFunctions: erf, erfc, logerfcx
+using StatsBase: Histogram, fit, mean
 using ValueShapes: NamedTupleDist
 
 # Component/container parameter structs and Enabled/Disabled presence markers
@@ -114,8 +113,6 @@ include("fitting.jl")
 include("integrals.jl")
 # Data slicing (cut_data), peak-feature estimation, is_present
 include("utils.jl")
-# Plotting
-include("plotting.jl")
 
 # Types - presence markers
 export AbstractComponent
@@ -145,6 +142,9 @@ export ModelParams
 
 # Data structs
 export SpectrumData
+export bin_energies
+export rebin
+export sample_spectrum
 
 # Configuration struct
 export FitConfigs
@@ -157,9 +157,6 @@ export PriorPair
 export poisson_ll
 export build_prior
 export build_posterior
-
-# Plotting
-export plot_data
 
 # Utils
 export cut_data

@@ -20,4 +20,11 @@ using StatsBase: Histogram
         @test_throws ArgumentError expected_counts(background, UNEVEN_EDGES)
     end
 
+    @testset "densityof" begin
+        # Re-exported; the density of a composite model is in counts/keV
+        peak_counts = 1000.0
+        model = peak_counts * GaussPeak(MU, SIGMA) + PolynomialShape(C_CONST)
+        @test densityof(model, MU) ≈ peak_counts / (sqrt(2 * pi) * SIGMA) + C_CONST
+    end
+
 end

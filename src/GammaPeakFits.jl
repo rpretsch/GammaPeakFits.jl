@@ -13,7 +13,8 @@ sampled with `BAT.jl`.
 
 ## Models
 - Re-exported: `GaussPeak`, `LowETailPeak`, `HighETailPeak`, `GaussianStep`,
-  `PolynomialShape` (LegendSpecFits) and `@pf` (PropertyFunctions)
+  `PolynomialShape` (LegendSpecFits), `@pf` (PropertyFunctions) and `densityof`
+  (MeasureBase, the model density in counts/keV)
 - [`expected_counts`](@ref)
 
 ## Fitting
@@ -74,7 +75,7 @@ using LegendSpecFits:
     GaussianStep,
     PolynomialShape,
     binned_poisson_likelihood
-using MeasureBase: AbstractMeasure
+using MeasureBase: AbstractMeasure, densityof
 using PropertyFunctions: @pf, PPath, PropertyFunction, input_property_paths
 using StatsBase: Histogram, fit, mean, midpoints
 using ValueShapes: NamedTupleDist
@@ -112,5 +113,8 @@ export HighETailPeak
 export GaussianStep
 export PolynomialShape
 export @pf
+
+# Re-export - model density (MeasureBase)
+export densityof
 
 end

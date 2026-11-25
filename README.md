@@ -99,7 +99,9 @@ model = @pf $n * (
 `n` is the number of peak counts and `alpha` the tail fraction. Parameters can
 be grouped, e.g. `$peak.n`, `$peak.mu`; the prior is then nested in the same
 way. `expected_counts(model(params), hist)` gives the expected counts per bin,
-e.g. for plotting a fit.
+e.g. for plotting a fit; `densityof(model(params), x)` gives the density in
+counts/keV at the energy `x`, e.g. for a smooth curve (times the bin size to
+draw it over a histogram).
 
 ## Priors
 
